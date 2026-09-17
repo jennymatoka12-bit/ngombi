@@ -1,6 +1,7 @@
 name: ngombi
-description: "Application NGOMBI TV et Radio en Direct"
+description: "Application TV et Radio en direct"
 publish_to: 'none'
+
 version: 1.0.0+1
 
 environment:
@@ -9,8 +10,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  webview_flutter: ^4.2.2
   cupertino_icons: ^1.0.6
+  webview_flutter: ^4.7.0
+  http: ^1.2.0
 
 dev_dependencies:
   flutter_test:

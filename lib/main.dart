@@ -196,7 +196,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void initState() {
     super.initState();
-    _isStream = widget.streamUrl.contains('.m3u8') || widget.streamUrl.contains('.mpd') || widget.streamUrl.contains('.mp4');
+    final urlLower = widget.streamUrl.toLowerCase();
+    _isStream = urlLower.contains('.m3u8') || urlLower.contains('.mpd') || urlLower.contains('.mp4');
 
     if (_isStream) {
       _initPlayer();
@@ -217,15 +218,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
         aspectRatio: _videoPlayerController!.value.aspectRatio,
         errorBuilder: (context, errorMessage) {
           return Center(
-            child: Text(
-              "Erreur de lecture du flux : $errorMessage",
-              style: const TextStyle(color: Colors.white),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                "Impossible de charger ce flux de direct ($errorMessage).",
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70),
+              ),
             ),
           );
         },
       );
     } catch (e) {
-      _errorMessage = "Impossible de charger la chaîne en direct.";
+      _errorMessage = "Erreur d'initialisation du lecteur en direct.";
     } finally {
       if (mounted) {
         setState(() {
@@ -249,7 +254,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFFE50914)))
           : _errorMessage != null
-              ? Center(child: Text(_errorMessage!, style: const TextStyle(color: Colors.white)))
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
+                  ),
+                )
               : _isStream && _chewieController != null
                   ? Center(child: Chewie(controller: _chewieController!))
                   : WebViewWidget(

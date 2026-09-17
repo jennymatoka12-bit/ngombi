@@ -1,4 +1,4 @@
-import 'package0package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 void main() {
   runApp(const NgombiApp());
@@ -11,91 +11,66 @@ class NgombiApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'NGOMBI TV & Radio',
-      debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF121212),
-        primaryColor: const Color(0xFFE50914),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF1F1F1F),
-          elevation: 0,
-        ),
+        primaryColor: Colors.redAccent,
       ),
       home: const LoginScreen(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
-
-  @override
-  State<LoginScreen> createState() => _LoginScreenState();
-}
-
-class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-
-  void _login() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const HomeScreen()),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Icon(Icons.live_tv_rounded, size: 80, color: Color(0xFFE50914)),
-              const SizedBox(height: 12),
-              const Text(
-                'NGOMBI',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: 2),
+      body: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Icon(Icons.tv, size: 80, color: Colors.redAccent),
+            const SizedBox(height: 16),
+            const Text(
+              'NGOMBI',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 32),
+            TextField(
+              decoration: InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              const Text(
-                'TV & Radio en Direct',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: 'Mot de passe',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              const SizedBox(height: 40),
-              TextField(
-                controller: _emailController,
-                decoration: InputDecoration(
-                  labelText: 'Email',
-                  prefixIcon: const Icon(Icons.email_outlined),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: 'Mot de passe',
-                  prefixIcon: const Icon(Icons.lock_outline),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE50914),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: _login,
-                child: const Text('Se connecter / Créer un compte', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const HomeScreen()),
+                );
+              },
+              child: const Text('Se connecter', style: TextStyle(fontSize: 16, color: Colors.white)),
+            ),
+          ],
         ),
       ),
     );
@@ -111,51 +86,30 @@ class HomeScreen extends StatelessWidget {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('NGOMBI Direct', style: TextStyle(fontWeight: FontWeight.bold)),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.logout),
-              onPressed: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
-                );
-              },
-            )
-          ],
+          title: const Text('NGOMBI TV & Radio'),
+          backgroundColor: const Color(0xFF1F1F1F),
           bottom: const TabBar(
-            indicatorColor: Color(0xFFE50914),
-            indicatorWeight: 3,
+            indicatorColor: Colors.redAccent,
             tabs: [
-              Tab(icon: Icon(Icons.tv), text: 'Chaînes TV'),
-              Tab(icon: Icon(Icons.radio), text: 'Radios'),
+              Tab(icon: Icon(Icons.live_tv), text: 'TV'),
+              Tab(icon: Icon(Icons.radio), text: 'Radio'),
             ],
           ),
         ),
         body: TabBarView(
           children: [
-            _buildGrid(context, isTv: true),
-            _buildGrid(context, isTv: false),
+            _buildMediaGrid(context, isTv: true),
+            _buildMediaGrid(context, isTv: false),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildGrid(BuildContext context, {required bool isTv}) {
-    final List<Map<String, String>> items = isTv
-        ? [
-            {'title': 'Gabon 1ère', 'sub': 'Généraliste'},
-            {'title': 'Gabon 24', 'sub': 'Information 24/7'},
-            {'title': 'TV+ Gabon', 'sub': 'Divertissement'},
-            {'title': 'Espace TV', 'sub': 'Culture & Musique'},
-          ]
-        : [
-            {'title': 'Radio Gabon 88.7 FM', 'sub': 'Information & Culture'},
-            {'title': 'Urban FM 104.5', 'sub': 'Musique & Jeunesse'},
-            {'title': 'RTG Chaine 1', 'sub': 'Direct National'},
-            {'title': 'Gabon Culture FM', 'sub': 'Patrimoine'},
-          ];
+  Widget _buildMediaGrid(BuildContext context, {required bool isTv}) {
+    final items = isTv
+        ? ['Chaîne 1', 'Chaîne Info', 'Chaîne Sport', 'Chaîne Culture']
+        : ['Radio 1 FM', 'Radio Info', 'Radio Musique', 'Radio Hit'];
 
     return GridView.builder(
       padding: const EdgeInsets.all(16),
@@ -163,121 +117,33 @@ class HomeScreen extends StatelessWidget {
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 1.1,
       ),
       itemCount: items.length,
       itemBuilder: (context, index) {
-        final item = items[index];
         return Card(
           color: const Color(0xFF1F1F1F),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => PlayerScreen(title: item['title']!, isTv: isTv),
-                ),
-              );
-            },
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircleAvatar(
-                    radius: 26,
-                    backgroundColor: const Color(0xFFE50914).withOpacity(0.2),
-                    child: Icon(
-                      isTv ? Icons.play_arrow_rounded : Icons.radio_outlined,
-                      size: 32,
-                      color: const Color(0xFFE50914),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    item['title']!,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    item['sub']!,
-                    style: const TextStyle(fontSize: 11, color: Colors.grey),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class PlayerScreen extends StatelessWidget {
-  final String title;
-  final bool isTv;
-
-  const PlayerScreen({super.key, required this.title, required this.isTv});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Column(
-        children: [
-          Container(
-            height: isTv ? 240 : 160,
-            width: double.infinity,
-            color: Colors.black,
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const CircularProgressIndicator(color: Color(0xFFE50914)),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Connexion au flux $title...',
-                    style: const TextStyle(color: Colors.white70),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(20.0),
+            onTap: () {},
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.fiber_manual_record, color: Colors.red, size: 16),
-                    const SizedBox(width: 8),
-                    Text(
-                      'EN DIRECT',
-                      style: TextStyle(color: Colors.red.shade400, fontWeight: FontWeight.bold),
-                    ),
-                  ],
+                Icon(
+                  isTv ? Icons.play_circle_fill : Icons.radio_button_checked,
+                  size: 48,
+                  color: Colors.redAccent,
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  title,
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Flux en ligne officiel. Lecture automatique intégrée.',
-                  style: TextStyle(color: Colors.grey),
+                  items[index],
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

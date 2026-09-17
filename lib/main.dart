@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:http/http.dart' as http;
-import 'package:video_player/video_player.dart';
 
 void main() {
   runApp(const NgombiApp());
@@ -30,8 +28,8 @@ class NgombiApp extends StatelessWidget {
 
 class Channel {
   final String name;
-  final String url;
-  Channel({required this.name, required this.url});
+  final String webUrl;
+  Channel({required this.name, required this.webUrl});
 }
 
 class HomeScreen extends StatelessWidget {
@@ -53,11 +51,11 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
         ),
-        body: const TabBarView(
-          physics: NeverScrollableScrollPhysics(),
+        body: TabBarView(
+          physics: const NeverScrollableScrollPhysics(),
           children: [
-            ChannelListView(playlistUrl: 'https://tvradiozap.eu/live/x/vlc/d/tvzeu.m3u', isTv: true),
-            ChannelListView(playlistUrl: 'https://tvradiozap.eu/live/x/vlc/d/tvzeu.m3u', isTv: false),
+            ChannelListView(channels: tvChannels),
+            ChannelListView(channels: radioChannels),
           ],
         ),
       ),
@@ -65,83 +63,58 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class ChannelListView extends StatefulWidget {
-  final String playlistUrl;
-  final bool isTv;
-  const ChannelListView({super.key, required this.playlistUrl, required this.isTv});
+// Liste des chaînes TV avec leurs pages de direct officielles/compatibles
+final List<Channel> tvChannels = [
+  Channel(name: 'TF1 Direct', webUrl: 'https://www.tf1.fr/tf1/direct'),
+  Channel(name: 'France 2 Direct', webUrl: 'https://www.france.tv/france-2/direct.html'),
+  Channel(name: 'France 3 Direct', webUrl: 'https://www.france.tv/france-3/direct.html'),
+  Channel(name: 'Arte Direct', webUrl: 'https://www.arte.tv/fr/direct/'),
+  Channel(name: 'M6 Direct', webUrl: 'https://www.6play.fr/m6/direct'),
+  Channel(name: 'BFM TV Direct', webUrl: 'https://www.bfmtv.com/en-direct/'),
+  Channel(name: 'CNews Direct', webUrl: 'https://www.cnews.fr/le-direct'),
+  Channel(name: 'France Info Direct', webUrl: 'https://www.francetvinfo.fr/en-direct/tv.html'),
+  Channel(name: 'TV5Monde Direct', webUrl: 'https://live.tv5monde.com/html5/index.html'),
+  Channel(name: '24h Gabon / Télé Gabon', webUrl: 'https://www.youtube.com/results?search_query=tele+gabon+direct'),
+];
 
-  @override
-  State<ChannelListView> createState() => _ChannelListViewState();
-}
+// Liste des radios avec leurs pages de direct web
+final List<Channel> radioChannels = [
+  Channel(name: 'RFI Monde', webUrl: 'https://www.rfi.fr/fr/en-direct'),
+  Channel(name: 'Africa Radio', webUrl: 'https://www.africaradio.com/'),
+  Channel(name: 'France Inter', webUrl: 'https://www.radiofrance.fr/franceinter/direct'),
+  Channel(name: 'NRJ', webUrl: 'https://www.nrj.fr/live'),
+  Channel(name: 'Skyrock', webUrl: 'https://skyrock.fm/live'),
+  Channel(name: 'RMC', webUrl: 'https://rmc.bfmtv.com/mediaplayer/radio/'),
+];
 
-class _ChannelListViewState extends State<ChannelListView> {
-  Future<List<Channel>> _fetchChannels() async {
-    try {
-      final response = await http.get(Uri.parse(widget.playlistUrl));
-      if (response.statusCode != 200) return [];
-
-      final List<Channel> channels = [];
-      final lines = response.body.split('\n');
-      String currentName = '';
-
-      for (var line in lines) {
-        line = line.trim();
-        if (line.startsWith('#EXTINF:')) {
-          final commaIndex = line.lastIndexOf(',');
-          if (commaIndex != -1) {
-            currentName = line.substring(commaIndex + 1).trim();
-          }
-        } else if (line.isNotEmpty && !line.startsWith('#')) {
-          if (currentName.isNotEmpty) {
-            channels.add(Channel(name: currentName, url: line));
-          }
-          currentName = '';
-        }
-      }
-      return channels;
-    } catch (e) {
-      return [];
-    }
-  }
+class ChannelListView extends StatelessWidget {
+  final List<Channel> channels;
+  const ChannelListView({super.key, required this.channels});
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Channel>>(
-      future: _fetchChannels(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: Color(0xFFE50914)));
-        }
-
-        final channels = snapshot.data ?? [];
-        if (channels.isEmpty) {
-          return WebPortalView(isTv: widget.isTv);
-        }
-
-        return ListView.separated(
-          padding: const EdgeInsets.all(12),
-          itemCount: channels.length,
-          separatorBuilder: (context, index) => const Divider(color: Colors.white10),
-          itemBuilder: (context, index) {
-            final channel = channels[index];
-            return ListTile(
-              leading: CircleAvatar(
-                backgroundColor: const Color(0xFFE50914).withOpacity(0.2),
-                child: Icon(
-                  widget.isTv ? Icons.play_arrow_rounded : Icons.radio,
-                  color: const Color(0xFFE50914),
-                ),
+    return ListView.separated(
+      padding: const EdgeInsets.all(12),
+      itemCount: channels.length,
+      separatorBuilder: (context, index) => const Divider(color: Colors.white10),
+      itemBuilder: (context, index) {
+        final channel = channels[index];
+        return ListTile(
+          leading: CircleAvatar(
+            backgroundColor: const Color(0xFFE50914).withOpacity(0.2),
+            child: const Icon(
+              Icons.play_arrow_rounded,
+              color: Color(0xFFE50914),
+            ),
+          ),
+          title: Text(channel.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+          trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => WebPlayerScreen(title: channel.name, url: channel.webUrl),
               ),
-              title: Text(channel.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-              trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => PlayerScreen(title: channel.name, streamUrl: channel.url),
-                  ),
-                );
-              },
             );
           },
         );
@@ -150,120 +123,63 @@ class _ChannelListViewState extends State<ChannelListView> {
   }
 }
 
-class WebPortalView extends StatefulWidget {
-  final bool isTv;
-  const WebPortalView({super.key, required this.isTv});
+class WebPlayerScreen extends StatefulWidget {
+  final String title;
+  final String url;
+
+  const WebPlayerScreen({super.key, required this.title, required this.url});
 
   @override
-  State<WebPortalView> createState() => _WebPortalViewState();
+  State<WebPlayerScreen> createState() => _WebPlayerScreenState();
 }
 
-class _WebPortalViewState extends State<WebPortalView> {
+class _WebPlayerScreenState extends State<WebPlayerScreen> {
   late final WebViewController _controller;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..loadRequest(Uri.parse('https://tvradiozap.eu/'));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return WebViewWidget(controller: _controller);
-  }
-}
-
-class PlayerScreen extends StatefulWidget {
-  final String title;
-  final String streamUrl;
-
-  const PlayerScreen({super.key, required this.title, required this.streamUrl});
-
-  @override
-  State<PlayerScreen> createState() => _PlayerScreenState();
-}
-
-class _PlayerScreenState extends State<PlayerScreen> {
-  VideoPlayerController? _controller;
-  bool _isStream = false;
-  bool _isLoading = true;
-  String? _errorMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    final urlLower = widget.streamUrl.toLowerCase();
-    _isStream = urlLower.contains('.m3u8') || urlLower.contains('.mpd') || urlLower.contains('.mp4');
-
-    if (_isStream) {
-      _initPlayer();
-    } else {
-      _isLoading = false;
-    }
-  }
-
-  Future<void> _initPlayer() async {
-    try {
-      _controller = VideoPlayerController.networkUrl(Uri.parse(widget.streamUrl));
-      await _controller!.initialize();
-      _controller!.play();
-    } catch (e) {
-      _errorMessage = "Impossible de lire le flux en direct.";
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller?.dispose();
-    super.dispose();
+      ..setUserAgent("Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36")
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageFinished: (String url) {
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+              });
+            }
+          },
+        ),
+      )
+      ..loadRequest(Uri.parse(widget.url));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFFE50914)))
-          : _errorMessage != null
-              ? Center(child: Text(_errorMessage!, style: const TextStyle(color: Colors.white)))
-              : _isStream && _controller != null && _controller!.value.isInitialized
-                  ? Center(
-                      child: AspectRatio(
-                        aspectRatio: _controller!.value.aspectRatio,
-                        child: Stack(
-                          alignment: Alignment.bottomCenter,
-                          children: [
-                            VideoPlayer(_controller!),
-                            FloatingActionButton(
-                              backgroundColor: Colors.black45,
-                              elevation: 0,
-                              onPressed: () {
-                                setState(() {
-                                  _controller!.value.isPlaying ? _controller!.pause() : _controller!.play();
-                                });
-                              },
-                              child: Icon(
-                                _controller!.value.isPlaying ? Icons.pause : Icons.play_arrow,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  : WebViewWidget(
-                      controller: WebViewController()
-                        ..setJavaScriptMode(JavaScriptMode.unrestricted)
-                        ..loadRequest(Uri.parse(widget.streamUrl)),
-                    ),
+      appBar: AppBar(
+        title: Text(widget.title),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              _controller.reload();
+            },
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          WebViewWidget(controller: _controller),
+          if (_isLoading)
+            const Center(
+              child: CircularProgressIndicator(color: Color(0xFFE50914)),
+            ),
+        ],
+      ),
     );
   }
 }

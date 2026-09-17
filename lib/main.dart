@@ -28,10 +28,14 @@ class NgombiApp extends StatelessWidget {
 
 class Channel {
   final String name;
-  final String webUrl;
+  final String tvRadioZapUrl;
   final String category;
 
-  Channel({required this.name, required this.webUrl, required this.category});
+  Channel({
+    required this.name,
+    required this.tvRadioZapUrl,
+    required this.category,
+  });
 }
 
 class HomeScreen extends StatelessWidget {
@@ -56,8 +60,8 @@ class HomeScreen extends StatelessWidget {
         body: TabBarView(
           physics: const NeverScrollableScrollPhysics(),
           children: [
-            ChannelListView(channels: openTvChannels),
-            ChannelListView(channels: openRadioChannels),
+            ChannelListView(channels: tvChannels),
+            ChannelListView(channels: radioChannels),
           ],
         ),
       ),
@@ -65,24 +69,71 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-// Sélection de chaînes accessibles dans le monde entier et SANS inscription obligatoire
-final List<Channel> openTvChannels = [
-  Channel(name: 'France 24 (Direct)', webUrl: 'https://www.youtube.com/embed/g_04bH4aT1s?autoplay=1', category: 'Information'),
-  Channel(name: 'BFM TV (Direct)', webUrl: 'https://www.bfmtv.com/en-direct/', category: 'Information'),
-  Channel(name: 'Arte (Direct)', webUrl: 'https://www.arte.tv/fr/direct/', category: 'Généraliste'),
-  Channel(name: 'TV5Monde Afrique', webUrl: 'https://afrique.tv5monde.com/df/direct-tv', category: 'Afrique'),
-  Channel(name: 'Gabon 24', webUrl: 'https://www.youtube.com/results?search_query=gabon+24+direct', category: 'Gabon'),
-  Channel(name: 'Euronews Français', webUrl: 'https://www.youtube.com/embed/py_1aB0_z_8?autoplay=1', category: 'Information'),
-  Channel(name: 'TVRadioZap (Portail WebTV)', webUrl: 'https://tvradiozap.eu/', category: 'Agrégateur'),
+// Liens directs TVRADIOZAP pour chaque chaîne
+final List<Channel> tvChannels = [
+  Channel(
+    name: 'TF1',
+    tvRadioZapUrl: 'https://tvradiozap.eu/tf1-en-direct.html',
+    category: 'Généraliste',
+  ),
+  Channel(
+    name: 'France 2',
+    tvRadioZapUrl: 'https://tvradiozap.eu/france-2-en-direct.html',
+    category: 'Généraliste',
+  ),
+  Channel(
+    name: 'France 3',
+    tvRadioZapUrl: 'https://tvradiozap.eu/france-3-en-direct.html',
+    category: 'Généraliste',
+  ),
+  Channel(
+    name: 'M6',
+    tvRadioZapUrl: 'https://tvradiozap.eu/m6-en-direct.html',
+    category: 'Généraliste',
+  ),
+  Channel(
+    name: 'BFM TV',
+    tvRadioZapUrl: 'https://tvradiozap.eu/bfm-tv-en-direct.html',
+    category: 'Information',
+  ),
+  Channel(
+    name: 'Arte',
+    tvRadioZapUrl: 'https://tvradiozap.eu/arte-en-direct.html',
+    category: 'Culture',
+  ),
+  Channel(
+    name: 'France 24',
+    tvRadioZapUrl: 'https://tvradiozap.eu/france-24-en-direct.html',
+    category: 'Information',
+  ),
+  Channel(
+    name: 'TV5 Monde',
+    tvRadioZapUrl: 'https://tvradiozap.eu/tv5-monde-en-direct.html',
+    category: 'International',
+  ),
 ];
 
-// Radios en direct accessibles partout sans inscription
-final List<Channel> openRadioChannels = [
-  Channel(name: 'RFI Afrique', webUrl: 'https://www.rfi.fr/fr/en-direct', category: 'Info/Radio'),
-  Channel(name: 'Africa Radio', webUrl: 'https://www.africaradio.com/', category: 'Musique/Info'),
-  Channel(name: 'Radio Gabon', webUrl: 'https://www.radios-gabon.com/', category: 'Gabon'),
-  Channel(name: 'France Inter', webUrl: 'https://www.radiofrance.fr/franceinter/direct', category: 'Généraliste'),
-  Channel(name: 'NRJ Live', webUrl: 'https://www.nrj.fr/live', category: 'Musique'),
+final List<Channel> radioChannels = [
+  Channel(
+    name: 'RFI Monde',
+    tvRadioZapUrl: 'https://tvradiozap.eu/rfi-en-direct.html',
+    category: 'Info/Radio',
+  ),
+  Channel(
+    name: 'NRJ',
+    tvRadioZapUrl: 'https://tvradiozap.eu/nrj-en-direct.html',
+    category: 'Musique',
+  ),
+  Channel(
+    name: 'France Inter',
+    tvRadioZapUrl: 'https://tvradiozap.eu/france-inter-en-direct.html',
+    category: 'Généraliste',
+  ),
+  Channel(
+    name: 'Skyrock',
+    tvRadioZapUrl: 'https://tvradiozap.eu/skyrock-en-direct.html',
+    category: 'Musique',
+  ),
 ];
 
 class ChannelListView extends StatelessWidget {
@@ -112,7 +163,10 @@ class ChannelListView extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => WebPlayerScreen(title: channel.name, url: channel.webUrl),
+                builder: (context) => TvRadioZapPlayerScreen(
+                  title: channel.name,
+                  url: channel.tvRadioZapUrl,
+                ),
               ),
             );
           },
@@ -122,17 +176,21 @@ class ChannelListView extends StatelessWidget {
   }
 }
 
-class WebPlayerScreen extends StatefulWidget {
+class TvRadioZapPlayerScreen extends StatefulWidget {
   final String title;
   final String url;
 
-  const WebPlayerScreen({super.key, required this.title, required this.url});
+  const TvRadioZapPlayerScreen({
+    super.key,
+    required this.title,
+    required this.url,
+  });
 
   @override
-  State<WebPlayerScreen> createState() => _WebPlayerScreenState();
+  State<TvRadioZapPlayerScreen> createState() => _TvRadioZapPlayerScreenState();
 }
 
-class _WebPlayerScreenState extends State<WebPlayerScreen> {
+class _TvRadioZapPlayerScreenState extends State<TvRadioZapPlayerScreen> {
   late final WebViewController _controller;
   bool _isLoading = true;
 
@@ -145,6 +203,16 @@ class _WebPlayerScreenState extends State<WebPlayerScreen> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageFinished: (String url) {
+            // Injection JavaScript pour masquer les bannières, menus et publicités du site
+            _controller.runJavaScript('''
+              try {
+                document.querySelector('header')?.style.setProperty('display', 'none', 'important');
+                document.querySelector('footer')?.style.setProperty('display', 'none', 'important');
+                document.querySelector('.sidebar')?.style.setProperty('display', 'none', 'important');
+                document.querySelector('.ads')?.style.setProperty('display', 'none', 'important');
+              } catch(e) {}
+            ''');
+
             if (mounted) {
               setState(() {
                 _isLoading = false;
@@ -165,6 +233,9 @@ class _WebPlayerScreenState extends State<WebPlayerScreen> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
+              setState(() {
+                _isLoading = true;
+              });
               _controller.reload();
             },
           ),

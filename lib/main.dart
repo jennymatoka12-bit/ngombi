@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'package:video_player/video_player.dart';
+import 'package:chewie/chewie.dart';
 
 void main() {
   runApp(const NgombiApp());
@@ -53,7 +55,7 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
         body: const TabBarView(
-          physics: NeverScrollableScrollPhysics(), // Empêche le conflit de scroll entre les onglets et la liste
+          physics: NeverScrollableScrollPhysics(),
           children: [
             ChannelListView(playlistUrl: 'https://tvradiozap.eu/live/x/vlc/d/tvzeu.m3u', isTv: true),
             ChannelListView(playlistUrl: 'https://tvradiozap.eu/live/x/vlc/d/tvzeu.m3u', isTv: false),
@@ -114,7 +116,6 @@ class _ChannelListViewState extends State<ChannelListView> {
 
         final channels = snapshot.data ?? [];
         if (channels.isEmpty) {
-          // Affichage de secours via le portail Web
           return WebPortalView(isTv: widget.isTv);
         }
 
@@ -186,21 +187,76 @@ class PlayerScreen extends StatefulWidget {
 }
 
 class _PlayerScreenState extends State<PlayerScreen> {
-  late final WebViewController _controller;
+  VideoPlayerController? _videoPlayerController;
+  ChewieController? _chewieController;
+  bool _isStream = false;
+  bool _isLoading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..loadRequest(Uri.parse(widget.streamUrl));
+    _isStream = widget.streamUrl.contains('.m3u8') || widget.streamUrl.contains('.mpd') || widget.streamUrl.contains('.mp4');
+
+    if (_isStream) {
+      _initPlayer();
+    } else {
+      _isLoading = false;
+    }
+  }
+
+  Future<void> _initPlayer() async {
+    try {
+      _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(widget.streamUrl));
+      await _videoPlayerController!.initialize();
+
+      _chewieController = ChewieController(
+        videoPlayerController: _videoPlayerController!,
+        autoPlay: true,
+        isLive: true,
+        aspectRatio: _videoPlayerController!.value.aspectRatio,
+        errorBuilder: (context, errorMessage) {
+          return Center(
+            child: Text(
+              "Erreur de lecture du flux : $errorMessage",
+              style: const TextStyle(color: Colors.white),
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      _errorMessage = "Impossible de charger la chaîne en direct.";
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _videoPlayerController?.dispose();
+    _chewieController?.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
-      body: WebViewWidget(controller: _controller),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFFE50914)))
+          : _errorMessage != null
+              ? Center(child: Text(_errorMessage!, style: const TextStyle(color: Colors.white)))
+              : _isStream && _chewieController != null
+                  ? Center(child: Chewie(controller: _chewieController!))
+                  : WebViewWidget(
+                      controller: WebViewController()
+                        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+                        ..loadRequest(Uri.parse(widget.streamUrl)),
+                    ),
     );
   }
 }

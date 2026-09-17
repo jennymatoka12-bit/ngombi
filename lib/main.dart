@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:video_player/video_player.dart';
-import 'package:chewie/chewie.dart';
 
 void main() {
   runApp(const NgombiApp());
@@ -187,8 +186,7 @@ class PlayerScreen extends StatefulWidget {
 }
 
 class _PlayerScreenState extends State<PlayerScreen> {
-  VideoPlayerController? _videoPlayerController;
-  ChewieController? _chewieController;
+  VideoPlayerController? _controller;
   bool _isStream = false;
   bool _isLoading = true;
   String? _errorMessage;
@@ -208,29 +206,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   Future<void> _initPlayer() async {
     try {
-      _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(widget.streamUrl));
-      await _videoPlayerController!.initialize();
-
-      _chewieController = ChewieController(
-        videoPlayerController: _videoPlayerController!,
-        autoPlay: true,
-        isLive: true,
-        aspectRatio: _videoPlayerController!.value.aspectRatio,
-        errorBuilder: (context, errorMessage) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                "Impossible de charger ce flux de direct ($errorMessage).",
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white70),
-              ),
-            ),
-          );
-        },
-      );
+      _controller = VideoPlayerController.networkUrl(Uri.parse(widget.streamUrl));
+      await _controller!.initialize();
+      _controller!.play();
     } catch (e) {
-      _errorMessage = "Erreur d'initialisation du lecteur en direct.";
+      _errorMessage = "Impossible de lire le flux en direct.";
     } finally {
       if (mounted) {
         setState(() {
@@ -242,8 +222,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   void dispose() {
-    _videoPlayerController?.dispose();
-    _chewieController?.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -254,14 +233,32 @@ class _PlayerScreenState extends State<PlayerScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFFE50914)))
           : _errorMessage != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
-                  ),
-                )
-              : _isStream && _chewieController != null
-                  ? Center(child: Chewie(controller: _chewieController!))
+              ? Center(child: Text(_errorMessage!, style: const TextStyle(color: Colors.white)))
+              : _isStream && _controller != null && _controller!.value.isInitialized
+                  ? Center(
+                      child: AspectRatio(
+                        aspectRatio: _controller!.value.aspectRatio,
+                        child: Stack(
+                          alignment: Alignment.bottomCenter,
+                          children: [
+                            VideoPlayer(_controller!),
+                            FloatingActionButton(
+                              backgroundColor: Colors.black45,
+                              elevation: 0,
+                              onPressed: () {
+                                setState(() {
+                                  _controller!.value.isPlaying ? _controller!.pause() : _controller!.play();
+                                });
+                              },
+                              child: Icon(
+                                _controller!.value.isPlaying ? Icons.pause : Icons.play_arrow,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
                   : WebViewWidget(
                       controller: WebViewController()
                         ..setJavaScriptMode(JavaScriptMode.unrestricted)

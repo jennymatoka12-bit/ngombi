@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const NgombiApp());
 }
 
@@ -107,9 +109,19 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildMediaGrid(BuildContext context, {required bool isTv}) {
-    final items = isTv
-        ? ['Chaîne 1', 'Chaîne Info', 'Chaîne Sport', 'Chaîne Culture']
-        : ['Radio 1 FM', 'Radio Info', 'Radio Musique', 'Radio Hit'];
+    final List<Map<String, String>> items = isTv
+        ? [
+            {'title': 'Gabon 1ère', 'url': 'https://www.youtube.com/embed/live_stream?channel=UC_EXAMPLE1'},
+            {'title': 'Gabon 24', 'url': 'https://www.youtube.com/embed/live_stream?channel=UC_EXAMPLE2'},
+            {'title': 'TV+ Gabon', 'url': 'https://www.youtube.com/embed/live_stream?channel=UC_EXAMPLE3'},
+            {'title': 'Espace TV', 'url': 'https://www.youtube.com/embed/live_stream?channel=UC_EXAMPLE4'},
+          ]
+        : [
+            {'title': 'Radio Gabon FM', 'url': 'https://www.radiogabon.ga'},
+            {'title': 'Urban FM', 'url': 'https://www.urbanfm.ga'},
+            {'title': 'RTG Chaine 1', 'url': 'https://www.rtg.ga'},
+            {'title': 'Gabon Culture FM', 'url': 'https://www.gabonculture.ga'},
+          ];
 
     return GridView.builder(
       padding: const EdgeInsets.all(16),
@@ -120,11 +132,22 @@ class HomeScreen extends StatelessWidget {
       ),
       itemCount: items.length,
       itemBuilder: (context, index) {
+        final item = items[index];
         return Card(
           color: const Color(0xFF1F1F1F),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: InkWell(
-            onTap: () {},
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PlayerScreen(
+                    title: item['title']!,
+                    url: item['url']!,
+                  ),
+                ),
+              );
+            },
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -135,7 +158,7 @@ class HomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  items[index],
+                  item['title']!,
                   style: const TextStyle(fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
@@ -144,6 +167,39 @@ class HomeScreen extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class PlayerScreen extends StatefulWidget {
+  final String title;
+  final String url;
+
+  const PlayerScreen({super.key, required this.title, required this.url});
+
+  @override
+  State<PlayerScreen> createState() => _PlayerScreenState();
+}
+
+class _PlayerScreenState extends State<PlayerScreen> {
+  late final WebViewController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..loadRequest(Uri.parse(widget.url));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.title),
+        backgroundColor: const Color(0xFF1F1F1F),
+      ),
+      body: WebViewWidget(controller: _controller),
     );
   }
 }

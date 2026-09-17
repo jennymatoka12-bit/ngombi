@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:http/http.dart' as http;
 
 void main() {
   runApp(const NgombiApp());
@@ -11,7 +12,7 @@ class NgombiApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'NGOMBI TV & Radio',
+      title: 'NGOMBI Direct',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF121212),
@@ -24,6 +25,12 @@ class NgombiApp extends StatelessWidget {
       home: const HomeScreen(),
     );
   }
+}
+
+class Channel {
+  final String name;
+  final String url;
+  Channel({required this.name, required this.url});
 }
 
 class HomeScreen extends StatelessWidget {
@@ -46,9 +53,10 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
         body: const TabBarView(
+          physics: NeverScrollableScrollPhysics(), // Empêche le conflit de scroll entre les onglets et la liste
           children: [
-            TvRadioZapViewer(url: 'https://tvradiozap.eu/live/x/vlc/d/tvzeu.m3u'),
-            TvRadioZapViewer(url: 'https://tvradiozap.eu/'),
+            ChannelListView(playlistUrl: 'https://tvradiozap.eu/live/x/vlc/d/tvzeu.m3u', isTv: true),
+            ChannelListView(playlistUrl: 'https://tvradiozap.eu/live/x/vlc/d/tvzeu.m3u', isTv: false),
           ],
         ),
       ),
@@ -56,52 +64,143 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class TvRadioZapViewer extends StatefulWidget {
-  final String url;
-  const TvRadioZapViewer({super.key, required this.url});
+class ChannelListView extends StatefulWidget {
+  final String playlistUrl;
+  final bool isTv;
+  const ChannelListView({super.key, required this.playlistUrl, required this.isTv});
 
   @override
-  State<TvRadioZapViewer> createState() => _TvRadioZapViewerState();
+  State<ChannelListView> createState() => _ChannelListViewState();
 }
 
-class _TvRadioZapViewerState extends State<TvRadioZapViewer> {
+class _ChannelListViewState extends State<ChannelListView> {
+  Future<List<Channel>> _fetchChannels() async {
+    try {
+      final response = await http.get(Uri.parse(widget.playlistUrl));
+      if (response.statusCode != 200) return [];
+
+      final List<Channel> channels = [];
+      final lines = response.body.split('\n');
+      String currentName = '';
+
+      for (var line in lines) {
+        line = line.trim();
+        if (line.startsWith('#EXTINF:')) {
+          final commaIndex = line.lastIndexOf(',');
+          if (commaIndex != -1) {
+            currentName = line.substring(commaIndex + 1).trim();
+          }
+        } else if (line.isNotEmpty && !line.startsWith('#')) {
+          if (currentName.isNotEmpty) {
+            channels.add(Channel(name: currentName, url: line));
+          }
+          currentName = '';
+        }
+      }
+      return channels;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Channel>>(
+      future: _fetchChannels(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: Color(0xFFE50914)));
+        }
+
+        final channels = snapshot.data ?? [];
+        if (channels.isEmpty) {
+          // Affichage de secours via le portail Web
+          return WebPortalView(isTv: widget.isTv);
+        }
+
+        return ListView.separated(
+          padding: const EdgeInsets.all(12),
+          itemCount: channels.length,
+          separatorBuilder: (context, index) => const Divider(color: Colors.white10),
+          itemBuilder: (context, index) {
+            final channel = channels[index];
+            return ListTile(
+              leading: CircleAvatar(
+                backgroundColor: const Color(0xFFE50914).withOpacity(0.2),
+                child: Icon(
+                  widget.isTv ? Icons.play_arrow_rounded : Icons.radio,
+                  color: const Color(0xFFE50914),
+                ),
+              ),
+              title: Text(channel.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+              trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PlayerScreen(title: channel.name, streamUrl: channel.url),
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class WebPortalView extends StatefulWidget {
+  final bool isTv;
+  const WebPortalView({super.key, required this.isTv});
+
+  @override
+  State<WebPortalView> createState() => _WebPortalViewState();
+}
+
+class _WebPortalViewState extends State<WebPortalView> {
   late final WebViewController _controller;
-  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageStarted: (String url) {
-            setState(() => _isLoading = true);
-          },
-          onPageFinished: (String url) {
-            setState(() => _isLoading = false);
-            // Injection CSS pour masquer l'entête, le tableau d'affichage et garder uniquement la zone vidéo
-            _controller.runJavaScript('''
-              var style = document.createElement('style');
-              style.innerHTML = 'header, footer, nav, .top-bar, #header, #footer { display: none !important; } body { background-color: #121212 !important; color: white !important; }';
-              document.head.appendChild(style);
-            ''');
-          },
-        ),
-      )
-      ..loadRequest(Uri.parse(widget.url));
+      ..loadRequest(Uri.parse('https://tvradiozap.eu/'));
   }
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        WebViewWidget(controller: _controller),
-        if (_isLoading)
-          const Center(
-            child: CircularProgressIndicator(color: Color(0xFFE50914)),
-          ),
-      ],
+    return WebViewWidget(controller: _controller);
+  }
+}
+
+class PlayerScreen extends StatefulWidget {
+  final String title;
+  final String streamUrl;
+
+  const PlayerScreen({super.key, required this.title, required this.streamUrl});
+
+  @override
+  State<PlayerScreen> createState() => _PlayerScreenState();
+}
+
+class _PlayerScreenState extends State<PlayerScreen> {
+  late final WebViewController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..loadRequest(Uri.parse(widget.streamUrl));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.title)),
+      body: WebViewWidget(controller: _controller),
     );
   }
 }

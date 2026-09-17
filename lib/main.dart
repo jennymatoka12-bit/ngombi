@@ -29,7 +29,9 @@ class NgombiApp extends StatelessWidget {
 class Channel {
   final String name;
   final String webUrl;
-  Channel({required this.name, required this.webUrl});
+  final String category;
+
+  Channel({required this.name, required this.webUrl, required this.category});
 }
 
 class HomeScreen extends StatelessWidget {
@@ -54,8 +56,8 @@ class HomeScreen extends StatelessWidget {
         body: TabBarView(
           physics: const NeverScrollableScrollPhysics(),
           children: [
-            ChannelListView(channels: tvChannels),
-            ChannelListView(channels: radioChannels),
+            ChannelListView(channels: openTvChannels),
+            ChannelListView(channels: openRadioChannels),
           ],
         ),
       ),
@@ -63,28 +65,24 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-// Liste des chaînes TV avec leurs pages de direct officielles/compatibles
-final List<Channel> tvChannels = [
-  Channel(name: 'TF1 Direct', webUrl: 'https://www.tf1.fr/tf1/direct'),
-  Channel(name: 'France 2 Direct', webUrl: 'https://www.france.tv/france-2/direct.html'),
-  Channel(name: 'France 3 Direct', webUrl: 'https://www.france.tv/france-3/direct.html'),
-  Channel(name: 'Arte Direct', webUrl: 'https://www.arte.tv/fr/direct/'),
-  Channel(name: 'M6 Direct', webUrl: 'https://www.6play.fr/m6/direct'),
-  Channel(name: 'BFM TV Direct', webUrl: 'https://www.bfmtv.com/en-direct/'),
-  Channel(name: 'CNews Direct', webUrl: 'https://www.cnews.fr/le-direct'),
-  Channel(name: 'France Info Direct', webUrl: 'https://www.francetvinfo.fr/en-direct/tv.html'),
-  Channel(name: 'TV5Monde Direct', webUrl: 'https://live.tv5monde.com/html5/index.html'),
-  Channel(name: '24h Gabon / Télé Gabon', webUrl: 'https://www.youtube.com/results?search_query=tele+gabon+direct'),
+// Sélection de chaînes accessibles dans le monde entier et SANS inscription obligatoire
+final List<Channel> openTvChannels = [
+  Channel(name: 'France 24 (Direct)', webUrl: 'https://www.youtube.com/embed/g_04bH4aT1s?autoplay=1', category: 'Information'),
+  Channel(name: 'BFM TV (Direct)', webUrl: 'https://www.bfmtv.com/en-direct/', category: 'Information'),
+  Channel(name: 'Arte (Direct)', webUrl: 'https://www.arte.tv/fr/direct/', category: 'Généraliste'),
+  Channel(name: 'TV5Monde Afrique', webUrl: 'https://afrique.tv5monde.com/df/direct-tv', category: 'Afrique'),
+  Channel(name: 'Gabon 24', webUrl: 'https://www.youtube.com/results?search_query=gabon+24+direct', category: 'Gabon'),
+  Channel(name: 'Euronews Français', webUrl: 'https://www.youtube.com/embed/py_1aB0_z_8?autoplay=1', category: 'Information'),
+  Channel(name: 'TVRadioZap (Portail WebTV)', webUrl: 'https://tvradiozap.eu/', category: 'Agrégateur'),
 ];
 
-// Liste des radios avec leurs pages de direct web
-final List<Channel> radioChannels = [
-  Channel(name: 'RFI Monde', webUrl: 'https://www.rfi.fr/fr/en-direct'),
-  Channel(name: 'Africa Radio', webUrl: 'https://www.africaradio.com/'),
-  Channel(name: 'France Inter', webUrl: 'https://www.radiofrance.fr/franceinter/direct'),
-  Channel(name: 'NRJ', webUrl: 'https://www.nrj.fr/live'),
-  Channel(name: 'Skyrock', webUrl: 'https://skyrock.fm/live'),
-  Channel(name: 'RMC', webUrl: 'https://rmc.bfmtv.com/mediaplayer/radio/'),
+// Radios en direct accessibles partout sans inscription
+final List<Channel> openRadioChannels = [
+  Channel(name: 'RFI Afrique', webUrl: 'https://www.rfi.fr/fr/en-direct', category: 'Info/Radio'),
+  Channel(name: 'Africa Radio', webUrl: 'https://www.africaradio.com/', category: 'Musique/Info'),
+  Channel(name: 'Radio Gabon', webUrl: 'https://www.radios-gabon.com/', category: 'Gabon'),
+  Channel(name: 'France Inter', webUrl: 'https://www.radiofrance.fr/franceinter/direct', category: 'Généraliste'),
+  Channel(name: 'NRJ Live', webUrl: 'https://www.nrj.fr/live', category: 'Musique'),
 ];
 
 class ChannelListView extends StatelessWidget {
@@ -108,6 +106,7 @@ class ChannelListView extends StatelessWidget {
             ),
           ),
           title: Text(channel.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+          subtitle: Text(channel.category, style: const TextStyle(color: Colors.grey, fontSize: 12)),
           trailing: const Icon(Icons.chevron_right, color: Colors.grey),
           onTap: () {
             Navigator.push(

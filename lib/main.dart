@@ -40,12 +40,12 @@ class MediaItem {
   });
 }
 
-// Liste des chaînes pointant vers le portail TVRadioZap et le flux YouTube pour le Gabon
+// Télévision (Portail TVRadioZap + Direct YouTube Gabon Télévision sans restriction)
 final List<MediaItem> tvChannels = [
   MediaItem(
     name: 'Gabon Télévision',
-    url: 'https://www.youtube.com/embed/live_stream?channel=UC8g9p1S3pT4j--81z1c5Xkg',
-    category: 'Gabon - Direct YouTube',
+    url: 'https://m.youtube.com/@GabonTélévisionOfficiel/live',
+    category: 'Gabon - Direct Officiel',
   ),
   MediaItem(
     name: 'TVRadioZap (Portail TV)',
@@ -69,23 +69,36 @@ final List<MediaItem> tvChannels = [
   ),
 ];
 
+// Radios (Flux officiels & Directs)
 final List<MediaItem> radioChannels = [
   MediaItem(
-    name: 'TVRadioZap (Portail Radios)',
-    url: 'https://tvradiozap.eu/',
-    category: 'Radios en Direct',
-    isRadio: true,
-  ),
-  MediaItem(
-    name: 'RFI Afrique',
-    url: 'https://www.rfi.fr/fr/en-direct',
+    name: 'RFI Afrique (Direct)',
+    url: 'https://live02.rfi.fr/rfiafrique-64.mp3',
     category: 'Information',
     isRadio: true,
   ),
   MediaItem(
-    name: 'Africa Radio',
-    url: 'https://www.africaradio.com/',
+    name: 'Africa Radio (Direct)',
+    url: 'https://africaradio.ice.infomaniak.ch/africaradio-128.mp3',
     category: 'Musique & Infos',
+    isRadio: true,
+  ),
+  MediaItem(
+    name: 'Urban FM 104.5 (Gabon)',
+    url: 'https://www.urbanfm.ga/',
+    category: 'Gabon - Libreville',
+    isRadio: true,
+  ),
+  MediaItem(
+    name: 'RFI Monde (Direct)',
+    url: 'https://live02.rfi.fr/rfimonde-64.mp3',
+    category: 'Information',
+    isRadio: true,
+  ),
+  MediaItem(
+    name: 'TVRadioZap (Portail Radios)',
+    url: 'https://tvradiozap.eu/',
+    category: 'Radios en Direct',
     isRadio: true,
   ),
 ];
@@ -187,7 +200,6 @@ class _WebPlayerScreenState extends State<WebPlayerScreen> {
             });
           },
           onPageFinished: (String url) {
-            // Nettoyage de l'interface du site web d'origine
             _controller.runJavaScript('''
               try {
                 document.querySelector('header')?.style.setProperty('display', 'none', 'important');

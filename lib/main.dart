@@ -40,11 +40,11 @@ class MediaItem {
   });
 }
 
-// Liste Télévision
+// Liste Télévision corrigée
 final List<MediaItem> tvChannels = [
   MediaItem(
     name: 'Gabon Télévision',
-    url: 'https://www.youtube.com/@GabonTélévisionOfficiel',
+    url: 'https://m.youtube.com/results?search_query=gabon+television+en+direct',
     category: 'Gabon - Direct & Replay',
   ),
   MediaItem(
@@ -69,17 +69,17 @@ final List<MediaItem> tvChannels = [
   ),
 ];
 
-// Liste Radios (URLs corrigées avec lecteurs web fonctionnels)
+// Liste Radios corrigée (RFI fonctionnel)
 final List<MediaItem> radioChannels = [
   MediaItem(
     name: 'RFI Afrique',
-    url: 'https://www.rfi.fr/fr/podcasts/direct-afrique',
+    url: 'https://www.rfi.fr/fr/en-direct',
     category: 'Information',
     isRadio: true,
   ),
   MediaItem(
     name: 'RFI Monde',
-    url: 'https://www.rfi.fr/fr/podcasts/direct-monde',
+    url: 'https://www.rfi.fr/fr/en-direct',
     category: 'Information',
     isRadio: true,
   ),

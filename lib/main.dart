@@ -93,7 +93,7 @@ final List<MediaItem> tvChannels = [
   ),
 ];
 
-// Base de données des Radios (Flux validés)
+// Base de données des Radios
 final List<MediaItem> radioChannels = [
   MediaItem(
     id: 'radio_1',
@@ -199,7 +199,7 @@ class MainTabScreen extends StatelessWidget {
               const SizedBox(width: 8),
               const Text(
                 'NGOMBI',
-                style: TextStyle(fontWeight: FontWeight.black, letterSpacing: 1.5),
+                style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5),
               ),
             ],
           ),
@@ -382,7 +382,7 @@ class _MediaTabWithSearchState extends State<MediaTabWithSearch> {
   }
 }
 
-// Lecteur Web avec User-Agent Desktop (Résolution Erreur 404 RFI)
+// Lecteur Web avec User-Agent Desktop
 class WebPlayerScreen extends StatefulWidget {
   final String title;
   final String url;
@@ -402,7 +402,6 @@ class _WebPlayerScreenState extends State<WebPlayerScreen> {
     super.initState();
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      // Simulation d'un navigateur Desktop pour contourner le blocage mobile RFI
       ..setUserAgent(
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       )

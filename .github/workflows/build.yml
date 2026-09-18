@@ -26,12 +26,21 @@ jobs:
           channel: 'stable'
 
       - name: Generate Android project structure
-        run: |
-          flutter create . --platforms android
-          sed -i '/<application/a \    <uses-permission android:name="android.permission.INTERNET"/>' android/app/src/main/AndroidManifest.xml
+        run: flutter create . --platforms android
 
       - name: Enable Internet Permission
-        run: chmod +x android/gradlew
+        run: |
+          chmod +x android/gradlew
+          python3 -c "
+          path = 'android/app/src/main/AndroidManifest.xml'
+          with open(path, 'r') as f:
+              content = f.read()
+          permission = '<uses-permission android:name=\"android.permission.INTERNET\"/>\n'
+          if permission not in content:
+              content = content.replace('<manifest', permission + '<manifest')
+          with open(path, 'w') as f:
+              f.write(content)
+          "
 
       - name: Get dependencies
         run: flutter pub get

@@ -26,7 +26,7 @@ jobs:
           channel: 'stable'
 
       - name: Generate Android project structure
-        run: flutter create . --platforms android
+        run: flutter create . --platforms android --org com.ngombi.app
 
       - name: Fix AndroidManifest.xml (Add Internet Permission)
         run: |
@@ -49,7 +49,7 @@ jobs:
         run: flutter pub get
 
       - name: Build APK
-        run: flutter build apk --release --android-project-arg android.compileSdkVersion=34 --android-project-arg android.minSdkVersion=23
+        run: flutter build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

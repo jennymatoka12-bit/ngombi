@@ -40,12 +40,12 @@ class MediaItem {
   });
 }
 
-// Télévision (Portail TVRadioZap + Direct YouTube Gabon Télévision sans restriction)
+// Liste Télévision
 final List<MediaItem> tvChannels = [
   MediaItem(
     name: 'Gabon Télévision',
-    url: 'https://m.youtube.com/@GabonTélévisionOfficiel/live',
-    category: 'Gabon - Direct Officiel',
+    url: 'https://www.youtube.com/@GabonTélévisionOfficiel',
+    category: 'Gabon - Direct & Replay',
   ),
   MediaItem(
     name: 'TVRadioZap (Portail TV)',
@@ -69,30 +69,24 @@ final List<MediaItem> tvChannels = [
   ),
 ];
 
-// Radios (Flux officiels & Directs)
+// Liste Radios (URLs corrigées avec lecteurs web fonctionnels)
 final List<MediaItem> radioChannels = [
   MediaItem(
-    name: 'RFI Afrique (Direct)',
-    url: 'https://live02.rfi.fr/rfiafrique-64.mp3',
+    name: 'RFI Afrique',
+    url: 'https://www.rfi.fr/fr/podcasts/direct-afrique',
     category: 'Information',
     isRadio: true,
   ),
   MediaItem(
-    name: 'Africa Radio (Direct)',
-    url: 'https://africaradio.ice.infomaniak.ch/africaradio-128.mp3',
+    name: 'RFI Monde',
+    url: 'https://www.rfi.fr/fr/podcasts/direct-monde',
+    category: 'Information',
+    isRadio: true,
+  ),
+  MediaItem(
+    name: 'Africa Radio',
+    url: 'https://www.africaradio.com/',
     category: 'Musique & Infos',
-    isRadio: true,
-  ),
-  MediaItem(
-    name: 'Urban FM 104.5 (Gabon)',
-    url: 'https://www.urbanfm.ga/',
-    category: 'Gabon - Libreville',
-    isRadio: true,
-  ),
-  MediaItem(
-    name: 'RFI Monde (Direct)',
-    url: 'https://live02.rfi.fr/rfimonde-64.mp3',
-    category: 'Information',
     isRadio: true,
   ),
   MediaItem(
@@ -200,14 +194,6 @@ class _WebPlayerScreenState extends State<WebPlayerScreen> {
             });
           },
           onPageFinished: (String url) {
-            _controller.runJavaScript('''
-              try {
-                document.querySelector('header')?.style.setProperty('display', 'none', 'important');
-                document.querySelector('footer')?.style.setProperty('display', 'none', 'important');
-                document.querySelector('.ads')?.style.setProperty('display', 'none', 'important');
-              } catch(e) {}
-            ''');
-
             if (mounted) {
               setState(() {
                 _isLoading = false;

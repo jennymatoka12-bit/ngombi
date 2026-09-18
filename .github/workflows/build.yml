@@ -31,7 +31,7 @@ jobs:
       - name: Rebuild fresh Android project structure
         run: flutter create . --platforms android --org com.ngombi.app
 
-      - name: Add Internet Permission
+      - name: Fix AndroidManifest.xml (Add Internet Permission & Embedding v2)
         run: |
           python3 -c "
           import xml.etree.ElementTree as ET
@@ -39,13 +39,26 @@ jobs:
           tree = ET.parse(path)
           root = tree.getroot()
           
+          # Add INTERNET permission
           perm_name = 'android.permission.INTERNET'
           has_perm = any(elem.attrib.get('{http://schemas.android.com/apk/res/android}name') == perm_name for elem in root.findall('uses-permission'))
-          
           if not has_perm:
               perm_elem = ET.Element('uses-permission', {'android:name': perm_name})
               root.insert(0, perm_elem)
-              tree.write(path, encoding='utf-8', xml_declaration=True)
+
+          # Add flutterEmbedding v2 meta-data
+          app = root.find('application')
+          if app is not None:
+              meta_name = 'flutterEmbedding'
+              has_meta = any(elem.attrib.get('{http://schemas.android.com/apk/res/android}name') == meta_name for elem in app.findall('meta-data'))
+              if not has_meta:
+                  meta_elem = ET.Element('meta-data', {
+                      '{http://schemas.android.com/apk/res/android}name': meta_name,
+                      '{http://schemas.android.com/apk/res/android}value': '2'
+                  })
+                  app.append(meta_elem)
+
+          tree.write(path, encoding='utf-8', xml_declaration=True)
           "
 
       - name: Get dependencies

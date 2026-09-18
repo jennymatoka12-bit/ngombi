@@ -10,6 +10,8 @@ dependencies:
   flutter:
     sdk: flutter
   webview_flutter: ^4.8.0
+  video_player: ^2.8.6
+  chewie: ^1.8.1
   http: ^1.2.0
   cupertino_icons: ^1.0.6
 

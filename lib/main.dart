@@ -56,53 +56,45 @@ class MediaItem {
 }
 
 // ==========================================
-// LISTE COMPLÈTE TÉLÉVISION
+// LISTE TÉLÉVISION
 // ==========================================
 final List<MediaItem> tvChannels = [
   MediaItem(
     id: 'gabon_tv',
     name: 'Gabon Télévision',
-    url: 'https://m.youtube.com/results?search_query=gabon+television+en+direct',
+    url: 'https://www.youtube.com/@gabontelevisionofficiel3930/streams',
     category: 'Gabon - Chaîne Nationale',
     icon: Icons.tv,
-    description: 'Actualités, direct et programmes officiels du Gabon',
+    description: 'Chaine officielle de télévision nationale du Gabon en direct',
   ),
   MediaItem(
     id: 'tv_radio_zap_tv',
     name: 'TVRadioZap (Portail TV)',
     url: 'https://tvradiozap.eu/',
-    category: 'Bouquet Généraliste',
+    category: 'Bouquet TV Francophone',
     icon: Icons.live_tv,
-    description: 'Accès direct au portail des chaînes francophones',
+    description: 'Accès au bouquet complet des chaînes francophones',
   ),
   MediaItem(
-    id: 'tf1',
-    name: 'TF1 (via TVRadioZap)',
-    url: 'https://tvradiozap.eu/',
-    category: 'Généraliste France',
-    icon: Icons.play_circle_fill,
-    description: 'Grands événements, infos et divertissements',
+    id: 'france24_fr',
+    name: 'France 24 Direct',
+    url: 'https://www.youtube.com/watch?v=R9U_sR88Rz8',
+    category: 'Information Internationale',
+    icon: Icons.language,
+    description: 'L\'information internationale 24h/24 en français',
   ),
   MediaItem(
-    id: 'france2',
-    name: 'France 2 (via TVRadioZap)',
-    url: 'https://tvradiozap.eu/',
-    category: 'Généraliste France',
-    icon: Icons.play_circle_fill,
-    description: 'Chaine publique d\'information et culture',
-  ),
-  MediaItem(
-    id: 'm6',
-    name: 'M6 (via TVRadioZap)',
-    url: 'https://tvradiozap.eu/',
-    category: 'Divertissement',
-    icon: Icons.play_circle_fill,
-    description: 'Séries, magazines et divertissements',
+    id: 'africanews',
+    name: 'Africanews Direct',
+    url: 'https://www.youtube.com/watch?v=gCNeDWCI010',
+    category: 'Information Afrique',
+    icon: Icons.public,
+    description: 'Toute l\'actualité du continent africain',
   ),
 ];
 
 // ==========================================
-// LISTE COMPLÈTE RADIOS (CHARTE & STATIONS)
+// LISTE RADIOS COMPLÈTE (LIENS DIRECTS)
 // ==========================================
 final List<MediaItem> radioChannels = [
   MediaItem(
@@ -112,7 +104,7 @@ final List<MediaItem> radioChannels = [
     category: 'Information & Débats',
     icon: Icons.radio,
     isRadio: true,
-    description: 'L\'actualité du continent africain en direct',
+    description: 'Direct RFI Afrique - Actualités et magazines',
   ),
   MediaItem(
     id: 'rfi_monde',
@@ -121,7 +113,7 @@ final List<MediaItem> radioChannels = [
     category: 'Information Internationale',
     icon: Icons.public,
     isRadio: true,
-    description: 'Le journal international en continu',
+    description: 'Journal international de RFI en continu',
   ),
   MediaItem(
     id: 'africa_radio',
@@ -130,25 +122,61 @@ final List<MediaItem> radioChannels = [
     category: 'Musique & Culture',
     icon: Icons.graphic_eq,
     isRadio: true,
-    description: 'Musique africaine, talk-shows et infos',
+    description: 'Musiques d\'Afrique, talk-shows et informations',
   ),
   MediaItem(
-    id: 'tv_radio_zap_radio',
-    name: 'TVRadioZap (Portail Radios)',
-    url: 'https://tvradiozap.eu/',
-    category: 'Bouquet Radios',
+    id: 'radio_gabon',
+    name: 'Radio Gabon (RTG)',
+    url: 'https://www.youtube.com/@gabontelevisionofficiel3930/streams',
+    category: 'Gabon - Radio Nationale',
     icon: Icons.cell_tower,
     isRadio: true,
-    description: 'Portail complet de stations radios francophones',
+    description: 'Radio Télévision Gabonaise en direct',
   ),
   MediaItem(
     id: 'urban_fm',
-    name: 'Urban FM (Gabon)',
-    url: 'https://tvradiozap.eu/',
+    name: 'Urban FM 104.5 (Gabon)',
+    url: 'https://www.urbanfm.ga/',
     category: 'Gabon - Musique & Jeunesse',
     icon: Icons.headset,
     isRadio: true,
-    description: 'La première radio urbaine du Gabon',
+    description: 'La station urbaine référence de Libreville',
+  ),
+  MediaItem(
+    id: 'bbc_afrique',
+    name: 'BBC Afrique Radio',
+    url: 'https://www.bbc.com/afrique',
+    category: 'Information & Analyses',
+    icon: Icons.newspaper,
+    isRadio: true,
+    description: 'Journaux et décryptages BBC en français',
+  ),
+  MediaItem(
+    id: 'rmc_info',
+    name: 'RMC Direct',
+    url: 'https://rmc.bfmtv.com/mediaplayer/live-audio/',
+    category: 'Talk & Sports',
+    icon: Icons.sports_mic,
+    isRadio: true,
+    description: 'Info, débats et grands événements sportifs',
+  ),
+  MediaItem(
+    id: 'rtl_france',
+    name: 'RTL Direct',
+    url: 'https://www.rtl.fr/direct',
+    category: 'Généraliste & Infos',
+    icon: Icons.radio,
+    isRadio: true,
+    description: 'Première radio généraliste de France',
+  ),
+  MediaItem(
+    id: 'europe1',
+    name: 'Europe 1 Direct',
+    url: 'https://www.europe1.fr/direct',
+    category: 'Information & Culture',
+    icon: Icons.podcasts,
+    isRadio: true,
+    description: 'Émissions, culture et journal d\'actualité',
   ),
 ];
 
@@ -406,7 +434,7 @@ class _WebPlayerScreenState extends State<WebPlayerScreen> {
                     CircularProgressIndicator(color: Color(0xFFE50914)),
                     SizedBox(height: 16),
                     Text(
-                      'Chargement de NGOMBI Direct...',
+                      'Chargement du direct...',
                       style: TextStyle(color: Colors.white70, fontSize: 13),
                     ),
                   ],

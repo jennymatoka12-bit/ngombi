@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 void main() {
@@ -56,13 +57,13 @@ class MediaItem {
 }
 
 // ==========================================
-// TÉLÉVISION
+// LISTE TÉLÉVISION
 // ==========================================
 final List<MediaItem> tvChannels = [
   MediaItem(
     id: 'gabon_tv',
     name: 'Gabon Télévision',
-    url: 'https://www.youtube.com/@gabontelevisionofficiel3930/streams',
+    url: 'https://m.youtube.com/@gabontelevisionofficiel3930/streams',
     category: 'Gabon - Chaîne Nationale',
     icon: Icons.tv,
     description: 'Chaîne officielle de télévision nationale du Gabon',
@@ -94,10 +95,9 @@ final List<MediaItem> tvChannels = [
 ];
 
 // ==========================================
-// RADIOS (CATALOGUE COMPLET & CORRIGÉ)
+// LISTE RADIOS
 // ==========================================
 final List<MediaItem> radioChannels = [
-  // --- GABON & AFRIQUE ---
   MediaItem(
     id: 'rfi_afrique',
     name: 'RFI Afrique',
@@ -119,7 +119,7 @@ final List<MediaItem> radioChannels = [
   MediaItem(
     id: 'radio_gabon',
     name: 'Radio Gabon (RTG)',
-    url: 'https://www.youtube.com/@gabontelevisionofficiel3930/streams',
+    url: 'https://m.youtube.com/@gabontelevisionofficiel3930/streams',
     category: 'Gabon - Radio Nationale',
     icon: Icons.cell_tower,
     isRadio: true,
@@ -143,8 +143,6 @@ final List<MediaItem> radioChannels = [
     isRadio: true,
     description: 'Journaux et analyses BBC en français',
   ),
-
-  // --- HITS & MUSIQUE URBAINE ---
   MediaItem(
     id: 'skyrock',
     name: 'Skyrock FM',
@@ -181,8 +179,6 @@ final List<MediaItem> radioChannels = [
     isRadio: true,
     description: 'Les plus grandes chansons des années 80, 90 et 2000',
   ),
-
-  // --- INTERNATIONAL & GENERALISTES ---
   MediaItem(
     id: 'rfi_monde',
     name: 'RFI Monde',
@@ -348,13 +344,28 @@ class MediaListView extends StatelessWidget {
           ),
           child: InkWell(
             borderRadius: BorderRadius.circular(14),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => WebPlayerScreen(item: item),
-                ),
-              );
+            onTap: () async {
+              // Pour Gabon TV, on essaie d'ouvrir l'application YouTube ou navigateur directement
+              if (item.id == 'gabon_tv') {
+                final Uri youtubeUrl = Uri.parse(item.url);
+                try {
+                  bool launched = await launchUrl(
+                    youtubeUrl,
+                    mode: LaunchMode.externalApplication,
+                  );
+                  if (launched) return;
+                } catch (_) {}
+              }
+
+              // Pour les autres médias, ouverture dans le lecteur interne
+              if (context.mounted) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => WebPlayerScreen(item: item),
+                  ),
+                );
+              }
             },
             child: Padding(
               padding: const EdgeInsets.all(14.0),
@@ -440,6 +451,7 @@ class WebPlayerScreen extends StatefulWidget {
 class _WebPlayerScreenState extends State<WebPlayerScreen> {
   late final WebViewController _controller;
   bool _isLoading = true;
+  bool _hasError = false;
 
   @override
   void initState() {
@@ -447,12 +459,17 @@ class _WebPlayerScreenState extends State<WebPlayerScreen> {
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setUserAgent(
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
       )
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (String url) {
-            if (mounted) setState(() => _isLoading = true);
+            if (mounted) {
+              setState(() {
+                _isLoading = true;
+                _hasError = false;
+              });
+            }
           },
           onPageFinished: (String url) {
             _controller.runJavaScript('''
@@ -462,6 +479,14 @@ class _WebPlayerScreenState extends State<WebPlayerScreen> {
               } catch(e) {}
             ''');
             if (mounted) setState(() => _isLoading = false);
+          },
+          onWebResourceError: (WebResourceError error) {
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+                _hasError = true;
+              });
+            }
           },
         ),
       )
@@ -474,6 +499,13 @@ class _WebPlayerScreenState extends State<WebPlayerScreen> {
       appBar: AppBar(
         title: Text(widget.item.name, style: const TextStyle(fontSize: 16)),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.open_in_browser),
+            onPressed: () async {
+              final Uri uri = Uri.parse(widget.item.url);
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => _controller.reload(),
@@ -495,6 +527,43 @@ class _WebPlayerScreenState extends State<WebPlayerScreen> {
                     Text(
                       'Chargement du direct...',
                       style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (_hasError)
+            Container(
+              color: const Color(0xFF121212),
+              padding: const EdgeInsets.all(24),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.signal_wifi_off, size: 64, color: Colors.grey),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Impossible de charger ce flux directement',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Vérifiez votre connexion internet ou ouvrez le lecteur externe.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE50914),
+                      ),
+                      onPressed: () async {
+                        final Uri uri = Uri.parse(widget.item.url);
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      },
+                      icon: const Icon(Icons.open_in_new, color: Colors.white),
+                      label: const Text('Ouvrir dans le navigateur', style: TextStyle(color: Colors.white)),
                     ),
                   ],
                 ),

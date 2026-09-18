@@ -1,6 +1,7 @@
 name: ngombi
-description: "NGOMBI - Direct TV & Radio en ligne"
+description: "Application TV et Radio en direct"
 publish_to: 'none'
+
 version: 1.0.0+1
 
 environment:
@@ -9,28 +10,16 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  firebase_core: ^3.0.0
-  firebase_auth: ^5.0.0
-  cloud_firestore: ^5.0.0
-  video_player: ^2.8.0
-  chewie: ^1.8.0
-  webview_flutter: ^4.7.0
   cupertino_icons: ^1.0.6
+  webview_flutter: ^4.7.0
+  http: ^1.2.0
+  video_player: ^2.8.6
+  chewie: ^1.8.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
-  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
-  assets:
-    - assets/icon/app_icon.png
-
-# Configuration du générateur d'icônes
-flutter_launcher_icons:
-  android: "launcher_icon"
-  ios: true
-  image_path: "assets/icon/app_icon.png"
-  min_sdk_android: 21

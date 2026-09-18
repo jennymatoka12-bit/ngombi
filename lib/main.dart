@@ -56,7 +56,7 @@ class MediaItem {
 }
 
 // ==========================================
-// LISTE TÉLÉVISION
+// TÉLÉVISION
 // ==========================================
 final List<MediaItem> tvChannels = [
   MediaItem(
@@ -65,15 +65,7 @@ final List<MediaItem> tvChannels = [
     url: 'https://www.youtube.com/@gabontelevisionofficiel3930/streams',
     category: 'Gabon - Chaîne Nationale',
     icon: Icons.tv,
-    description: 'Chaine officielle de télévision nationale du Gabon en direct',
-  ),
-  MediaItem(
-    id: 'tv_radio_zap_tv',
-    name: 'TVRadioZap (Portail TV)',
-    url: 'https://tvradiozap.eu/',
-    category: 'Bouquet TV Francophone',
-    icon: Icons.live_tv,
-    description: 'Accès au bouquet complet des chaînes francophones',
+    description: 'Chaîne officielle de télévision nationale du Gabon',
   ),
   MediaItem(
     id: 'france24_fr',
@@ -89,37 +81,37 @@ final List<MediaItem> tvChannels = [
     url: 'https://www.youtube.com/watch?v=gCNeDWCI010',
     category: 'Information Afrique',
     icon: Icons.public,
-    description: 'Toute l\'actualité du continent africain',
+    description: 'Toute l\'actualité du continent africain en direct',
+  ),
+  MediaItem(
+    id: 'tv_radio_zap_tv',
+    name: 'TVRadioZap (Portail TV)',
+    url: 'https://tvradiozap.eu/',
+    category: 'Bouquet TV Francophone',
+    icon: Icons.live_tv,
+    description: 'Portail global des chaînes TV francophones',
   ),
 ];
 
 // ==========================================
-// LISTE RADIOS COMPLÈTE (LIENS DIRECTS)
+// RADIOS (CATALOGUE COMPLET & CORRIGÉ)
 // ==========================================
 final List<MediaItem> radioChannels = [
+  // --- GABON & AFRIQUE ---
   MediaItem(
     id: 'rfi_afrique',
     name: 'RFI Afrique',
-    url: 'https://www.rfi.fr/fr/en-direct',
-    category: 'Information & Débats',
+    url: 'https://www.rfi.fr/fr/podcasts/direct-afrique',
+    category: 'Afrique - Information & Débats',
     icon: Icons.radio,
     isRadio: true,
-    description: 'Direct RFI Afrique - Actualités et magazines',
-  ),
-  MediaItem(
-    id: 'rfi_monde',
-    name: 'RFI Monde',
-    url: 'https://www.rfi.fr/fr/en-direct',
-    category: 'Information Internationale',
-    icon: Icons.public,
-    isRadio: true,
-    description: 'Journal international de RFI en continu',
+    description: 'L\'actualité du continent africain en direct',
   ),
   MediaItem(
     id: 'africa_radio',
     name: 'Africa Radio',
     url: 'https://www.africaradio.com/',
-    category: 'Musique & Culture',
+    category: 'Afrique - Musique & Culture',
     icon: Icons.graphic_eq,
     isRadio: true,
     description: 'Musiques d\'Afrique, talk-shows et informations',
@@ -131,7 +123,7 @@ final List<MediaItem> radioChannels = [
     category: 'Gabon - Radio Nationale',
     icon: Icons.cell_tower,
     isRadio: true,
-    description: 'Radio Télévision Gabonaise en direct',
+    description: 'Chaîne radio nationale du Gabon',
   ),
   MediaItem(
     id: 'urban_fm',
@@ -140,43 +132,110 @@ final List<MediaItem> radioChannels = [
     category: 'Gabon - Musique & Jeunesse',
     icon: Icons.headset,
     isRadio: true,
-    description: 'La station urbaine référence de Libreville',
+    description: 'La 1ère radio urbaine de Libreville',
   ),
   MediaItem(
     id: 'bbc_afrique',
     name: 'BBC Afrique Radio',
     url: 'https://www.bbc.com/afrique',
-    category: 'Information & Analyses',
+    category: 'Afrique - Info & Décryptage',
     icon: Icons.newspaper,
     isRadio: true,
-    description: 'Journaux et décryptages BBC en français',
+    description: 'Journaux et analyses BBC en français',
+  ),
+
+  // --- HITS & MUSIQUE URBAINE ---
+  MediaItem(
+    id: 'skyrock',
+    name: 'Skyrock FM',
+    url: 'https://skyrock.fm/',
+    category: 'Musique - Rap & Urban',
+    icon: Icons.speaker_group,
+    isRadio: true,
+    description: 'Premier sur le Rap et les Musiques Urbaines',
   ),
   MediaItem(
-    id: 'rmc_info',
-    name: 'RMC Direct',
+    id: 'trace_fm',
+    name: 'Trace FM Afrique',
+    url: 'https://www.radio.fr/s/tracefm',
+    category: 'Musique - Afro & Urban Hits',
+    icon: Icons.music_note,
+    isRadio: true,
+    description: 'Les meilleurs hits urbains et Afrobeats',
+  ),
+  MediaItem(
+    id: 'nrj',
+    name: 'NRJ Hit Music Only',
+    url: 'https://www.nrj.fr/live',
+    category: 'Musique - Hits Pop',
+    icon: Icons.library_music,
+    isRadio: true,
+    description: 'Hit Music Only - Les plus grands hits du moment',
+  ),
+  MediaItem(
+    id: 'nostalgie',
+    name: 'Nostalgie',
+    url: 'https://www.radio.fr/s/nostalgie',
+    category: 'Musique - Retro & Classiques',
+    icon: Icons.album,
+    isRadio: true,
+    description: 'Les plus grandes chansons des années 80, 90 et 2000',
+  ),
+
+  // --- INTERNATIONAL & GENERALISTES ---
+  MediaItem(
+    id: 'rfi_monde',
+    name: 'RFI Monde',
+    url: 'https://www.rfi.fr/fr/podcasts/direct-monde',
+    category: 'International - Information',
+    icon: Icons.public,
+    isRadio: true,
+    description: 'Journal international en continu',
+  ),
+  MediaItem(
+    id: 'france_info',
+    name: 'France Info',
+    url: 'https://www.francetvinfo.fr/en-direct/radio.html',
+    category: 'International - Info Continu',
+    icon: Icons.info_outline,
+    isRadio: true,
+    description: 'L\'information en continu 24h/24',
+  ),
+  MediaItem(
+    id: 'rmc',
+    name: 'RMC Info Talk Sport',
     url: 'https://rmc.bfmtv.com/mediaplayer/live-audio/',
     category: 'Talk & Sports',
-    icon: Icons.sports_mic,
+    icon: Icons.mic,
     isRadio: true,
-    description: 'Info, débats et grands événements sportifs',
+    description: 'Actualité, débats et retransmissions sportives',
   ),
   MediaItem(
-    id: 'rtl_france',
-    name: 'RTL Direct',
+    id: 'rtl',
+    name: 'RTL',
     url: 'https://www.rtl.fr/direct',
-    category: 'Généraliste & Infos',
+    category: 'Généraliste & Magazines',
     icon: Icons.radio,
     isRadio: true,
-    description: 'Première radio généraliste de France',
+    description: 'Chroniqueurs, journaux et divertissement',
   ),
   MediaItem(
     id: 'europe1',
-    name: 'Europe 1 Direct',
+    name: 'Europe 1',
     url: 'https://www.europe1.fr/direct',
-    category: 'Information & Culture',
+    category: 'Généraliste & Culture',
     icon: Icons.podcasts,
     isRadio: true,
-    description: 'Émissions, culture et journal d\'actualité',
+    description: 'Émissions d\'actualité, culture et politique',
+  ),
+  MediaItem(
+    id: 'tv_radio_zap_radio',
+    name: 'TVRadioZap (Portail Radios)',
+    url: 'https://tvradiozap.eu/',
+    category: 'Bouquet Radios Globale',
+    icon: Icons.cell_tower,
+    isRadio: true,
+    description: 'Accès au bouquet complet de stations radios',
   ),
 ];
 
@@ -388,7 +447,7 @@ class _WebPlayerScreenState extends State<WebPlayerScreen> {
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setUserAgent(
-        "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       )
       ..setNavigationDelegate(
         NavigationDelegate(

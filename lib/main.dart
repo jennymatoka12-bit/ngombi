@@ -40,7 +40,7 @@ class MediaItem {
   });
 }
 
-// Liste Télévision corrigée
+// Liste Télévision
 final List<MediaItem> tvChannels = [
   MediaItem(
     name: 'Gabon Télévision',
@@ -69,30 +69,86 @@ final List<MediaItem> tvChannels = [
   ),
 ];
 
-// Liste Radios corrigée (RFI fonctionnel)
+// Liste des Radios Corrigée (Liens sans blocage ni erreur 404)
 final List<MediaItem> radioChannels = [
+  // --- GABON & AFRIQUE ---
   MediaItem(
     name: 'RFI Afrique',
-    url: 'https://www.rfi.fr/fr/en-direct',
-    category: 'Information',
-    isRadio: true,
-  ),
-  MediaItem(
-    name: 'RFI Monde',
-    url: 'https://www.rfi.fr/fr/en-direct',
-    category: 'Information',
+    // Redirection directe vers le player fonctionnel RFI
+    url: 'https://www.rfi.fr/fr/podcasts/direct-afrique',
+    category: 'Afrique - Info & Actualités',
     isRadio: true,
   ),
   MediaItem(
     name: 'Africa Radio',
     url: 'https://www.africaradio.com/',
-    category: 'Musique & Infos',
+    category: 'Afrique - Musique & Culture',
+    isRadio: true,
+  ),
+  MediaItem(
+    name: 'BBC News Afrique',
+    url: 'https://www.bbc.com/afrique',
+    category: 'Afrique - Actualités',
+    isRadio: true,
+  ),
+
+  // --- INTERNATIONAL & INFO ---
+  MediaItem(
+    name: 'RFI Monde',
+    url: 'https://www.rfi.fr/fr/podcasts/direct-monde',
+    category: 'International - Information',
+    isRadio: true,
+  ),
+  MediaItem(
+    name: 'France Info',
+    url: 'https://www.francetvinfo.fr/en-direct/radio.html',
+    category: 'International - Info Continu',
+    isRadio: true,
+  ),
+  MediaItem(
+    name: 'France Inter',
+    url: 'https://www.radiofrance.fr/franceinter/direct',
+    category: 'International - Généraliste',
+    isRadio: true,
+  ),
+
+  // --- MUSIQUE & DIVERTISSEMENT ---
+  MediaItem(
+    name: 'Trace FM Afrique',
+    url: 'https://www.radio.fr/s/tracefm',
+    category: 'Musique - Afrobeats & Urban',
+    isRadio: true,
+  ),
+  MediaItem(
+    name: 'NRJ International',
+    url: 'https://www.nrj.fr/live',
+    category: 'Musique - Hits Pop',
+    isRadio: true,
+  ),
+  MediaItem(
+    name: 'Skyrock',
+    url: 'https://skyrock.fm/',
+    category: 'Musique - Rap & Urban',
+    isRadio: true,
+  ),
+  MediaItem(
+    name: 'Nostalgie Afrique / Int.',
+    url: 'https://www.radio.fr/s/nostalgie',
+    category: 'Musique - Retro & Classiques',
+    isRadio: true,
+  ),
+
+  // --- PORTAILS GÉNÉRAUX ---
+  MediaItem(
+    name: 'Portail Radio.fr (Monde)',
+    url: 'https://www.radio.fr/',
+    category: 'Recherche +60 000 Radios',
     isRadio: true,
   ),
   MediaItem(
     name: 'TVRadioZap (Portail Radios)',
     url: 'https://tvradiozap.eu/',
-    category: 'Radios en Direct',
+    category: 'Radios Direct & Replay',
     isRadio: true,
   ),
 ];
@@ -183,15 +239,18 @@ class _WebPlayerScreenState extends State<WebPlayerScreen> {
     super.initState();
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      // Simulation d'un User-Agent Desktop pour forcer RFI à ne pas rediriger vers une page d'erreur mobile
       ..setUserAgent(
-        "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       )
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (String url) {
-            setState(() {
-              _isLoading = true;
-            });
+            if (mounted) {
+              setState(() {
+                _isLoading = true;
+              });
+            }
           },
           onPageFinished: (String url) {
             if (mounted) {

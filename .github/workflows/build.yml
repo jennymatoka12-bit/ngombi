@@ -28,18 +28,21 @@ jobs:
       - name: Generate Android project structure
         run: flutter create . --platforms android
 
-      - name: Enable Internet Permission
+      - name: Fix AndroidManifest.xml (Add Internet Permission)
         run: |
-          chmod +x android/gradlew
           python3 -c "
+          import xml.etree.ElementTree as ET
           path = 'android/app/src/main/AndroidManifest.xml'
-          with open(path, 'r') as f:
-              content = f.read()
-          permission = '<uses-permission android:name=\"android.permission.INTERNET\"/>\n'
-          if permission not in content:
-              content = content.replace('<manifest', permission + '<manifest')
-          with open(path, 'w') as f:
-              f.write(content)
+          tree = ET.parse(path)
+          root = tree.getroot()
+          
+          perm_name = 'android.permission.INTERNET'
+          has_perm = any(elem.attrib.get('{http://schemas.android.com/apk/res/android}name') == perm_name for elem in root.findall('uses-permission'))
+          
+          if not has_perm:
+              perm_elem = ET.Element('uses-permission', {'android:name': perm_name})
+              root.insert(0, perm_elem)
+              tree.write(path, encoding='utf-8', xml_declaration=True)
           "
 
       - name: Get dependencies

@@ -1,5 +1,5 @@
 name: ngombi
-description: "Application NGOMBI TV & Radio Direct"
+description: "Application NGOMBI TV & Radio"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -9,13 +9,17 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.6
   webview_flutter: ^4.7.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.13.1
 
-flutter:
-  uses-material-design: true
+# Configuration de l'icône NGOMBI
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  min_sdk_android: 21

@@ -25,10 +25,13 @@ jobs:
           flutter-version: '3.19.6'
           channel: 'stable'
 
-      - name: Generate Android project structure
+      - name: Clean old Android files
+        run: rm -rf android
+
+      - name: Rebuild fresh Android project structure
         run: flutter create . --platforms android --org com.ngombi.app
 
-      - name: Fix AndroidManifest.xml (Add Internet Permission)
+      - name: Add Internet Permission
         run: |
           python3 -c "
           import xml.etree.ElementTree as ET

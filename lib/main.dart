@@ -62,7 +62,7 @@ final List<MediaItem> tvChannels = [
   MediaItem(
     id: 'gabon_tv',
     name: 'Gabon Télévision',
-    url: 'https://www.youtube.com/@GabonTélévisionOfficiel',
+    url: 'https://m.youtube.com/results?search_query=gabon+television+en+direct',
     category: 'Gabon - Chaîne Nationale',
     icon: Icons.tv,
     description: 'Actualités, direct et programmes officiels du Gabon',
@@ -108,7 +108,7 @@ final List<MediaItem> radioChannels = [
   MediaItem(
     id: 'rfi_afrique',
     name: 'RFI Afrique',
-    url: 'https://www.rfi.fr/fr/podcasts/direct-afrique',
+    url: 'https://www.rfi.fr/fr/en-direct',
     category: 'Information & Débats',
     icon: Icons.radio,
     isRadio: true,
@@ -117,7 +117,7 @@ final List<MediaItem> radioChannels = [
   MediaItem(
     id: 'rfi_monde',
     name: 'RFI Monde',
-    url: 'https://www.rfi.fr/fr/podcasts/direct-monde',
+    url: 'https://www.rfi.fr/fr/en-direct',
     category: 'Information Internationale',
     icon: Icons.public,
     isRadio: true,
@@ -162,11 +162,6 @@ class MainTabScreen extends StatefulWidget {
 class _MainTabScreenState extends State<MainTabScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _screens = const [
-    MediaListView(items: [], isRadioTab: false),
-    MediaListView(items: [], isRadioTab: true),
-  ];
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -189,7 +184,7 @@ class _MainTabScreenState extends State<MainTabScreen> {
                 Text(
                   'NGOMBI',
                   style: TextStyle(
-                    fontWeight: FontWeight.black,
+                    fontWeight: FontWeight.w900,
                     fontSize: 20,
                     letterSpacing: 1.5,
                     color: Colors.white,

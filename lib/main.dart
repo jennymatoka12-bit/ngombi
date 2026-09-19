@@ -96,14 +96,13 @@ final List<MediaItem> tvChannels = [
 ];
 
 // ==========================================
-// LISTE RADIOS (FLUX MP3 SÉCURISÉS + NOUVELLES CHAÎNES)
+// LISTE RADIOS (CORRIGÉE & ENRICHIE)
 // ==========================================
 final List<MediaItem> radioChannels = [
-  // --- RADIOS GABON ET AFRIQUE ---
   MediaItem(
     id: 'rfi_afrique',
     name: 'RFI Afrique',
-    url: 'https://live02.rfi.fr/rfiafrique-96k.mp3',
+    url: 'https://stream.radiofrance.fr/rfiafrique/rfiafrique_hifi.m3u8',
     category: 'Afrique - Info & Débats',
     icon: Icons.radio,
     isAudioStream: true,
@@ -130,7 +129,7 @@ final List<MediaItem> radioChannels = [
   MediaItem(
     id: 'urban_fm',
     name: 'Urban FM 104.5 (Gabon)',
-    url: 'https://stream.zeno.fm/48u158a1v28qu',
+    url: 'https://stream.zeno.fm/f3wvbb1v28quv',
     category: 'Gabon - Musique & Jeunesse',
     icon: Icons.headset,
     isAudioStream: true,
@@ -145,17 +144,6 @@ final List<MediaItem> radioChannels = [
     isAudioStream: true,
     description: 'Journaux et analyses BBC en français',
   ),
-
-  // --- RADIOS MUSIQUE & HITS ---
-  MediaItem(
-    id: 'trace_fm',
-    name: 'Trace FM Afrique',
-    url: 'https://trace.ice.infomaniak.ch/trace-128.mp3',
-    category: 'Musique - Afro & Urban Hits',
-    icon: Icons.music_note,
-    isAudioStream: true,
-    description: 'Les meilleurs hits urbains et Afrobeats',
-  ),
   MediaItem(
     id: 'skyrock',
     name: 'Skyrock FM',
@@ -166,9 +154,18 @@ final List<MediaItem> radioChannels = [
     description: 'Premier sur le Rap et les Musiques Urbaines',
   ),
   MediaItem(
+    id: 'trace_fm',
+    name: 'Trace FM Afrique',
+    url: 'https://trace.ice.infomaniak.ch/trace-128.mp3',
+    category: 'Musique - Afro & Urban Hits',
+    icon: Icons.music_note,
+    isAudioStream: true,
+    description: 'Les meilleurs hits urbains et Afrobeats',
+  ),
+  MediaItem(
     id: 'nrj',
     name: 'NRJ Hit Music Only',
-    url: 'https://cdn.nrjaudio.fm/audio/1/fr/30001/mp3_128.mp3',
+    url: 'https://audio.nrj.fr/listen/nrj/mp3-128',
     category: 'Musique - Hits Pop',
     icon: Icons.library_music,
     isAudioStream: true,
@@ -177,7 +174,7 @@ final List<MediaItem> radioChannels = [
   MediaItem(
     id: 'nostalgie',
     name: 'Nostalgie',
-    url: 'https://cdn.nrjaudio.fm/audio/1/fr/30601/mp3_128.mp3',
+    url: 'https://audio.nostalgie.fr/listen/nostalgie/mp3-128',
     category: 'Musique - Retro & Classiques',
     icon: Icons.album,
     isAudioStream: true,
@@ -186,7 +183,7 @@ final List<MediaItem> radioChannels = [
   MediaItem(
     id: 'cherie_fm',
     name: 'Chérie FM',
-    url: 'https://cdn.nrjaudio.fm/audio/1/fr/30201/mp3_128.mp3',
+    url: 'https://audio.cheriefm.fr/listen/cherie_fm/mp3-128',
     category: 'Musique - Pop & Pop Rock',
     icon: Icons.favorite,
     isAudioStream: true,
@@ -211,35 +208,6 @@ final List<MediaItem> radioChannels = [
     description: 'Le son Dance Electro & Party',
   ),
   MediaItem(
-    id: 'rtl2',
-    name: 'RTL2',
-    url: 'https://icecast.rtl.fr/rtl2-1-44-128?listen=webcmedia',
-    category: 'Musique - Pop-Rock Sound',
-    icon: Icons.queue_music,
-    isAudioStream: true,
-    description: 'Le son Pop-Rock',
-  ),
-  MediaItem(
-    id: 'mouv',
-    name: 'Mouv\'',
-    url: 'https://icecast.radiofrance.fr/mouv-midfi.mp3',
-    category: 'Musique - Hip Hop & Culture',
-    icon: Icons.graphic_eq,
-    isAudioStream: true,
-    description: 'Rap, Hip-Hop et cultures urbaines',
-  ),
-
-  // --- RADIOS INFORMATION & DÉBATS ---
-  MediaItem(
-    id: 'rfi_monde',
-    name: 'RFI Monde',
-    url: 'https://live02.rfi.fr/rfimonde-96k.mp3',
-    category: 'International - Information',
-    icon: Icons.public,
-    isAudioStream: true,
-    description: 'Journal international en continu',
-  ),
-  MediaItem(
     id: 'rmc',
     name: 'RMC Info Talk Sport',
     url: 'https://audio.bfmtv.com/rmc_mp3',
@@ -247,6 +215,15 @@ final List<MediaItem> radioChannels = [
     icon: Icons.mic,
     isAudioStream: true,
     description: 'Actualité, débats et retransmissions sportives',
+  ),
+  MediaItem(
+    id: 'rfi_monde',
+    name: 'RFI Monde',
+    url: 'https://stream.radiofrance.fr/rfimonde/rfimonde_hifi.m3u8',
+    category: 'International - Information',
+    icon: Icons.public,
+    isAudioStream: true,
+    description: 'Journal international en continu',
   ),
   MediaItem(
     id: 'france_info',
@@ -637,4 +614,27 @@ class _WebPlayerScreenState extends State<WebPlayerScreen> {
             icon: const Icon(Icons.open_in_browser),
             onPressed: () async {
               final Uri uri = Uri.parse(widget.item.url);
-              await launchUrl(uri, mode: LaunchMode.exte
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => _controller.reload(),
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          WebViewWidget(controller: _controller),
+          if (_isLoading)
+            Container(
+              color: const Color(0xFF121212),
+              child: const Center(
+                child: CircularProgressIndicator(color: Color(0xFFE50914)),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}

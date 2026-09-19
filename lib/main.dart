@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,7 +40,6 @@ class MediaItem {
   final String id;
   final String name;
   final String url;
-  final String? youtubeVideoId; // ID direct pour YouTube
   final String category;
   final IconData icon;
   final bool isRadio;
@@ -51,7 +49,6 @@ class MediaItem {
     required this.id,
     required this.name,
     required this.url,
-    this.youtubeVideoId,
     required this.category,
     required this.icon,
     this.isRadio = false,
@@ -60,14 +57,13 @@ class MediaItem {
 }
 
 // ==========================================
-// LISTE TÉLÉVISION (Avec identifiants YouTube corrigés)
+// LISTE TÉLÉVISION COMPLET
 // ==========================================
 final List<MediaItem> tvChannels = [
   MediaItem(
     id: 'gabon_tv',
     name: 'Gabon Télévision',
-    url: 'https://www.youtube.com/watch?v=live',
-    youtubeVideoId: 'gCNeDWCI010', // Id de remplacement si le live direct varie
+    url: 'https://m.youtube.com/@gabontelevisionofficiel3930/streams',
     category: 'Gabon - Chaîne Nationale',
     icon: Icons.tv,
     description: 'Chaîne officielle de télévision nationale du Gabon',
@@ -76,7 +72,6 @@ final List<MediaItem> tvChannels = [
     id: 'france24_fr',
     name: 'France 24 Direct',
     url: 'https://www.youtube.com/watch?v=R9U_sR88Rz8',
-    youtubeVideoId: 'R9U_sR88Rz8', // ID officiel du direct France 24
     category: 'Information Internationale',
     icon: Icons.language,
     description: 'L\'information internationale 24h/24 en français',
@@ -85,7 +80,6 @@ final List<MediaItem> tvChannels = [
     id: 'africanews',
     name: 'Africanews Direct',
     url: 'https://www.youtube.com/watch?v=gCNeDWCI010',
-    youtubeVideoId: 'gCNeDWCI010', // ID officiel du direct Africanews
     category: 'Information Afrique',
     icon: Icons.public,
     description: 'Toute l\'actualité du continent africain en direct',
@@ -101,7 +95,7 @@ final List<MediaItem> tvChannels = [
 ];
 
 // ==========================================
-// LISTE RADIOS
+// LISTE RADIOS COMPLETE
 // ==========================================
 final List<MediaItem> radioChannels = [
   MediaItem(
@@ -121,6 +115,15 @@ final List<MediaItem> radioChannels = [
     icon: Icons.graphic_eq,
     isRadio: true,
     description: 'Musiques d\'Afrique, talk-shows et informations',
+  ),
+  MediaItem(
+    id: 'radio_gabon',
+    name: 'Radio Gabon (RTG)',
+    url: 'https://m.youtube.com/@gabontelevisionofficiel3930/streams',
+    category: 'Gabon - Radio Nationale',
+    icon: Icons.cell_tower,
+    isRadio: true,
+    description: 'Chaîne radio nationale du Gabon',
   ),
   MediaItem(
     id: 'urban_fm',
@@ -157,6 +160,69 @@ final List<MediaItem> radioChannels = [
     icon: Icons.music_note,
     isRadio: true,
     description: 'Les meilleurs hits urbains et Afrobeats',
+  ),
+  MediaItem(
+    id: 'nrj',
+    name: 'NRJ Hit Music Only',
+    url: 'https://www.nrj.fr/live',
+    category: 'Musique - Hits Pop',
+    icon: Icons.library_music,
+    isRadio: true,
+    description: 'Hit Music Only - Les plus grands hits du moment',
+  ),
+  MediaItem(
+    id: 'nostalgie',
+    name: 'Nostalgie',
+    url: 'https://www.radio.fr/s/nostalgie',
+    category: 'Musique - Retro & Classiques',
+    icon: Icons.album,
+    isRadio: true,
+    description: 'Les plus grandes chansons des années 80, 90 et 2000',
+  ),
+  MediaItem(
+    id: 'rfi_monde',
+    name: 'RFI Monde',
+    url: 'https://www.rfi.fr/fr/podcasts/direct-monde',
+    category: 'International - Information',
+    icon: Icons.public,
+    isRadio: true,
+    description: 'Journal international en continu',
+  ),
+  MediaItem(
+    id: 'france_info',
+    name: 'France Info',
+    url: 'https://www.francetvinfo.fr/en-direct/radio.html',
+    category: 'International - Info Continu',
+    icon: Icons.info_outline,
+    isRadio: true,
+    description: 'L\'information en continu 24h/24',
+  ),
+  MediaItem(
+    id: 'rmc',
+    name: 'RMC Info Talk Sport',
+    url: 'https://rmc.bfmtv.com/mediaplayer/live-audio/',
+    category: 'Talk & Sports',
+    icon: Icons.mic,
+    isRadio: true,
+    description: 'Actualité, débats et retransmissions sportives',
+  ),
+  MediaItem(
+    id: 'rtl',
+    name: 'RTL',
+    url: 'https://www.rtl.fr/direct',
+    category: 'Généraliste & Magazines',
+    icon: Icons.radio,
+    isRadio: true,
+    description: 'Chroniqueurs, journaux et divertissement',
+  ),
+  MediaItem(
+    id: 'europe1',
+    name: 'Europe 1',
+    url: 'https://www.europe1.fr/direct',
+    category: 'Généraliste & Culture',
+    icon: Icons.podcasts,
+    isRadio: true,
+    description: 'Émissions d\'actualité, culture et politique',
   ),
   MediaItem(
     id: 'tv_radio_zap_radio',
@@ -278,12 +344,25 @@ class MediaListView extends StatelessWidget {
           ),
           child: InkWell(
             borderRadius: BorderRadius.circular(14),
-            onTap: () {
+            onTap: () async {
+              // Pour Gabon TV et Radio Gabon, ouverture directe via l'app externe
+              if (item.id == 'gabon_tv' || item.id == 'radio_gabon') {
+                final Uri youtubeUrl = Uri.parse(item.url);
+                try {
+                  bool launched = await launchUrl(
+                    youtubeUrl,
+                    mode: LaunchMode.externalApplication,
+                  );
+                  if (launched) return;
+                } catch (_) {}
+              }
+
+              // Pour les autres médias, lecture dans le lecteur interne
               if (context.mounted) {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => MediaPlayerRouter(item: item),
+                    builder: (context) => WebPlayerScreen(item: item),
                   ),
                 );
               }
@@ -360,81 +439,6 @@ class MediaListView extends StatelessWidget {
   }
 }
 
-// ROUTEUR : CHOISIT ENTRE LE LECTEUR YOUTUBE ET LE WEBVIEW CLASSIQUE
-class MediaPlayerRouter extends StatelessWidget {
-  final MediaItem item;
-
-  const MediaPlayerRouter({super.key, required this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    if (item.youtubeVideoId != null) {
-      return YoutubePlayerScreen(item: item);
-    } else {
-      return WebPlayerScreen(item: item);
-    }
-  }
-}
-
-// LECTEUR DÉDIÉ YOUTUBE (Corrige l'Erreur 153)
-class YoutubePlayerScreen extends StatefulWidget {
-  final MediaItem item;
-
-  const YoutubePlayerScreen({super.key, required this.item});
-
-  @override
-  State<YoutubePlayerScreen> createState() => _YoutubePlayerScreenState();
-}
-
-class _YoutubePlayerScreenState extends State<YoutubePlayerScreen> {
-  late YoutubePlayerController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = YoutubePlayerController.fromVideoId(
-      videoId: widget.item.youtubeVideoId!,
-      autoPlay: true,
-      params: const YoutubePlayerParams(
-        showControls: true,
-        showFullscreenButton: true,
-        strictRelatedVideos: true,
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.close();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.item.name, style: const TextStyle(fontSize: 16)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.open_in_browser),
-            onPressed: () async {
-              final Uri uri = Uri.parse(widget.item.url);
-              await launchUrl(uri, mode: LaunchMode.externalApplication);
-            },
-          ),
-        ],
-      ),
-      body: Center(
-        child: YoutubePlayer(
-          controller: _controller,
-          aspectRatio: 16 / 9,
-        ),
-      ),
-    );
-  }
-}
-
-// LECTEUR WEBVIEW POUR LES AUTRES SITES (Non-YouTube)
 class WebPlayerScreen extends StatefulWidget {
   final MediaItem item;
 
@@ -455,7 +459,7 @@ class _WebPlayerScreenState extends State<WebPlayerScreen> {
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setUserAgent(
-        "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+        "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
       )
       ..setNavigationDelegate(
         NavigationDelegate(
@@ -468,16 +472,20 @@ class _WebPlayerScreenState extends State<WebPlayerScreen> {
             }
           },
           onPageFinished: (String url) {
+            _controller.runJavaScript('''
+              try {
+                document.querySelector('header')?.style.setProperty('display', 'none', 'important');
+                document.querySelector('footer')?.style.setProperty('display', 'none', 'important');
+              } catch(e) {}
+            ''');
             if (mounted) setState(() => _isLoading = false);
           },
           onWebResourceError: (WebResourceError error) {
-            if (error.isForMainFrame == true) {
-              if (mounted) {
-                setState(() {
-                  _isLoading = false;
-                  _hasError = true;
-                });
-              }
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+                _hasError = true;
+              });
             }
           },
         ),
@@ -511,7 +519,17 @@ class _WebPlayerScreenState extends State<WebPlayerScreen> {
             Container(
               color: const Color(0xFF121212),
               child: const Center(
-                child: CircularProgressIndicator(color: Color(0xFFE50914)),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(color: Color(0xFFE50914)),
+                    SizedBox(height: 16),
+                    Text(
+                      'Chargement du direct...',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                  ],
+                ),
               ),
             ),
           if (_hasError)
@@ -524,10 +542,22 @@ class _WebPlayerScreenState extends State<WebPlayerScreen> {
                   children: [
                     const Icon(Icons.signal_wifi_off, size: 64, color: Colors.grey),
                     const SizedBox(height: 16),
-                    const Text('Impossible de charger le flux'),
-                    const SizedBox(height: 16),
+                    const Text(
+                      'Impossible de charger ce flux directement',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Vérifiez votre connexion internet ou ouvrez le lecteur externe.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
+                    const SizedBox(height: 24),
                     ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE50914)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE50914),
+                      ),
                       onPressed: () async {
                         final Uri uri = Uri.parse(widget.item.url);
                         await launchUrl(uri, mode: LaunchMode.externalApplication);

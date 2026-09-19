@@ -446,7 +446,7 @@ class _WebPlayerScreenState extends State<WebPlayerScreen> {
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setUserAgent(
-        "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+        "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
       )
       ..setNavigationDelegate(
         NavigationDelegate(
@@ -468,11 +468,14 @@ class _WebPlayerScreenState extends State<WebPlayerScreen> {
             if (mounted) setState(() => _isLoading = false);
           },
           onWebResourceError: (WebResourceError error) {
-            if (mounted) {
-              setState(() {
-                _isLoading = false;
-                _hasError = true;
-              });
+            // N'afficher l'écran d'erreur QUE si la page principale échoue
+            if (error.isForMainFrame == true) {
+              if (mounted) {
+                setState(() {
+                  _isLoading = false;
+                  _hasError = true;
+                });
+              }
             }
           },
         ),

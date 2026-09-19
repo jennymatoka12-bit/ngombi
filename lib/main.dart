@@ -63,7 +63,7 @@ final List<MediaItem> tvChannels = [
   MediaItem(
     id: 'gabon_tv',
     name: 'Gabon Télévision',
-    url: 'https://m.youtube.com/@gabontelevisionofficiel3930/streams',
+    url: 'https://www.youtube.com/@gabontelevisionofficiel3930/live',
     category: 'Gabon - Chaîne Nationale',
     icon: Icons.tv,
     description: 'Chaîne officielle de télévision nationale du Gabon',
@@ -119,7 +119,7 @@ final List<MediaItem> radioChannels = [
   MediaItem(
     id: 'radio_gabon',
     name: 'Radio Gabon (RTG)',
-    url: 'https://m.youtube.com/@gabontelevisionofficiel3930/streams',
+    url: 'https://www.youtube.com/@gabontelevisionofficiel3930/live',
     category: 'Gabon - Radio Nationale',
     icon: Icons.cell_tower,
     isRadio: true,
@@ -344,20 +344,7 @@ class MediaListView extends StatelessWidget {
           ),
           child: InkWell(
             borderRadius: BorderRadius.circular(14),
-            onTap: () async {
-              // Pour Gabon TV, on essaie d'ouvrir l'application YouTube ou navigateur directement
-              if (item.id == 'gabon_tv') {
-                final Uri youtubeUrl = Uri.parse(item.url);
-                try {
-                  bool launched = await launchUrl(
-                    youtubeUrl,
-                    mode: LaunchMode.externalApplication,
-                  );
-                  if (launched) return;
-                } catch (_) {}
-              }
-
-              // Pour les autres médias, ouverture dans le lecteur interne
+            onTap: () {
               if (context.mounted) {
                 Navigator.push(
                   context,
@@ -411,7 +398,7 @@ class MediaListView extends StatelessWidget {
                             item.category,
                             style: const TextStyle(
                               fontSize: 11,
-                              color: Color(0xFFFF4D4D),
+                              color: Color(0xFFFFFF4D4D),
                               fontWeight: FontWeight.w600,
                             ),
                           ),

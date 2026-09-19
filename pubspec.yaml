@@ -1,6 +1,6 @@
 name: ngombi_app
 description: "Application NGOMBI - TV & Radio en direct"
-publish_to: 'none' # Empêche la publication accidentelle sur pub.dev
+publish_to: 'none'
 
 version: 1.0.0+1
 
@@ -11,28 +11,18 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Packages UI et icônes
   cupertino_icons: ^1.0.8
-
-  # Navigation & Ouverture de liens externes
   url_launcher: ^6.3.1
-
-  # Affichage Web (pour les radios et flux web)
   webview_flutter: ^4.10.0
 
-  # Lecteur officiel YouTube (Corrige l'Erreur 153 sur Android & iOS)
-  youtube_player_iframe: ^5.2.1
+  # Version compatible avec Dart 3.0.x
+  youtube_player_iframe: ^4.0.4
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  # Règles de linter recommandées
-  flutter_lints: ^4.0.0
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true
-
-  # Pour ajouter des assets (images, logos) plus tard si besoin :
-  # assets:
-  #   - assets/images/

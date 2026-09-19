@@ -14,7 +14,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   url_launcher: ^6.2.0
 
-  # Versions compatibles avec Dart SDK 3.0.4
+  # Versions compatibles Dart 3.0.4
   webview_flutter: ^4.7.0
   youtube_player_iframe: ^4.0.4
 
@@ -24,5 +24,14 @@ dev_dependencies:
 
   flutter_lints: ^3.0.0
 
+  # Requis pour l'étape Generate App Icons
+  flutter_launcher_icons: ^0.13.1
+
 flutter:
   uses-material-design: true
+
+# Configuration des icônes d'application
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/icon.png"

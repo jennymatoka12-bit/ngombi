@@ -12,10 +12,10 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
-  url_launcher: ^6.3.1
-  webview_flutter: ^4.10.0
+  url_launcher: ^6.2.0
 
-  # Version compatible avec Dart 3.0.x
+  # Versions compatibles avec Dart SDK 3.0.4
+  webview_flutter: ^4.7.0
   youtube_player_iframe: ^4.0.4
 
 dev_dependencies:

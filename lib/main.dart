@@ -58,7 +58,7 @@ class MediaItem {
 }
 
 // ==========================================
-// LISTE TÉLÉVISION (LIENS DIRECTS EMBED)
+// LISTE TÉLÉVISION (INTACTE ET CONSERVÉE)
 // ==========================================
 final List<MediaItem> tvChannels = [
   MediaItem(
@@ -96,7 +96,7 @@ final List<MediaItem> tvChannels = [
 ];
 
 // ==========================================
-// LISTE RADIOS (FLUX AUDIO DIRECTS MP3/AAC)
+// LISTE RADIOS (FLUX DIRECTS MP3/STREAMING CORRIGÉS)
 // ==========================================
 final List<MediaItem> radioChannels = [
   MediaItem(
@@ -120,10 +120,10 @@ final List<MediaItem> radioChannels = [
   MediaItem(
     id: 'radio_gabon',
     name: 'Radio Gabon (RTG)',
-    url: 'https://www.youtube.com/embed/live_stream?channel=UC7K23_V1HkY0Y_K0vN69A5g',
+    url: 'https://stream.zeno.fm/f3wvbb1v28quv', // Stream direct révisé
     category: 'Gabon - Radio Nationale',
     icon: Icons.cell_tower,
-    isAudioStream: false,
+    isAudioStream: true,
     description: 'Chaîne radio nationale du Gabon',
   ),
   MediaItem(
@@ -508,6 +508,7 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                     const Text('Erreur de lecture du flux direct', style: TextStyle(color: Colors.redAccent)),
                     const SizedBox(height: 12),
                     ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE50914)),
                       onPressed: () {
                         setState(() {
                           _isLoading = true;
@@ -515,8 +516,8 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                         });
                         _initAudio();
                       },
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Réessayer'),
+                      icon: const Icon(Icons.refresh, color: Colors.white),
+                      label: const Text('Réessayer', style: TextStyle(color: Colors.white)),
                     )
                   ],
                 )

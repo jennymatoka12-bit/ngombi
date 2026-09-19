@@ -58,7 +58,7 @@ class MediaItem {
 }
 
 // ==========================================
-// LISTE TÉLÉVISION (INTACTE ET CONSERVÉE)
+// LISTE TÉLÉVISION (STRICTEMENT INTACTE)
 // ==========================================
 final List<MediaItem> tvChannels = [
   MediaItem(
@@ -96,14 +96,15 @@ final List<MediaItem> tvChannels = [
 ];
 
 // ==========================================
-// LISTE RADIOS (FLUX DIRECTS MP3/STREAMING CORRIGÉS)
+// LISTE RADIOS (FLUX MP3 SÉCURISÉS + NOUVELLES CHAÎNES)
 // ==========================================
 final List<MediaItem> radioChannels = [
+  // --- RADIOS GABON ET AFRIQUE ---
   MediaItem(
     id: 'rfi_afrique',
     name: 'RFI Afrique',
-    url: 'https://rfiafrique.ice.infomaniak.ch/rfiafrique-64.mp3',
-    category: 'Afrique - Information & Débats',
+    url: 'https://live02.rfi.fr/rfiafrique-96k.mp3',
+    category: 'Afrique - Info & Débats',
     icon: Icons.radio,
     isAudioStream: true,
     description: 'L\'actualité du continent africain en direct',
@@ -120,7 +121,7 @@ final List<MediaItem> radioChannels = [
   MediaItem(
     id: 'radio_gabon',
     name: 'Radio Gabon (RTG)',
-    url: 'https://stream.zeno.fm/f3wvbb1v28quv', // Stream direct révisé
+    url: 'https://stream.zeno.fm/f3wvbb1v28quv',
     category: 'Gabon - Radio Nationale',
     icon: Icons.cell_tower,
     isAudioStream: true,
@@ -129,7 +130,7 @@ final List<MediaItem> radioChannels = [
   MediaItem(
     id: 'urban_fm',
     name: 'Urban FM 104.5 (Gabon)',
-    url: 'https://stream.zeno.fm/f3wvbb1v28quv',
+    url: 'https://stream.zeno.fm/48u158a1v28qu',
     category: 'Gabon - Musique & Jeunesse',
     icon: Icons.headset,
     isAudioStream: true,
@@ -144,15 +145,8 @@ final List<MediaItem> radioChannels = [
     isAudioStream: true,
     description: 'Journaux et analyses BBC en français',
   ),
-  MediaItem(
-    id: 'skyrock',
-    name: 'Skyrock FM',
-    url: 'https://icecast.skyrock.net/s/natio_mp3_128k',
-    category: 'Musique - Rap & Urban',
-    icon: Icons.speaker_group,
-    isAudioStream: true,
-    description: 'Premier sur le Rap et les Musiques Urbaines',
-  ),
+
+  // --- RADIOS MUSIQUE & HITS ---
   MediaItem(
     id: 'trace_fm',
     name: 'Trace FM Afrique',
@@ -161,6 +155,15 @@ final List<MediaItem> radioChannels = [
     icon: Icons.music_note,
     isAudioStream: true,
     description: 'Les meilleurs hits urbains et Afrobeats',
+  ),
+  MediaItem(
+    id: 'skyrock',
+    name: 'Skyrock FM',
+    url: 'https://icecast.skyrock.net/s/natio_mp3_128k',
+    category: 'Musique - Rap & Urban',
+    icon: Icons.speaker_group,
+    isAudioStream: true,
+    description: 'Premier sur le Rap et les Musiques Urbaines',
   ),
   MediaItem(
     id: 'nrj',
@@ -181,22 +184,60 @@ final List<MediaItem> radioChannels = [
     description: 'Les plus grandes chansons des années 80, 90 et 2000',
   ),
   MediaItem(
+    id: 'cherie_fm',
+    name: 'Chérie FM',
+    url: 'https://cdn.nrjaudio.fm/audio/1/fr/30201/mp3_128.mp3',
+    category: 'Musique - Pop & Pop Rock',
+    icon: Icons.favorite,
+    isAudioStream: true,
+    description: 'La plus belle musique et les plus beaux hits',
+  ),
+  MediaItem(
+    id: 'rfm',
+    name: 'RFM',
+    url: 'https://rfm.ice.infomaniak.ch/rfm-128.mp3',
+    category: 'Musique - Pop Rock & Disco',
+    icon: Icons.radio,
+    isAudioStream: true,
+    description: 'Le meilleur de la musique Pop Rock',
+  ),
+  MediaItem(
+    id: 'fun_radio',
+    name: 'Fun Radio',
+    url: 'https://icecast.rtl.fr/fun-1-44-128?listen=webcmedia',
+    category: 'Musique - Dance & Electro',
+    icon: Icons.headphones,
+    isAudioStream: true,
+    description: 'Le son Dance Electro & Party',
+  ),
+  MediaItem(
+    id: 'rtl2',
+    name: 'RTL2',
+    url: 'https://icecast.rtl.fr/rtl2-1-44-128?listen=webcmedia',
+    category: 'Musique - Pop-Rock Sound',
+    icon: Icons.queue_music,
+    isAudioStream: true,
+    description: 'Le son Pop-Rock',
+  ),
+  MediaItem(
+    id: 'mouv',
+    name: 'Mouv\'',
+    url: 'https://icecast.radiofrance.fr/mouv-midfi.mp3',
+    category: 'Musique - Hip Hop & Culture',
+    icon: Icons.graphic_eq,
+    isAudioStream: true,
+    description: 'Rap, Hip-Hop et cultures urbaines',
+  ),
+
+  // --- RADIOS INFORMATION & DÉBATS ---
+  MediaItem(
     id: 'rfi_monde',
     name: 'RFI Monde',
-    url: 'https://rfimonde.ice.infomaniak.ch/rfimonde-64.mp3',
+    url: 'https://live02.rfi.fr/rfimonde-96k.mp3',
     category: 'International - Information',
     icon: Icons.public,
     isAudioStream: true,
     description: 'Journal international en continu',
-  ),
-  MediaItem(
-    id: 'france_info',
-    name: 'France Info',
-    url: 'https://icecast.radiofrance.fr/franceinfo-midfi.mp3',
-    category: 'International - Info Continu',
-    icon: Icons.info_outline,
-    isAudioStream: true,
-    description: 'L\'information en continu 24h/24',
   ),
   MediaItem(
     id: 'rmc',
@@ -206,6 +247,15 @@ final List<MediaItem> radioChannels = [
     icon: Icons.mic,
     isAudioStream: true,
     description: 'Actualité, débats et retransmissions sportives',
+  ),
+  MediaItem(
+    id: 'france_info',
+    name: 'France Info',
+    url: 'https://icecast.radiofrance.fr/franceinfo-midfi.mp3',
+    category: 'International - Info Continu',
+    icon: Icons.info_outline,
+    isAudioStream: true,
+    description: 'L\'information en continu 24h/24',
   ),
   MediaItem(
     id: 'rtl',
@@ -587,27 +637,4 @@ class _WebPlayerScreenState extends State<WebPlayerScreen> {
             icon: const Icon(Icons.open_in_browser),
             onPressed: () async {
               final Uri uri = Uri.parse(widget.item.url);
-              await launchUrl(uri, mode: LaunchMode.externalApplication);
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => _controller.reload(),
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          WebViewWidget(controller: _controller),
-          if (_isLoading)
-            Container(
-              color: const Color(0xFF121212),
-              child: const Center(
-                child: CircularProgressIndicator(color: Color(0xFFE50914)),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
+              await launchUrl(uri, mode: LaunchMode.exte

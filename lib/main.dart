@@ -57,13 +57,13 @@ class MediaItem {
 }
 
 // ==========================================
-// LISTE TÉLÉVISION
+// LISTE TÉLÉVISION (URLs corrigées pour WebView)
 // ==========================================
 final List<MediaItem> tvChannels = [
   MediaItem(
     id: 'gabon_tv',
     name: 'Gabon Télévision',
-    url: 'https://www.youtube.com/@gabontelevisionofficiel3930/live',
+    url: 'https://www.youtube.com/embed/live_stream?channel=UCv-B3N1N6P3T2S8c3p22G2w', // URL Embed corrigée
     category: 'Gabon - Chaîne Nationale',
     icon: Icons.tv,
     description: 'Chaîne officielle de télévision nationale du Gabon',
@@ -71,7 +71,7 @@ final List<MediaItem> tvChannels = [
   MediaItem(
     id: 'france24_fr',
     name: 'France 24 Direct',
-    url: 'https://www.youtube.com/watch?v=R9U_sR88Rz8',
+    url: 'https://www.youtube.com/embed/R9U_sR88Rz8?autoplay=1', // URL Embed corrigée
     category: 'Information Internationale',
     icon: Icons.language,
     description: 'L\'information internationale 24h/24 en français',
@@ -79,7 +79,7 @@ final List<MediaItem> tvChannels = [
   MediaItem(
     id: 'africanews',
     name: 'Africanews Direct',
-    url: 'https://www.youtube.com/watch?v=gCNeDWCI010',
+    url: 'https://www.youtube.com/embed/gCNeDWCI010?autoplay=1', // URL Embed corrigée
     category: 'Information Afrique',
     icon: Icons.public,
     description: 'Toute l\'actualité du continent africain en direct',
@@ -119,7 +119,7 @@ final List<MediaItem> radioChannels = [
   MediaItem(
     id: 'radio_gabon',
     name: 'Radio Gabon (RTG)',
-    url: 'https://www.youtube.com/@gabontelevisionofficiel3930/live',
+    url: 'https://www.youtube.com/embed/live_stream?channel=UCv-B3N1N6P3T2S8c3p22G2w',
     category: 'Gabon - Radio Nationale',
     icon: Icons.cell_tower,
     isRadio: true,
@@ -398,7 +398,7 @@ class MediaListView extends StatelessWidget {
                             item.category,
                             style: const TextStyle(
                               fontSize: 11,
-                              color: Color(0xFFFFFF4D4D),
+                              color: Color(0xFFFF4D4D),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -461,14 +461,13 @@ class _WebPlayerScreenState extends State<WebPlayerScreen> {
           onPageFinished: (String url) {
             _controller.runJavaScript('''
               try {
-                document.querySelector('header')?.style.setProperty('display', 'none', 'important');
-                document.querySelector('footer')?.style.setProperty('display', 'none', 'important');
+                document.querySelector('header')?.style.setProperty("display", "none", "important");
+                document.querySelector('footer')?.style.setProperty("display", "none", "important");
               } catch(e) {}
             ''');
             if (mounted) setState(() => _isLoading = false);
           },
           onWebResourceError: (WebResourceError error) {
-            // N'afficher l'écran d'erreur QUE si la page principale échoue
             if (error.isForMainFrame == true) {
               if (mounted) {
                 setState(() {

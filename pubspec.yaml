@@ -28,3 +28,10 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+# Configuration pour la génération automatique de l'icône NGOMBI
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  remove_alpha_ios: true
+  image_path: "assets/icon/icon.png"

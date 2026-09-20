@@ -9,10 +9,20 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  
+  # Pour la lecture vidéo TV / Web
   webview_flutter: ^4.7.0
   url_launcher: ^6.2.5
-  cupertino_icons: ^1.0.6
+  
+  # Pour la lecture des flux audio Radio
   just_audio: ^0.9.36
+  audio_session: ^0.1.18
+  
+  # Pour le stockage local (Favoris)
+  shared_preferences: ^2.2.2
+  
+  # Icônes iOS / Material
+  cupertino_icons: ^1.0.6
 
 dev_dependencies:
   flutter_test:

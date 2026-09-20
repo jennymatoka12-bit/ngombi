@@ -516,7 +516,9 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.item.name)),
+      appBar: AppBar(
+        title: Text(widget.item.name),
+      ),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -563,7 +565,7 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                       },
                       icon: const Icon(Icons.refresh, color: Colors.white),
                       label: const Text('Réessayer', style: TextStyle(color: Colors.white)),
-                    )
+                    ),
                   ],
                 )
               else
@@ -640,5 +642,4 @@ class _WebPlayerScreenState extends State<WebPlayerScreen> {
                 await launchUrl(uri, mode: LaunchMode.externalApplication);
               }
             },
-          ),
-       
+  

@@ -58,7 +58,7 @@ class MediaItem {
 }
 
 // ==========================================
-// LISTE TÉLÉVISION (STRICTEMENT INTACTE)
+// LISTE TÉLÉVISION
 // ==========================================
 final List<MediaItem> tvChannels = [
   MediaItem(
@@ -96,10 +96,9 @@ final List<MediaItem> tvChannels = [
 ];
 
 // ==========================================
-// LISTE RADIOS (FLUX MP3 SÉCURISÉS + NOUVELLES CHAÎNES)
+// LISTE RADIOS
 // ==========================================
 final List<MediaItem> radioChannels = [
-  // --- RADIOS GABON ET AFRIQUE ---
   MediaItem(
     id: 'rfi_afrique',
     name: 'RFI Afrique',
@@ -145,8 +144,6 @@ final List<MediaItem> radioChannels = [
     isAudioStream: true,
     description: 'Journaux et analyses BBC en français',
   ),
-
-  // --- RADIOS MUSIQUE & HITS ---
   MediaItem(
     id: 'trace_fm',
     name: 'Trace FM Afrique',
@@ -228,8 +225,6 @@ final List<MediaItem> radioChannels = [
     isAudioStream: true,
     description: 'Rap, Hip-Hop et cultures urbaines',
   ),
-
-  // --- RADIOS INFORMATION & DÉBATS ---
   MediaItem(
     id: 'rfi_monde',
     name: 'RFI Monde',
@@ -620,7 +615,11 @@ class _WebPlayerScreenState extends State<WebPlayerScreen> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageFinished: (String url) {
-            if (mounted) setState(() => _isLoading = false);
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+              });
+            }
           },
         ),
       )
@@ -637,4 +636,9 @@ class _WebPlayerScreenState extends State<WebPlayerScreen> {
             icon: const Icon(Icons.open_in_browser),
             onPressed: () async {
               final Uri uri = Uri.parse(widget.item.url);
-              await launchUrl(uri, mode: LaunchMode.exte
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+          ),
+       

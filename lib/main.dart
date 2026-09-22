@@ -20,12 +20,12 @@ class NgombiApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
-        primarySwatch: Colors.red,
+        primarySwatch: Colors.amber,
         scaffoldBackgroundColor: const Color(0xFF121212),
         cardColor: const Color(0xFF1E1E1E),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF181818),
-          elevation: 2,
+          backgroundColor: Color(0xFF1E1E1E),
+          elevation: 0,
         ),
       ),
       home: const HomeScreen(),
@@ -33,7 +33,7 @@ class NgombiApp extends StatelessWidget {
   }
 }
 
-// Modèle pour les Médias
+// Modèle de données pour les médias
 class MediaItem {
   final String id;
   final String title;
@@ -73,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   String _searchQuery = "";
   String _selectedCategory = "Toutes";
 
-  // Catalogue enrichi de chaînes TV & Radio
+  // Catalogue complet TV & Radio
   final List<MediaItem> _mediaList = [
     // --- TELEVISION ---
     MediaItem(
@@ -81,26 +81,26 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       title: 'Gabon Télévision',
       category: 'Gabon',
       type: 'TV',
-      url: 'https://www.youtube.com/watch?v=live_gabon_tv',
+      url: 'https://www.youtube.com/watch?v=d9N-J6I8L0g',
       youtubeVideoId: 'd9N-J6I8L0g',
       logoUrl: 'https://via.placeholder.com/150?text=Gabon+TV',
     ),
     MediaItem(
       id: 'tv_2',
-      title: 'France 24',
+      title: 'France 24 Direct',
       category: 'Infos',
       type: 'TV',
-      url: 'https://www.youtube.com/watch?v=R9U_sR88Rz8',
-      youtubeVideoId: 'R9U_sR88Rz8',
+      url: 'https://www.youtube.com/watch?v=gCNeDWCI0vo',
+      youtubeVideoId: 'gCNeDWCI0vo',
       logoUrl: 'https://via.placeholder.com/150?text=France+24',
     ),
     MediaItem(
       id: 'tv_3',
-      title: 'Africanews',
+      title: 'Africanews Direct',
       category: 'Infos',
       type: 'TV',
-      url: 'https://www.youtube.com/watch?v=gCNeDWCI010',
-      youtubeVideoId: 'gCNeDWCI010',
+      url: 'https://www.youtube.com/watch?v=s_8R-3Z_Ibc',
+      youtubeVideoId: 's_8R-3Z_Ibc',
       logoUrl: 'https://via.placeholder.com/150?text=Africanews',
     ),
     MediaItem(
@@ -119,15 +119,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       title: 'Radio Gabon (RTG)',
       category: 'Gabon',
       type: 'RADIO',
-      url: 'https://stream.zeno.fm/f3wvbb1v28quv',
+      url: 'http://stream.zeno.fm/f32b8429948h',
       logoUrl: 'https://via.placeholder.com/150?text=Radio+Gabon',
     ),
     MediaItem(
       id: 'radio_2',
-      title: 'Urban FM 104.5',
+      title: 'Urban FM Libreville',
       category: 'Gabon',
       type: 'RADIO',
-      url: 'https://stream.zeno.fm/f3wvbb1v28quv',
+      url: 'https://stream.zeno.fm/v77u2v45e5quv',
       logoUrl: 'https://via.placeholder.com/150?text=Urban+FM',
     ),
     MediaItem(
@@ -135,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       title: 'RFI Afrique',
       category: 'Infos',
       type: 'RADIO',
-      url: 'https://rfiafrique.ice.infomaniak.ch/rfiafrique-64.mp3',
+      url: 'https://rfiafrique96k.ice.infomaniak.ch/rfiafrique-96k.mp3',
       logoUrl: 'https://via.placeholder.com/150?text=RFI+Afrique',
     ),
     MediaItem(
@@ -156,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ),
     MediaItem(
       id: 'radio_6',
-      title: 'Skyrock FM',
+      title: 'Skyrock',
       category: 'Musique',
       type: 'RADIO',
       url: 'https://icecast.skyrock.net/s/natio_mp3_128k',
@@ -172,7 +172,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ),
     MediaItem(
       id: 'radio_8',
-      title: 'NRJ Hits',
+      title: 'NRJ',
       category: 'Musique',
       type: 'RADIO',
       url: 'https://cdn.nrjaudio.fm/audio/1/fr/30001/mp3_128.mp3',
@@ -188,11 +188,43 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ),
     MediaItem(
       id: 'radio_10',
+      title: 'RFI Monde',
+      category: 'Infos',
+      type: 'RADIO',
+      url: 'https://rfimonde96k.ice.infomaniak.ch/rfimonde-96k.mp3',
+      logoUrl: 'https://via.placeholder.com/150?text=RFI+Monde',
+    ),
+    MediaItem(
+      id: 'radio_11',
       title: 'France Info',
       category: 'Infos',
       type: 'RADIO',
       url: 'https://icecast.radiofrance.fr/franceinfo-midfi.mp3',
       logoUrl: 'https://via.placeholder.com/150?text=France+Info',
+    ),
+    MediaItem(
+      id: 'radio_12',
+      title: 'RMC',
+      category: 'Infos',
+      type: 'RADIO',
+      url: 'https://audio.rmc.fr/rmc.mp3',
+      logoUrl: 'https://via.placeholder.com/150?text=RMC',
+    ),
+    MediaItem(
+      id: 'radio_13',
+      title: 'RTL',
+      category: 'Infos',
+      type: 'RADIO',
+      url: 'https://icecast.rtl.fr/rtl-1-44-128?listen=web',
+      logoUrl: 'https://via.placeholder.com/150?text=RTL',
+    ),
+    MediaItem(
+      id: 'radio_14',
+      title: 'Europe 1',
+      category: 'Infos',
+      type: 'RADIO',
+      url: 'https://stream.europe1.fr/europe1.mp3',
+      logoUrl: 'https://via.placeholder.com/150?text=Europe+1',
     ),
   ];
 
@@ -220,6 +252,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     super.dispose();
   }
 
+  // Chargement des favoris sauvegardés
   Future<void> _loadFavorites() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -227,6 +260,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     });
   }
 
+  // Basculer un élément en favori
   Future<void> _toggleFavorite(String id) async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -239,6 +273,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     await prefs.setStringList('favorites', _favoriteIds);
   }
 
+  // Gestion de la lecture Radio
   Future<void> _playRadio(MediaItem item) async {
     try {
       if (_currentRadio?.id == item.id && _isPlayingRadio) {
@@ -278,7 +313,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         title: const Text('NGOMBI Direct', style: TextStyle(fontWeight: FontWeight.bold)),
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: const Color(0xFFE50914),
+          indicatorColor: Colors.amber,
           tabs: const [
             Tab(icon: Icon(Icons.tv), text: "TÉLÉVISION"),
             Tab(icon: Icon(Icons.radio), text: "RADIO"),
@@ -303,6 +338,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
+  // Barre de recherche et de filtres par catégories
   Widget _buildSearchAndFilterBar() {
     final categories = ["Toutes", "Gabon", "Infos", "Musique", "Bouquet TV"];
 
@@ -315,7 +351,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             onChanged: (val) => setState(() => _searchQuery = val),
             decoration: InputDecoration(
               hintText: 'Rechercher une chaîne...',
-              prefixIcon: const Icon(Icons.search, color: Color(0xFFE50914)),
+              prefixIcon: const Icon(Icons.search, color: Colors.amber),
               filled: true,
               fillColor: const Color(0xFF2C2C2C),
               contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
@@ -336,9 +372,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   child: FilterChip(
                     label: Text(cat),
                     selected: isSelected,
-                    selectedColor: const Color(0xFFE50914),
+                    selectedColor: Colors.amber,
                     labelStyle: TextStyle(
-                      color: Colors.white,
+                      color: isSelected ? Colors.black : Colors.white,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
                     backgroundColor: const Color(0xFF2C2C2C),
@@ -357,6 +393,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
+  // Grille / Liste des médias avec priorité aux favoris
   Widget _buildMediaGrid(String type) {
     var filteredList = _mediaList.where((item) {
       final matchesType = item.type == type;
@@ -390,7 +427,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             contentPadding: const EdgeInsets.all(8),
             leading: CircleAvatar(
               radius: 28,
-              backgroundColor: const Color(0xFFE50914),
+              backgroundColor: Colors.amber.shade800,
               child: Text(
                 item.title.substring(0, 2).toUpperCase(),
                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -411,8 +448,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 if (type == 'TV')
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE50914),
-                      foregroundColor: Colors.white,
+                      backgroundColor: Colors.amber,
+                      foregroundColor: Colors.black,
                     ),
                     icon: const Icon(Icons.play_arrow, size: 18),
                     label: const Text('Regarder'),
@@ -422,7 +459,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   IconButton(
                     icon: Icon(
                       isSelectedRadio && _isPlayingRadio ? Icons.pause_circle_filled : Icons.play_circle_fill,
-                      color: const Color(0xFFE50914),
+                      color: Colors.amber,
                       size: 36,
                     ),
                     onPressed: () => _playRadio(item),
@@ -435,13 +472,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
+  // Mini-Lecteur Audio Flottant
   Widget _buildMiniPlayer() {
     return Container(
       color: const Color(0xFF2C2C2C),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          const Icon(Icons.radio, color: Color(0xFFE50914)),
+          const Icon(Icons.radio, color: Colors.amber),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -464,7 +502,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             const SizedBox(
               width: 24,
               height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFE50914)),
+              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.amber),
             )
           else
             IconButton(
@@ -480,6 +518,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
+  // Aiguillage vers le bon lecteur TV
   void _openTvPlayer(MediaItem item) {
     if (item.youtubeVideoId != null) {
       Navigator.push(
@@ -499,7 +538,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 }
 
-// Lecteur Vidéo YouTube
+// Lecteur Vidéo YouTube Natif
 class TvPlayerScreen extends StatefulWidget {
   final MediaItem item;
 
@@ -534,13 +573,15 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.item.title)),
+      appBar: AppBar(
+        title: Text(widget.item.title),
+      ),
       body: Column(
         children: [
           YoutubePlayer(
             controller: _controller,
             showVideoProgressIndicator: true,
-            progressIndicatorColor: const Color(0xFFE50914),
+            progressIndicatorColor: Colors.amber,
           ),
           Padding(
             padding: const EdgeInsets.all(16.0),
@@ -556,7 +597,7 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
                 const SizedBox(height: 20),
                 OutlinedButton.icon(
                   icon: const Icon(Icons.open_in_new),
-                  label: const Text("Ouvrir dans l'application YouTube"),
+                  label: const Text("Ouvrir dans l'application YouTube (Secours)"),
                   onPressed: () {
                     final url = 'https://www.youtube.com/watch?v=${widget.item.youtubeVideoId}';
                     launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
@@ -571,7 +612,7 @@ class _TvPlayerScreenState extends State<TvPlayerScreen> {
   }
 }
 
-// Lecteur Web pour les liens hors YouTube
+// Lecteur Web pour les flux HTTP / Web (ex: TVRadioZap)
 class WebTvPlayerScreen extends StatefulWidget {
   final MediaItem item;
 
@@ -589,13 +630,16 @@ class _WebTvPlayerScreenState extends State<WebTvPlayerScreen> {
     super.initState();
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setUserAgent("Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36")
       ..loadRequest(Uri.parse(widget.item.url));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.item.title)),
+      appBar: AppBar(
+        title: Text(widget.item.title),
+      ),
       body: WebViewWidget(controller: _controller),
     );
   }

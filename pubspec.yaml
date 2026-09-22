@@ -1,5 +1,5 @@
-name: ngombi_app
-description: "Application NGOMBI - TV & Radio en direct"
+name: ngombi
+description: "NGOMBI - Application de TV et Radio en direct"
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -14,10 +14,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   url_launcher: ^6.2.5
   webview_flutter: ^4.7.0
-
-  # Packages requis par lib/main.dart (Version fixée pour Flutter 3.22+)
   youtube_player_flutter: ^9.1.1
   just_audio: ^0.9.36
+  audio_session: ^0.1.18
   shared_preferences: ^2.2.2
 
 dev_dependencies:
@@ -25,6 +24,15 @@ dev_dependencies:
     sdk: flutter
 
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: true
+  image_path: "assets/icon/icon.png"
+  min_sdk_android: 21
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/icon/

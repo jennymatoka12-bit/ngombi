@@ -1,4 +1,4 @@
-package com.example.ngombi_app;
+package com.example.ngombi;
 
 import io.flutter.embedding.android.FlutterActivity;
 

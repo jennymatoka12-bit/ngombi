@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const NgombiApp());
 }
@@ -16,500 +17,467 @@ class NgombiApp extends StatelessWidget {
     return MaterialApp(
       title: 'NGOMBI Direct',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        primarySwatch: Colors.amber,
         scaffoldBackgroundColor: const Color(0xFF121212),
-        primaryColor: const Color(0xFFE50914),
         cardColor: const Color(0xFF1E1E1E),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF181818),
-          elevation: 4,
-          shadowColor: Colors.black54,
-          centerTitle: true,
-        ),
-        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-          backgroundColor: Color(0xFF181818),
-          selectedItemColor: Color(0xFFE50914),
-          unselectedItemColor: Colors.grey,
+          backgroundColor: Color(0xFF1E1E1E),
+          elevation: 0,
         ),
       ),
-      home: const MainTabScreen(),
+      home: const HomeScreen(),
     );
   }
 }
 
+// Model pour les Médias
 class MediaItem {
   final String id;
-  final String name;
-  final String url;
+  final String title;
   final String category;
-  final IconData icon;
-  final bool isAudioStream;
-  final String description;
+  final String type; // 'TV' ou 'RADIO'
+  final String url;
+  final String? youtubeVideoId;
+  final String logoUrl;
 
   MediaItem({
     required this.id,
-    required this.name,
-    required this.url,
+    required this.title,
     required this.category,
-    required this.icon,
-    this.isAudioStream = false,
-    this.description = '',
+    required this.type,
+    required this.url,
+    this.youtubeVideoId,
+    required this.logoUrl,
   });
 }
 
-// ==========================================
-// LISTE TÉLÉVISION
-// ==========================================
-final List<MediaItem> tvChannels = [
-  MediaItem(
-    id: 'gabon_tv',
-    name: 'Gabon Télévision',
-    url: 'https://www.youtube.com/embed/live_stream?channel=UC7K23_V1HkY0Y_K0vN69A5g',
-    category: 'Gabon - Chaîne Nationale',
-    icon: Icons.tv,
-    description: 'Chaîne officielle de télévision nationale du Gabon',
-  ),
-  MediaItem(
-    id: 'france24_fr',
-    name: 'France 24 Direct',
-    url: 'https://www.youtube.com/embed/R9U_sR88Rz8?autoplay=1',
-    category: 'Information Internationale',
-    icon: Icons.language,
-    description: 'L\'information internationale 24h/24 en français',
-  ),
-  MediaItem(
-    id: 'africanews',
-    name: 'Africanews Direct',
-    url: 'https://www.youtube.com/embed/gCNeDWCI010?autoplay=1',
-    category: 'Information Afrique',
-    icon: Icons.public,
-    description: 'Toute l\'actualité du continent africain en direct',
-  ),
-  MediaItem(
-    id: 'tv_radio_zap_tv',
-    name: 'TVRadioZap (Portail TV)',
-    url: 'https://tvradiozap.eu/',
-    category: 'Bouquet TV Francophone',
-    icon: Icons.live_tv,
-    description: 'Portail global des chaînes TV francophones',
-  ),
-];
-
-// ==========================================
-// LISTE RADIOS
-// ==========================================
-final List<MediaItem> radioChannels = [
-  MediaItem(
-    id: 'rfi_afrique',
-    name: 'RFI Afrique',
-    url: 'https://live02.rfi.fr/rfiafrique-96k.mp3',
-    category: 'Afrique - Info & Débats',
-    icon: Icons.radio,
-    isAudioStream: true,
-    description: 'L\'actualité du continent africain en direct',
-  ),
-  MediaItem(
-    id: 'africa_radio',
-    name: 'Africa Radio',
-    url: 'https://africaradio.ice.infomaniak.ch/africaradio-128.mp3',
-    category: 'Afrique - Musique & Culture',
-    icon: Icons.graphic_eq,
-    isAudioStream: true,
-    description: 'Musiques d\'Afrique, talk-shows et informations',
-  ),
-  MediaItem(
-    id: 'radio_gabon',
-    name: 'Radio Gabon (RTG)',
-    url: 'https://stream.zeno.fm/f3wvbb1v28quv',
-    category: 'Gabon - Radio Nationale',
-    icon: Icons.cell_tower,
-    isAudioStream: true,
-    description: 'Chaîne radio nationale du Gabon',
-  ),
-  MediaItem(
-    id: 'urban_fm',
-    name: 'Urban FM 104.5 (Gabon)',
-    url: 'https://stream.zeno.fm/48u158a1v28qu',
-    category: 'Gabon - Musique & Jeunesse',
-    icon: Icons.headset,
-    isAudioStream: true,
-    description: 'La 1ère radio urbaine de Libreville',
-  ),
-  MediaItem(
-    id: 'bbc_afrique',
-    name: 'BBC Afrique Radio',
-    url: 'https://stream.live.vc.bbcmedia.co.uk/bbc_world_service',
-    category: 'Afrique - Info & Décryptage',
-    icon: Icons.newspaper,
-    isAudioStream: true,
-    description: 'Journaux et analyses BBC en français',
-  ),
-  MediaItem(
-    id: 'trace_fm',
-    name: 'Trace FM Afrique',
-    url: 'https://trace.ice.infomaniak.ch/trace-128.mp3',
-    category: 'Musique - Afro & Urban Hits',
-    icon: Icons.music_note,
-    isAudioStream: true,
-    description: 'Les meilleurs hits urbains et Afrobeats',
-  ),
-  MediaItem(
-    id: 'skyrock',
-    name: 'Skyrock FM',
-    url: 'https://icecast.skyrock.net/s/natio_mp3_128k',
-    category: 'Musique - Rap & Urban',
-    icon: Icons.speaker_group,
-    isAudioStream: true,
-    description: 'Premier sur le Rap et les Musiques Urbaines',
-  ),
-  MediaItem(
-    id: 'nrj',
-    name: 'NRJ Hit Music Only',
-    url: 'https://cdn.nrjaudio.fm/audio/1/fr/30001/mp3_128.mp3',
-    category: 'Musique - Hits Pop',
-    icon: Icons.library_music,
-    isAudioStream: true,
-    description: 'Hit Music Only - Les plus grands hits du moment',
-  ),
-  MediaItem(
-    id: 'nostalgie',
-    name: 'Nostalgie',
-    url: 'https://cdn.nrjaudio.fm/audio/1/fr/30601/mp3_128.mp3',
-    category: 'Musique - Retro & Classiques',
-    icon: Icons.album,
-    isAudioStream: true,
-    description: 'Les plus grandes chansons des années 80, 90 et 2000',
-  ),
-  MediaItem(
-    id: 'cherie_fm',
-    name: 'Chérie FM',
-    url: 'https://cdn.nrjaudio.fm/audio/1/fr/30201/mp3_128.mp3',
-    category: 'Musique - Pop & Pop Rock',
-    icon: Icons.favorite,
-    isAudioStream: true,
-    description: 'La plus belle musique et les plus beaux hits',
-  ),
-  MediaItem(
-    id: 'rfm',
-    name: 'RFM',
-    url: 'https://rfm.ice.infomaniak.ch/rfm-128.mp3',
-    category: 'Musique - Pop Rock & Disco',
-    icon: Icons.radio,
-    isAudioStream: true,
-    description: 'Le meilleur de la musique Pop Rock',
-  ),
-  MediaItem(
-    id: 'fun_radio',
-    name: 'Fun Radio',
-    url: 'https://icecast.rtl.fr/fun-1-44-128?listen=webcmedia',
-    category: 'Musique - Dance & Electro',
-    icon: Icons.headphones,
-    isAudioStream: true,
-    description: 'Le son Dance Electro & Party',
-  ),
-  MediaItem(
-    id: 'rtl2',
-    name: 'RTL2',
-    url: 'https://icecast.rtl.fr/rtl2-1-44-128?listen=webcmedia',
-    category: 'Musique - Pop-Rock Sound',
-    icon: Icons.queue_music,
-    isAudioStream: true,
-    description: 'Le son Pop-Rock',
-  ),
-  MediaItem(
-    id: 'mouv',
-    name: 'Mouv\'',
-    url: 'https://icecast.radiofrance.fr/mouv-midfi.mp3',
-    category: 'Musique - Hip Hop & Culture',
-    icon: Icons.graphic_eq,
-    isAudioStream: true,
-    description: 'Rap, Hip-Hop et cultures urbaines',
-  ),
-  MediaItem(
-    id: 'rfi_monde',
-    name: 'RFI Monde',
-    url: 'https://live02.rfi.fr/rfimonde-96k.mp3',
-    category: 'International - Information',
-    icon: Icons.public,
-    isAudioStream: true,
-    description: 'Journal international en continu',
-  ),
-  MediaItem(
-    id: 'rmc',
-    name: 'RMC Info Talk Sport',
-    url: 'https://audio.bfmtv.com/rmc_mp3',
-    category: 'Talk & Sports',
-    icon: Icons.mic,
-    isAudioStream: true,
-    description: 'Actualité, débats et retransmissions sportives',
-  ),
-  MediaItem(
-    id: 'france_info',
-    name: 'France Info',
-    url: 'https://icecast.radiofrance.fr/franceinfo-midfi.mp3',
-    category: 'International - Info Continu',
-    icon: Icons.info_outline,
-    isAudioStream: true,
-    description: 'L\'information en continu 24h/24',
-  ),
-  MediaItem(
-    id: 'rtl',
-    name: 'RTL',
-    url: 'https://icecast.rtl.fr/rtl-1-44-128?listen=webcmedia',
-    category: 'Généraliste & Magazines',
-    icon: Icons.radio,
-    isAudioStream: true,
-    description: 'Chroniqueurs, journaux et divertissement',
-  ),
-  MediaItem(
-    id: 'europe1',
-    name: 'Europe 1',
-    url: 'https://stream.europe1.fr/europe1.mp3',
-    category: 'Généraliste & Culture',
-    icon: Icons.podcasts,
-    isAudioStream: true,
-    description: 'Émissions d\'actualité, culture et politique',
-  ),
-];
-
-class MainTabScreen extends StatefulWidget {
-  const MainTabScreen({super.key});
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
   @override
-  State<MainTabScreen> createState() => _MainTabScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _MainTabScreenState extends State<MainTabScreen> {
-  int _selectedIndex = 0;
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  
+  MediaItem? _currentRadio;
+  bool _isPlayingRadio = false;
+  bool _isLoadingRadio = false;
+  
+  List<String> _favoriteIds = [];
+  String _searchQuery = "";
+  String _selectedCategory = "Toutes";
+
+  // Base de données des chaînes TV & Radio
+  final List<MediaItem> _mediaList = [
+    // TV
+    MediaItem(
+      id: 'tv_1',
+      title: 'Gabon Télévision',
+      category: 'Gabon',
+      type: 'TV',
+      url: 'https://www.youtube.com/watch?v=live_gabon_tv',
+      youtubeVideoId: 'd9N-J6I8L0g', // ID YouTube du direct
+      logoUrl: 'https://via.placeholder.com/150?text=Gabon+TV',
+    ),
+    MediaItem(
+      id: 'tv_2',
+      title: 'France 24',
+      category: 'Infos',
+      type: 'TV',
+      url: 'https://www.youtube.com/watch?v=live_f24',
+      youtubeVideoId: 'gCNeDWCI0vo',
+      logoUrl: 'https://via.placeholder.com/150?text=France+24',
+    ),
+    MediaItem(
+      id: 'tv_3',
+      title: 'Africanews',
+      category: 'Infos',
+      type: 'TV',
+      url: 'https://www.youtube.com/watch?v=live_africanews',
+      youtubeVideoId: 's_8R-3Z_Ibc',
+      logoUrl: 'https://via.placeholder.com/150?text=Africanews',
+    ),
+    
+    // RADIOS
+    MediaItem(
+      id: 'radio_1',
+      title: 'Radio Gabon',
+      category: 'Gabon',
+      type: 'RADIO',
+      url: 'http://stream.zeno.fm/f32b8429948h', // Exemple de flux HTTP
+      logoUrl: 'https://via.placeholder.com/150?text=Radio+Gabon',
+    ),
+    MediaItem(
+      id: 'radio_2',
+      title: 'Urban FM Gabon',
+      category: 'Musique',
+      type: 'RADIO',
+      url: 'https://stream.zeno.fm/v77u2v45e5quv',
+      logoUrl: 'https://via.placeholder.com/150?text=Urban+FM',
+    ),
+    MediaItem(
+      id: 'radio_3',
+      title: 'RFI Afrique',
+      category: 'Infos',
+      type: 'RADIO',
+      url: 'https://rfiafrique96k.ice.infomaniak.ch/rfiafrique-96k.mp3',
+      logoUrl: 'https://via.placeholder.com/150?text=RFI+Afrique',
+    ),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _loadFavorites();
+
+    // Écoute des états du lecteur audio
+    _audioPlayer.playerStateStream.listen((state) {
+      if (mounted) {
+        setState(() {
+          _isPlayingRadio = state.playing;
+          _isLoadingRadio = state.processingState == ProcessingState.loading ||
+              state.processingState == ProcessingState.buffering;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+
+  // Chargement et Sauvegarde des Favoris
+  Future<void> _loadFavorites() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _favoriteIds = prefs.getStringList('favorites') ?? [];
+    });
+  }
+
+  Future<void> _toggleFavorite(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      if (_favoriteIds.contains(id)) {
+        _favoriteIds.remove(id);
+      } else {
+        _favoriteIds.add(id);
+      }
+    });
+    await prefs.setStringList('favorites', _favoriteIds);
+  }
+
+  // Gestion de la lecture Radio
+  Future<void> _playRadio(MediaItem item) async {
+    try {
+      if (_currentRadio?.id == item.id && _isPlayingRadio) {
+        await _audioPlayer.pause();
+        return;
+      }
+
+      setState(() {
+        _currentRadio = item;
+      });
+
+      await _audioPlayer.setUrl(item.url);
+      await _audioPlayer.play();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Impossible de lire le flux radio : $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _stopRadio() {
+    _audioPlayer.stop();
+    setState(() {
+      _currentRadio = null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE50914),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 20),
-            ),
-            const SizedBox(width: 10),
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'NGOMBI',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 20,
-                    letterSpacing: 1.5,
-                    color: Colors.white,
-                  ),
-                ),
-                Text(
-                  'TV & RADIO EN DIRECT',
-                  style: TextStyle(
-                    fontSize: 9,
-                    color: Color(0xFFE50914),
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ],
-            ),
+        title: const Text('NGOMBI Direct', style: TextStyle(fontWeight: FontWeight.bold)),
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: Colors.amber,
+          tabs: const [
+            Tab(icon: Icon(Icons.tv), text: "TÉLÉVISION"),
+            Tab(icon: Icon(Icons.radio), text: "RADIO"),
           ],
         ),
       ),
-      body: IndexedStack(
-        index: _selectedIndex,
+      body: Column(
         children: [
-          MediaListView(items: tvChannels),
-          MediaListView(items: radioChannels),
+          // Barre de recherche et catégories
+          _buildSearchAndFilterBar(),
+          
+          // Contenu principal (Listes)
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildMediaGrid('TV'),
+                _buildMediaGrid('RADIO'),
+              ],
+            ),
+          ),
+          
+          // Mini-Lecteur Audio Flottant
+          if (_currentRadio != null) _buildMiniPlayer(),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        selectedItemColor: const Color(0xFFE50914),
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.live_tv_rounded),
-            label: 'Télévision',
+    );
+  }
+
+  // Barre de Filtre & Recherche
+  Widget _buildSearchAndFilterBar() {
+    final categories = ["Toutes", "Gabon", "Infos", "Musique"];
+
+    return Container(
+      color: const Color(0xFF1E1E1E),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Column(
+        children: [
+          TextField(
+            onChanged: (val) => setState(() => _searchQuery = val),
+            decoration: InputDecoration(
+              hintText: 'Rechercher une chaîne...',
+              prefixIcon: const Icon(Icons.search, color: Colors.amber),
+              filled: true,
+              fillColor: const Color(0xFF2C2C2C),
+              contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(25),
+                borderSide: BorderSide.none,
+              ),
+            ),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.radio_rounded),
-            label: 'Radios',
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: categories.map((cat) {
+                final isSelected = _selectedCategory == cat;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: FilterChip(
+                    label: Text(cat),
+                    selected: isSelected,
+                    selectedColor: Colors.amber,
+                    labelStyle: TextStyle(
+                      color: isSelected ? Colors.black : Colors.white,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                    backgroundColor: const Color(0xFF2C2C2C),
+                    onSelected: (selected) {
+                      setState(() {
+                        _selectedCategory = cat;
+                      });
+                    },
+                  ),
+                );
+              }).toList(),
+            ),
           ),
         ],
       ),
     );
   }
-}
 
-class MediaListView extends StatelessWidget {
-  final List<MediaItem> items;
+  // Grille / Liste des Médias
+  Widget _buildMediaGrid(String type) {
+    var filteredList = _mediaList.where((item) {
+      final matchesType = item.type == type;
+      final matchesSearch = item.title.toLowerCase().contains(_searchQuery.toLowerCase());
+      final matchesCategory = _selectedCategory == "Toutes" || item.category == _selectedCategory;
+      return matchesType && matchesSearch && matchesCategory;
+    }).toList();
 
-  const MediaListView({super.key, required this.items});
+    // Tri pour placer les favoris en premier
+    filteredList.sort((a, b) {
+      final aFav = _favoriteIds.contains(a.id) ? 0 : 1;
+      final bFav = _favoriteIds.contains(b.id) ? 0 : 1;
+      return aFav.compareTo(bFav);
+    });
 
-  @override
-  Widget build(BuildContext context) {
+    if (filteredList.isEmpty) {
+      return const Center(child: Text("Aucune chaîne trouvée."));
+    }
+
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      itemCount: items.length,
+      padding: const EdgeInsets.all(12),
+      itemCount: filteredList.length,
       itemBuilder: (context, index) {
-        final item = items[index];
+        final item = filteredList[index];
+        final isFav = _favoriteIds.contains(item.id);
+        final isSelectedRadio = _currentRadio?.id == item.id;
+
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
-          elevation: 3,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-            side: BorderSide(color: Colors.white.withOpacity(0.05)),
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(14),
-            onTap: () {
-              if (item.isAudioStream) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => AudioPlayerScreen(item: item),
-                  ),
-                );
-              } else {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => WebPlayerScreen(item: item),
-                  ),
-                );
-              }
-            },
-            child: Padding(
-              padding: const EdgeInsets.all(14.0),
-              child: Row(
-                children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFFE50914).withOpacity(0.8),
-                          const Color(0xFF8B0000),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(item.icon, color: Colors.white, size: 26),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.name,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE50914).withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            item.category,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFFFF4D4D),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        if (item.description.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            item.description,
-                            style: const TextStyle(fontSize: 12, color: Colors.grey),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.play_arrow_rounded, color: Color(0xFFE50914), size: 28),
-                ],
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(8),
+            leading: CircleAvatar(
+              radius: 28,
+              backgroundColor: Colors.amber.shade800,
+              child: Text(
+                item.title.substring(0, 2).toUpperCase(),
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
+            ),
+            title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text('${item.category} • Direct'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: Icon(
+                    isFav ? Icons.star : Icons.star_border,
+                    color: isFav ? Colors.amber : Colors.grey,
+                  ),
+                  onPressed: () => _toggleFavorite(item.id),
+                ),
+                if (type == 'TV')
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.amber,
+                      foregroundColor: Colors.black,
+                    ),
+                    icon: const Icon(Icons.play_arrow, size: 18),
+                    label: const Text('Regarder'),
+                    onPressed: () => _openTvPlayer(item),
+                  )
+                else
+                  IconButton(
+                    icon: Icon(
+                      isSelectedRadio && _isPlayingRadio ? Icons.pause_circle_filled : Icons.play_circle_fill,
+                      color: Colors.amber,
+                      size: 36,
+                    ),
+                    onPressed: () => _playRadio(item),
+                  ),
+              ],
             ),
           ),
         );
       },
     );
   }
+
+  // Mini-Lecteur Audio Flottant
+  Widget _buildMiniPlayer() {
+    return Container(
+      color: const Color(0xFF2C2C2C),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          const Icon(Icons.radio, color: Colors.amber),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _currentRadio!.title,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const Text(
+                  "En cours de lecture...",
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+          if (_isLoadingRadio)
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.amber),
+            )
+          else
+            IconButton(
+              icon: Icon(_isPlayingRadio ? Icons.pause : Icons.play_arrow),
+              onPressed: () => _playRadio(_currentRadio!),
+            ),
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: _stopRadio,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Ouverture du lecteur TV YouTube
+  void _openTvPlayer(MediaItem item) {
+    if (item.youtubeVideoId != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => TvPlayerScreen(item: item),
+        ),
+      );
+    } else {
+      // Fallback Lien Web
+      _launchExternalUrl(item.url);
+    }
+  }
+
+  Future<void> _launchExternalUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
 }
 
-// LECTEUR AUDIO NATIF POUR LES RADIOS
-class AudioPlayerScreen extends StatefulWidget {
+// Page du lecteur vidéo YouTube natif (Affiche la vidéo sans erreurs 153/150)
+class TvPlayerScreen extends StatefulWidget {
   final MediaItem item;
-  const AudioPlayerScreen({super.key, required this.item});
+
+  const TvPlayerScreen({super.key, required this.item});
 
   @override
-  State<AudioPlayerScreen> createState() => _AudioPlayerScreenState();
+  State<TvPlayerScreen> createState() => _TvPlayerScreenState();
 }
 
-class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
-  late AudioPlayer _audioPlayer;
-  bool _isPlaying = false;
-  bool _isLoading = true;
-  bool _hasError = false;
+class _TvPlayerScreenState extends State<TvPlayerScreen> {
+  late YoutubePlayerController _controller;
 
   @override
   void initState() {
     super.initState();
-    _audioPlayer = AudioPlayer();
-    _initAudio();
-  }
-
-  Future<void> _initAudio() async {
-    try {
-      await _audioPlayer.setUrl(widget.item.url);
-      _audioPlayer.play();
-      if (mounted) {
-        setState(() {
-          _isPlaying = true;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _hasError = true;
-        });
-      }
-    }
+    _controller = YoutubePlayerController(
+      initialVideoId: widget.item.youtubeVideoId!,
+      flags: const YoutubePlayerFlags(
+        isLive: true,
+        autoPlay: true,
+        mute: false,
+      ),
+    );
   }
 
   @override
   void dispose() {
-    _audioPlayer.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
@@ -517,129 +485,41 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.item.name),
+        title: Text(widget.item.title),
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE50914).withOpacity(0.2),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFE50914), width: 3),
-                ),
-                child: Icon(widget.item.icon, size: 60, color: const Color(0xFFE50914)),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                widget.item.name,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                widget.item.category,
-                style: const TextStyle(color: Colors.grey, fontSize: 14),
-              ),
-              const SizedBox(height: 40),
-              if (_isLoading)
-                const CircularProgressIndicator(color: Color(0xFFE50914))
-              else if (_hasError)
-                Column(
-                  children: [
-                    const Text('Erreur de lecture du flux direct', style: TextStyle(color: Colors.redAccent)),
-                    const SizedBox(height: 12),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE50914)),
-                      onPressed: () {
-                        setState(() {
-                          _isLoading = true;
-                          _hasError = false;
-                        });
-                        _initAudio();
-                      },
-                      icon: const Icon(Icons.refresh, color: Colors.white),
-                      label: const Text('Réessayer', style: TextStyle(color: Colors.white)),
-                    ),
-                  ],
-                )
-              else
-                IconButton(
-                  iconSize: 72,
-                  color: const Color(0xFFE50914),
-                  icon: Icon(_isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled),
-                  onPressed: () {
-                    if (_isPlaying) {
-                      _audioPlayer.pause();
-                    } else {
-                      _audioPlayer.play();
-                    }
-                    setState(() {
-                      _isPlaying = !_isPlaying;
-                    });
-                  },
-                ),
-            ],
+      body: Column(
+        children: [
+          YoutubePlayer(
+            controller: _controller,
+            showVideoProgressIndicator: true,
+            progressIndicatorColor: Colors.amber,
+            onReady: () {},
           ),
-        ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.item.title,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text('Catégorie : ${widget.item.category}'),
+                const SizedBox(height: 20),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.open_in_new),
+                  label: const Text("Ouvrir dans l'application YouTube (Secours)"),
+                  onPressed: () {
+                    final url = 'https://www.youtube.com/watch?v=${widget.item.youtubeVideoId}';
+                    launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                  },
+                )
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 }
-
-// LECTEUR WEBVIEW POUR LES TV ET PORTAILS
-class WebPlayerScreen extends StatefulWidget {
-  final MediaItem item;
-
-  const WebPlayerScreen({super.key, required this.item});
-
-  @override
-  State<WebPlayerScreen> createState() => _WebPlayerScreenState();
-}
-
-class _WebPlayerScreenState extends State<WebPlayerScreen> {
-  late final WebViewController _controller;
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setUserAgent(
-        'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-      )
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageFinished: (String url) {
-            if (mounted) {
-              setState(() {
-                _isLoading = false;
-              });
-            }
-          },
-        ),
-      )
-      ..loadRequest(Uri.parse(widget.item.url));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.item.name, style: const TextStyle(fontSize: 16)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.open_in_browser),
-            onPressed: () async {
-              final Uri uri = Uri.parse(widget.item.url);
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              }
-            },
-  

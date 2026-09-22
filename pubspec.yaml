@@ -10,15 +10,21 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
   cupertino_icons: ^1.0.8
-  url_launcher: ^6.3.1
-  webview_flutter: ^4.10.0
-  youtube_player_iframe: ^5.2.1
+  url_launcher: ^6.2.5
+  webview_flutter: ^4.7.0
+
+  # Packages requis par lib/main.dart
+  youtube_player_flutter: ^9.0.1
+  just_audio: ^0.9.36
+  shared_preferences: ^2.2.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0
+
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true

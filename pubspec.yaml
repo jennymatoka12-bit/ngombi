@@ -11,7 +11,7 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
   
-  # Lecteur YouTube natif (Résolution des erreurs 153, 150, 400)
+  # Lecteur YouTube natif
   youtube_player_flutter: ^9.0.1
   
   # Lecteur Audio performant pour flux HTTP / HTTPS / HLS
@@ -21,7 +21,7 @@ dependencies:
   # Sauvegarde locale des favoris
   shared_preferences: ^2.2.2
   
-  # Gestion de l'ouverture des liens externes (Fallback / Secours)
+  # Gestion de l'ouverture des liens externes
   url_launcher: ^6.2.5
 
 dev_dependencies:
@@ -29,10 +29,10 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^3.0.0
   
-  # Générateur d'icône d'application pour Android et iOS
+  # Générateur d'icône d'application
   flutter_launcher_icons: ^0.13.1
 
-# Configuration de l'icône de l'application
+# Configuration du générateur d'icônes
 flutter_launcher_icons:
   android: "ic_launcher"
   ios: true
@@ -42,6 +42,6 @@ flutter_launcher_icons:
 flutter:
   uses-material-design: true
   
-  # Déclaration du dossier des ressources graphiques
+  # Déclaration des ressources graphiques
   assets:
     - assets/icon/

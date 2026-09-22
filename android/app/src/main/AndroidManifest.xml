@@ -26,6 +26,7 @@
             </intent-filter>
         </activity>
 
+        <!-- Indique obligatoirement à Flutter qu'on utilise l'Embedding v2 -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

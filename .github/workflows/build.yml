@@ -2,9 +2,10 @@ name: Build & Release NGOMBI Direct APK
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
+      - master
+  workflow_dispatch:
 
 jobs:
   build:
@@ -26,20 +27,16 @@ jobs:
         with:
           flutter-version: '3.22.3'
           channel: 'stable'
+          cache: true
 
-      - name: Prepare Android Build
-        run: |
-          flutter create . --platforms android
-          chmod +x android/gradlew
-
-      - name: Get dependencies
+      - name: Install dependencies
         run: flutter pub get
 
       - name: Build APK Release
-        run: flutter build apk --release --no-tree-shake-icons
+        run: flutter build apk --release
 
       - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: NGOMBI-Direct-APK
+          name: app-release
           path: build/app/outputs/flutter-apk/app-release.apk

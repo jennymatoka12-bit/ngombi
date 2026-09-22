@@ -29,10 +29,17 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Clean & Get Dependencies
+      - name: Recreate Android Project Structure (Clean V2 Embedding)
         run: |
-          flutter clean
-          flutter pub get
+          flutter config --no-analytics
+          flutter create . --platforms android
+
+      - name: Ensure Internet Permission and V2 Embedding
+        run: |
+          sed -i 's/<\/application>/    <uses-permission android:name="android.permission.INTERNET"\/>\n<\/application>/g' android/app/src/main/AndroidManifest.xml
+
+      - name: Get dependencies
+        run: flutter pub get
 
       - name: Build APK Release
         run: flutter build apk --release

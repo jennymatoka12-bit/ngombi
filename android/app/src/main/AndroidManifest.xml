@@ -1,5 +1,4 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.ngombi_app">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
@@ -20,7 +19,7 @@
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
             
-            <!-- Force le moteur Flutter à utiliser Android Embedding v2 -->
+            <!-- Déclaratif obligatoire pour Android Embedding v2 -->
             <meta-data
               android:name="flutterEmbedding"
               android:value="2" />
@@ -31,6 +30,7 @@
             </intent-filter>
         </activity>
 
+        <!-- Indique au moteur Flutter d'utiliser la v2 globale -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

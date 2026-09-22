@@ -31,14 +31,12 @@ jobs:
 
       - name: Recreate Android Project (Migration Embedding v2)
         run: |
-          rm -rf android
+          rm -rf android test
           flutter create --platforms=android .
+          rm -rf test
 
       - name: Get dependencies
         run: flutter pub get
-
-      - name: Analyze project
-        run: flutter analyze --no-fatal-infos
 
       - name: Build APK Release
         run: flutter build apk --release

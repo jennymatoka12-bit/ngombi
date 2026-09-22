@@ -1,5 +1,5 @@
-name: ngombi
-description: "Application NGOMBI TV et Radio en Direct"
+name: ngombi_direct
+description: "Application de streaming TV et Radio en direct - NGOMBI"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -9,33 +9,25 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  cupertino_icons: ^1.0.8
   
-  # Pour la lecture vidéo TV / Web
-  webview_flutter: ^4.7.0
-  url_launcher: ^6.2.5
+  # Lecteur YouTube natif (Résolution des erreurs 153, 150, 400)
+  youtube_player_flutter: ^9.0.1
   
-  # Pour la lecture des flux audio Radio
+  # Lecteur Audio performant pour flux HTTP / HTTPS / HLS
   just_audio: ^0.9.36
   audio_session: ^0.1.18
   
-  # Pour le stockage local (Favoris)
+  # Sauvegarde locale des favoris
   shared_preferences: ^2.2.2
   
-  # Icônes iOS / Material
-  cupertino_icons: ^1.0.6
+  # Gestion de l'ouverture des liens externes (Fallback / Secours)
+  url_launcher: ^6.2.5
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_launcher_icons: ^0.13.1
-
-flutter_launcher_icons:
-  android: "launcher_icon"
-  ios: false
-  remove_alpha_ios: true
-  image_path: "assets/icon/app_icon.png"
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true
-  assets:
-    - assets/icon/app_icon.png

@@ -1,5 +1,7 @@
 name: ngombi
+
 description: "NGOMBI - TV & Radio Direct"
+
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -14,7 +16,6 @@ dependencies:
   cupertino_icons: ^1.0.8
   url_launcher: ^6.2.5
   webview_flutter: ^4.7.0
-  youtube_player_flutter: ^9.0.4
 
 dev_dependencies:
   flutter_test:

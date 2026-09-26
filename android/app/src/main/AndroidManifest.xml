@@ -1,9 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Autorise l'accès à Internet -->
+    <!-- Accès Internet pour les flux TV, radios et pages Web -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- Permet de vérifier l'état de la connexion réseau -->
+    <!-- Vérification de l'état de la connexion -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
@@ -32,7 +32,7 @@
 
         </activity>
 
-        <!-- Flutter utilise l'Embedding V2 -->
+        <!-- Flutter Embedding V2 -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

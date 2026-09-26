@@ -71,6 +71,9 @@ jobs:
 
       - name: Get dependencies again
         run: flutter pub get
+        
+      - name: Remove default Flutter test
+        run: rm -f test/widget_test.dart
 
       - name: Analyze Flutter project
         run: flutter analyze

@@ -41,7 +41,9 @@ class NgombiApp extends StatelessWidget {
         colorSchemeSeed: Colors.red,
         scaffoldBackgroundColor: const Color(0xFF0B0B0B),
       ),
-      home: const MainTabScreen(),
+      home: MainTabScreen(
+        tvChannels: tvChannels,
+      ),
     );
   }
 }

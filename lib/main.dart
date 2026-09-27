@@ -200,7 +200,7 @@ class _MainTabScreenState extends State<MainTabScreen> {
             isTv: true,
             tvChannels: widget.tvChannels,
           ),
-          MediaListScreen(
+          const MediaListScreen(
             title: 'Radio en direct',
             items: radioChannels,
             isTv: false,

@@ -5,13 +5,29 @@ import 'package:flutter/services.dart';
 
 import 'models/tv_channel.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const NgombiApp());
+
+  final bouquet = await rootBundle.loadString(
+    'assets/tvradiozap.txt',
+  );
+
+  final tvChannels = parseEnigma2Bouquet(bouquet);
+
+  runApp(
+    NgombiApp(
+      tvChannels: tvChannels,
+    ),
+  );
 }
 
 class NgombiApp extends StatelessWidget {
-  const NgombiApp({super.key});
+  final List<TvChannel> tvChannels;
+
+  const NgombiApp({
+    super.key,
+    required this.tvChannels,
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -12,6 +12,7 @@ class TvChannel {
   final StreamType type;
   final String category;
   final String? logo;
+  final Map<String, String> headers;
 
   const TvChannel({
     required this.name,
@@ -19,14 +20,25 @@ class TvChannel {
     required this.type,
     required this.category,
     this.logo,
+    this.headers = const {},
   });
 }
 
 List<TvChannel> parseEnigma2Bouquet(String content) {
   final channels = <TvChannel>[];
 
+  String? pendingUserAgent;
+
   for (final line in content.split(RegExp(r'\r?\n'))) {
     final trimmed = line.trim();
+
+    if (trimmed.startsWith('#EXTVLCOPT:http-user-agent=')) {
+      pendingUserAgent = trimmed
+          .substring('#EXTVLCOPT:http-user-agent='.length)
+          .trim();
+
+      continue;
+    }
 
     if (!trimmed.startsWith('#SERVICE ')) {
       continue;
@@ -42,6 +54,7 @@ List<TvChannel> parseEnigma2Bouquet(String content) {
     final rawUrl = parts[10].trim();
 
     if (rawUrl.isEmpty) {
+      pendingUserAgent = null;
       continue;
     }
 
@@ -50,13 +63,24 @@ List<TvChannel> parseEnigma2Bouquet(String content) {
     );
 
     if (name.isEmpty) {
+      pendingUserAgent = null;
       continue;
     }
 
     final url = cleanStreamUrl(rawUrl);
 
     if (url.isEmpty) {
+      pendingUserAgent = null;
       continue;
+    }
+
+    final headers = <String, String>{};
+
+    if (pendingUserAgent != null &&
+        pendingUserAgent!.isNotEmpty) {
+      headers['User-Agent'] = pendingUserAgent!;
+    } else if (url.toLowerCase().contains('tvradiozap.eu')) {
+      headers['User-Agent'] = 'Mozilla/5.0';
     }
 
     channels.add(
@@ -65,8 +89,11 @@ List<TvChannel> parseEnigma2Bouquet(String content) {
         url: url,
         type: detectStreamType(url),
         category: detectCategory(name),
+        headers: headers,
       ),
     );
+
+    pendingUserAgent = null;
   }
 
   return channels;

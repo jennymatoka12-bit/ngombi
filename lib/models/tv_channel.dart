@@ -77,10 +77,10 @@ List<TvChannel> parseEnigma2Bouquet(String content) {
     final headers = <String, String>{};
 
     if (pendingUserAgent != null &&
-        pendingUserAgent!.isNotEmpty) {
-      headers['User-Agent'] = pendingUserAgent!;
-    } else if (url.toLowerCase().contains('tvradiozap.eu')) {
-      headers['User-Agent'] = 'Mozilla/5.0';
+    pendingUserAgent.isNotEmpty) {
+  headers['User-Agent'] = pendingUserAgent;
+} else if (url.toLowerCase().contains('tvradiozap.eu')) {
+  headers['User-Agent'] = 'Mozilla/5.0';
     }
 
     channels.add(

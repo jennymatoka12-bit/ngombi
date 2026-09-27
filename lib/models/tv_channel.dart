@@ -78,9 +78,9 @@ String cleanStreamUrl(String rawUrl) {
   final lower = url.toLowerCase();
 
   if (lower.startsWith('https%3a//')) {
-    url = 'https://' + url.substring('https%3a//'.length);
+    url = 'https://${url.substring('https%3a//'.length)}';
   } else if (lower.startsWith('http%3a//')) {
-    url = 'http://' + url.substring('http%3a//'.length);
+    url = 'http://${url.substring('http%3a//'.length)}';
   }
 
   final hashIndex = url.indexOf('#');

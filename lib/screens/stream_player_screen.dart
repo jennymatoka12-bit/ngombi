@@ -16,7 +16,7 @@ class StreamPlayerScreen extends StatefulWidget {
 }
 
 class _StreamPlayerScreenState extends State<StreamPlayerScreen> {
-  late final VideoPlayerController _controller;
+  VideoPlayerController? _controller;
 
   bool _initialized = false;
   String? _errorMessage;
@@ -29,13 +29,17 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen> {
 
   Future<void> _initializePlayer() async {
     try {
-      _controller = VideoPlayerController.networkUrl(
+      final controller = VideoPlayerController.networkUrl(
         Uri.parse(widget.channel.url),
+        httpHeaders: widget.channel.headers,
       );
 
-      await _controller.initialize();
+      _controller = controller;
+
+      await controller.initialize();
 
       if (!mounted) {
+        controller.dispose();
         return;
       }
 
@@ -43,7 +47,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen> {
         _initialized = true;
       });
 
-      await _controller.play();
+      await controller.play();
     } catch (error) {
       if (!mounted) {
         return;
@@ -57,10 +61,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen> {
 
   @override
   void dispose() {
-    if (_initialized) {
-      _controller.dispose();
-    }
-
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -101,8 +102,8 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Le flux peut être indisponible ou nécessiter une '
-              'protection DRM non prise en charge par ce lecteur.',
+              'Le flux peut être indisponible, géobloqué ou '
+              'nécessiter une protection non prise en charge.',
               style: TextStyle(
                 color: Colors.grey.shade400,
               ),
@@ -116,6 +117,9 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen> {
                   _initialized = false;
                 });
 
+                _controller?.dispose();
+                _controller = null;
+
                 _initializePlayer();
               },
               icon: const Icon(Icons.refresh),
@@ -126,7 +130,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen> {
       );
     }
 
-    if (!_initialized) {
+    if (!_initialized || _controller == null) {
       return const Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -142,19 +146,21 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen> {
       );
     }
 
+    final controller = _controller!;
+
     return SafeArea(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           AspectRatio(
-            aspectRatio: _controller.value.aspectRatio > 0
-                ? _controller.value.aspectRatio
+            aspectRatio: controller.value.aspectRatio > 0
+                ? controller.value.aspectRatio
                 : 16 / 9,
-            child: VideoPlayer(_controller),
+            child: VideoPlayer(controller),
           ),
           const SizedBox(height: 12),
           VideoProgressIndicator(
-            _controller,
+            controller,
             allowScrubbing: true,
             padding: const EdgeInsets.symmetric(
               horizontal: 12,
@@ -168,16 +174,16 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen> {
                 color: Colors.white,
                 iconSize: 40,
                 icon: Icon(
-                  _controller.value.isPlaying
+                  controller.value.isPlaying
                       ? Icons.pause_circle_filled
                       : Icons.play_circle_filled,
                 ),
                 onPressed: () {
                   setState(() {
-                    if (_controller.value.isPlaying) {
-                      _controller.pause();
+                    if (controller.value.isPlaying) {
+                      controller.pause();
                     } else {
-                      _controller.play();
+                      controller.play();
                     }
                   });
                 },
@@ -185,9 +191,12 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen> {
             ],
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+            ),
             child: Text(
-              '${widget.channel.category} • ${_streamTypeLabel(widget.channel.type)}',
+              '${widget.channel.category} • '
+              '${_streamTypeLabel(widget.channel.type)}',
               style: TextStyle(
                 color: Colors.grey.shade400,
               ),

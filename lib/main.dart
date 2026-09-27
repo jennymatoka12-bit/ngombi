@@ -4,6 +4,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:flutter/services.dart';
 
 import 'models/tv_channel.dart';
+import 'screens/stream_player_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

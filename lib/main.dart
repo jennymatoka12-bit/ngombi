@@ -356,169 +356,185 @@ class MediaListScreen extends StatelessWidget {
 // ============================================================
 // LECTEUR WEB
 // ============================================================
-
-class WebPlayerScreen extends StatefulWidget {
+class MediaListScreen extends StatelessWidget {
   final String title;
-  final String url;
+  final List<MediaItem> items;
+  final bool isTv;
+  final List<TvChannel> tvChannels;
 
-  const WebPlayerScreen({
+  const MediaListScreen({
     super.key,
     required this.title,
-    required this.url,
+    required this.items,
+    required this.isTv,
+    this.tvChannels = const [],
   });
 
   @override
-  State<WebPlayerScreen> createState() => _WebPlayerScreenState();
-}
-
-class _WebPlayerScreenState extends State<WebPlayerScreen> {
-  late final WebViewController controller;
-
-  bool isLoading = true;
-  bool hasError = false;
-
-  @override
-  void initState() {
-    super.initState();
-
-    controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Colors.black)
-      ..setUserAgent(
-        'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 '
-        '(KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36',
-      )
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageStarted: (_) {
-            if (!mounted) return;
-
-            setState(() {
-              isLoading = true;
-              hasError = false;
-            });
-          },
-          onPageFinished: (_) {
-            if (!mounted) return;
-
-            setState(() {
-              isLoading = false;
-            });
-          },
-          onWebResourceError: (_) {
-            if (!mounted) return;
-
-            setState(() {
-              isLoading = false;
-              hasError = true;
-            });
-          },
-        ),
-      )
-      ..loadRequest(Uri.parse(widget.url));
-  }
-
-  Future<void> openExternalBrowser() async {
-    final uri = Uri.parse(widget.url);
-
-    final launched = await launchUrl(
-      uri,
-      mode: LaunchMode.externalApplication,
-    );
-
-    if (!launched && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Impossible d’ouvrir cette page dans le navigateur.',
-          ),
-        ),
-      );
-    }
-  }
-
-  Future<void> reloadPage() async {
-    setState(() {
-      isLoading = true;
-      hasError = false;
-    });
-
-    await controller.reload();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.title,
-          overflow: TextOverflow.ellipsis,
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Actualiser',
-            onPressed: reloadPage,
-            icon: const Icon(Icons.refresh),
-          ),
-          IconButton(
-            tooltip: 'Ouvrir dans le navigateur',
-            onPressed: openExternalBrowser,
-            icon: const Icon(Icons.open_in_browser),
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          WebViewWidget(
-            controller: controller,
-          ),
-          if (isLoading)
-            const LinearProgressIndicator(
-              minHeight: 3,
-            ),
-          if (hasError)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.wifi_off_rounded,
-                      size: 60,
+    // Pour la télévision, on utilise maintenant le bouquet local.
+    if (isTv && tvChannels.isNotEmpty) {
+      return _buildTvList(context);
+    }
+
+    // La radio conserve pour l'instant son fonctionnement actuel.
+    return _buildMediaList(context);
+  }
+
+  Widget _buildTvList(BuildContext context) {
+    return SafeArea(
+      child: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
+              child: Text(
+                title,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Impossible de charger cette page.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 18,
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+            sliver: SliverList.builder(
+              itemCount: tvChannels.length,
+              itemBuilder: (context, index) {
+                final channel = tvChannels[index];
+
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 6,
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    leading: CircleAvatar(
+                      radius: 27,
+                      child: Text(
+                        channel.name.isNotEmpty
+                            ? channel.name[0].toUpperCase()
+                            : '?',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      channel.name,
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Vérifie ta connexion Internet ou ouvre la page dans le navigateur.',
-                      textAlign: TextAlign.center,
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 5),
+                      child: Text(
+                        '${channel.category} • ${_streamTypeLabel(channel.type)}',
+                      ),
                     ),
-                    const SizedBox(height: 20),
-                    FilledButton.icon(
-                      onPressed: reloadPage,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Réessayer'),
+                    trailing: const Icon(
+                      Icons.play_arrow_rounded,
                     ),
-                    const SizedBox(height: 10),
-                    OutlinedButton.icon(
-                      onPressed: openExternalBrowser,
-                      icon: const Icon(Icons.open_in_browser),
-                      label: const Text('Navigateur'),
-                    ),
-                  ],
-                ),
-              ),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => StreamPlayerScreen(
+                            channel: channel,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
             ),
+          ),
         ],
       ),
     );
+  }
+
+  Widget _buildMediaList(BuildContext context) {
+    return SafeArea(
+      child: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
+              child: Text(
+                title,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+            sliver: SliverList.builder(
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final item = items[index];
+
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 6,
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    leading: CircleAvatar(
+                      radius: 27,
+                      child: Icon(item.icon),
+                    ),
+                    title: Text(
+                      item.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 5),
+                      child: Text(item.description),
+                    ),
+                    trailing: const Icon(
+                      Icons.play_arrow_rounded,
+                    ),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => WebPlayerScreen(
+                            title: item.name,
+                            url: item.url,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _streamTypeLabel(StreamType type) {
+    switch (type) {
+      case StreamType.hls:
+        return 'HLS';
+      case StreamType.dash:
+        return 'DASH';
+      case StreamType.unknown:
+        return 'Flux';
+    }
   }
 }

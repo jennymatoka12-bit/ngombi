@@ -197,7 +197,12 @@ const List<MediaItem> radioChannels = [
 // ============================================================
 
 class MainTabScreen extends StatefulWidget {
-  const MainTabScreen({super.key});
+  final List<TvChannel> tvChannels;
+
+  const MainTabScreen({
+    super.key,
+    required this.tvChannels,
+  });
 
   @override
   State<MainTabScreen> createState() => _MainTabScreenState();
@@ -230,11 +235,12 @@ class _MainTabScreenState extends State<MainTabScreen> {
       ),
       body: IndexedStack(
         index: currentIndex,
-        children: const [
+        children: [
           MediaListScreen(
             title: 'TV en direct',
-            items: tvChannels,
+            items: const [],
             isTv: true,
+            tvChannels: widget.tvChannels,
           ),
           MediaListScreen(
             title: 'Radio en direct',

@@ -47,6 +47,44 @@ List<TvChannel> parseEnigma2Bouquet(String content) {
     final service = trimmed.substring('#SERVICE '.length);
     final parts = service.split(':');
 
+if (parts.length < 12) {
+  continue;
+}
+
+// Dans une ligne Enigma2, les champs 0 à 9
+// constituent l'en-tête du service.
+// Le champ 10 contient l'URL, mais celle-ci
+// peut elle-même contenir des ':'.
+//
+// On reconstruit donc l'URL en prenant le
+// contenu situé après les 10 premiers séparateurs.
+final rawUrl = parts.sublist(10).join(':');
+
+// Le nom de chaîne commence après l'URL.
+// On doit donc retrouver le premier ':'
+// qui termine l'URL.
+// Les URLs HTTP/HTTPS peuvent contenir ':'
+// après le protocole.
+final separatorIndex = rawUrl.indexOf(':', rawUrl.indexOf('//') + 2);
+
+if (separatorIndex < 0) {
+  pendingUserAgent = null;
+  continue;
+}
+
+final extractedUrl = rawUrl.substring(0, separatorIndex).trim();
+
+final name = repairMojibake(
+  rawUrl.substring(separatorIndex + 1).trim(),
+);
+
+if (extractedUrl.isEmpty || name.isEmpty) {
+  pendingUserAgent = null;
+  continue;
+}
+
+final url = cleanStreamUrl(extractedUrl);
+
     if (parts.length < 12) {
       continue;
     }

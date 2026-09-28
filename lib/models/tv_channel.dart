@@ -132,11 +132,9 @@ List<TvChannel> parseEnigma2Bouquet(String content) {
      * navigateur standard.
      */
     if (pendingUserAgent != null &&
-        pendingUserAgent!.isNotEmpty) {
-      headers['User-Agent'] = pendingUserAgent!;
-    } else if (lowerUrl.contains('tvradiozap.eu')) {
-      headers['User-Agent'] = 'Mozilla/5.0';
-    }
+    pendingUserAgent.isNotEmpty) {
+  headers['User-Agent'] = pendingUserAgent;
+} else if (lowerUrl.contains('tvradiozap.eu')) {
 
     channels.add(
       TvChannel(

@@ -32,6 +32,7 @@ List<TvChannel> parseEnigma2Bouquet(String content) {
   for (final line in content.split(RegExp(r'\r?\n'))) {
     final trimmed = line.trim();
 
+    // User-Agent associé au service suivant.
     if (trimmed.startsWith('#EXTVLCOPT:http-user-agent=')) {
       pendingUserAgent = trimmed
           .substring('#EXTVLCOPT:http-user-agent='.length)
@@ -45,62 +46,59 @@ List<TvChannel> parseEnigma2Bouquet(String content) {
     }
 
     final service = trimmed.substring('#SERVICE '.length);
+
+    /*
+     * Une ligne Enigma2 ressemble à :
+     *
+     * #SERVICE 4097:0:1:...:URL:Nom
+     *
+     * Le problème est que l'URL elle-même peut contenir
+     * plusieurs ':' comme dans :
+     *
+     * https://exemple.com/stream.m3u8
+     *
+     * On conserve donc les 10 premiers champs puis
+     * on reconstruit le reste.
+     */
     final parts = service.split(':');
 
-if (parts.length < 12) {
-  continue;
-}
-
-// Dans une ligne Enigma2, les champs 0 à 9
-// constituent l'en-tête du service.
-// Le champ 10 contient l'URL, mais celle-ci
-// peut elle-même contenir des ':'.
-//
-// On reconstruit donc l'URL en prenant le
-// contenu situé après les 10 premiers séparateurs.
-final rawUrl = parts.sublist(10).join(':');
-
-// Le nom de chaîne commence après l'URL.
-// On doit donc retrouver le premier ':'
-// qui termine l'URL.
-// Les URLs HTTP/HTTPS peuvent contenir ':'
-// après le protocole.
-final separatorIndex = rawUrl.indexOf(':', rawUrl.indexOf('//') + 2);
-
-if (separatorIndex < 0) {
-  pendingUserAgent = null;
-  continue;
-}
-
-final extractedUrl = rawUrl.substring(0, separatorIndex).trim();
-
-final name = repairMojibake(
-  rawUrl.substring(separatorIndex + 1).trim(),
-);
-
-if (extractedUrl.isEmpty || name.isEmpty) {
-  pendingUserAgent = null;
-  continue;
-}
-
-final url = cleanStreamUrl(extractedUrl);
-
-    if (parts.length < 12) {
-      continue;
-    }
-
-    final rawUrl = parts[10].trim();
-
-    if (rawUrl.isEmpty) {
+    if (parts.length < 11) {
       pendingUserAgent = null;
       continue;
     }
 
+    /*
+     * Les champs 0 à 9 correspondent à la partie technique
+     * de la référence Enigma2.
+     *
+     * Tout ce qui suit contient :
+     *
+     * URL:Nom de chaîne
+     *
+     * On utilise le dernier ':' comme séparateur entre
+     * l'URL et le nom.
+     */
+    final rawUrlAndName = parts.sublist(10).join(':');
+
+    final separatorIndex = rawUrlAndName.lastIndexOf(':');
+
+    if (separatorIndex <= 0 ||
+        separatorIndex >= rawUrlAndName.length - 1) {
+      pendingUserAgent = null;
+      continue;
+    }
+
+    final rawUrl = rawUrlAndName
+        .substring(0, separatorIndex)
+        .trim();
+
     final name = repairMojibake(
-      parts.sublist(11).join(':').trim(),
+      rawUrlAndName
+          .substring(separatorIndex + 1)
+          .trim(),
     );
 
-    if (name.isEmpty) {
+    if (rawUrl.isEmpty || name.isEmpty) {
       pendingUserAgent = null;
       continue;
     }
@@ -112,13 +110,32 @@ final url = cleanStreamUrl(extractedUrl);
       continue;
     }
 
+    /*
+     * On ignore les services qui ne correspondent pas
+     * réellement à une URL exploitable.
+     */
+    final lowerUrl = url.toLowerCase();
+
+    if (!lowerUrl.startsWith('http://') &&
+        !lowerUrl.startsWith('https://')) {
+      pendingUserAgent = null;
+      continue;
+    }
+
     final headers = <String, String>{};
 
+    /*
+     * Si le bouquet fournit un User-Agent spécifique,
+     * on le conserve.
+     *
+     * Sinon, les flux TVRadioZap reçoivent un User-Agent
+     * navigateur standard.
+     */
     if (pendingUserAgent != null &&
-    pendingUserAgent.isNotEmpty) {
-  headers['User-Agent'] = pendingUserAgent;
-} else if (url.toLowerCase().contains('tvradiozap.eu')) {
-  headers['User-Agent'] = 'Mozilla/5.0';
+        pendingUserAgent!.isNotEmpty) {
+      headers['User-Agent'] = pendingUserAgent!;
+    } else if (lowerUrl.contains('tvradiozap.eu')) {
+      headers['User-Agent'] = 'Mozilla/5.0';
     }
 
     channels.add(
@@ -140,14 +157,24 @@ final url = cleanStreamUrl(extractedUrl);
 String cleanStreamUrl(String rawUrl) {
   var url = rawUrl.trim();
 
-  final lower = url.toLowerCase();
-
-  if (lower.startsWith('https%3a//')) {
-    url = 'https://${url.substring('https%3a//'.length)}';
-  } else if (lower.startsWith('http%3a//')) {
-    url = 'http://${url.substring('http%3a//'.length)}';
+  /*
+   * Certaines listes Enigma2 contiennent des URL
+   * partiellement encodées :
+   *
+   * https%3a//...
+   * https%3A%2F%2F...
+   *
+   * On tente donc de décoder les caractères percent-encodés.
+   */
+  try {
+    url = Uri.decodeFull(url);
+  } catch (_) {
+    // Si le décodage échoue, on conserve l'URL originale.
   }
 
+  /*
+   * Nettoyage éventuel d'un fragment situé après l'URL.
+   */
   final hashIndex = url.indexOf('#');
 
   if (hashIndex >= 0) {

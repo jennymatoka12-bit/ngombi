@@ -212,6 +212,147 @@ jobs:
               }
 
               @Override
+          # DashPlayerActivity.java
+          (java_dir / "DashPlayerActivity.java").write_text(
+              """package com.example.ngombi;
+
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.view.ViewGroup;
+          import android.widget.FrameLayout;
+          import android.widget.TextView;
+
+          import androidx.annotation.Nullable;
+          import androidx.media3.common.C;
+          import androidx.media3.common.MediaItem;
+          import androidx.media3.common.PlaybackException;
+          import androidx.media3.common.Player;
+          import androidx.media3.common.util.UnstableApi;
+          import androidx.media3.datasource.DefaultHttpDataSource;
+          import androidx.media3.exoplayer.ExoPlayer;
+          import androidx.media3.ui.PlayerView;
+
+          @UnstableApi
+          public class DashPlayerActivity extends Activity {
+
+              private ExoPlayer player;
+              private PlayerView playerView;
+              private TextView errorText;
+
+              @Override
+              protected void onCreate(
+                      @Nullable Bundle savedInstanceState
+              ) {
+                  super.onCreate(savedInstanceState);
+
+                  FrameLayout root = new FrameLayout(this);
+
+                  playerView = new PlayerView(this);
+
+                  root.addView(
+                          playerView,
+                          new FrameLayout.LayoutParams(
+                                  ViewGroup.LayoutParams.MATCH_PARENT,
+                                  ViewGroup.LayoutParams.MATCH_PARENT
+                          )
+                  );
+
+                  errorText = new TextView(this);
+
+                  errorText.setTextColor(0xFFFFFFFF);
+                  errorText.setTextSize(15);
+                  errorText.setPadding(40, 40, 40, 40);
+                  errorText.setVisibility(TextView.GONE);
+
+                  root.addView(
+                          errorText,
+                          new FrameLayout.LayoutParams(
+                                  ViewGroup.LayoutParams.MATCH_PARENT,
+                                  ViewGroup.LayoutParams.WRAP_CONTENT
+                          )
+                  );
+
+                  setContentView(root);
+
+                  String url =
+                          getIntent().getStringExtra("url");
+
+                  String userAgent =
+                          getIntent().getStringExtra("userAgent");
+
+                  if (url == null || url.isEmpty()) {
+                      showError("URL DASH manquante.");
+                      return;
+                  }
+
+                  if (userAgent == null || userAgent.isEmpty()) {
+                      userAgent = "Mozilla/5.0";
+                  }
+
+                  DefaultHttpDataSource.Factory
+                          httpDataSourceFactory =
+                          new DefaultHttpDataSource.Factory()
+                                  .setUserAgent(userAgent);
+
+                  MediaItem.DrmConfiguration
+                          drmConfiguration =
+                          new MediaItem.DrmConfiguration.Builder(
+                                  C.WIDEVINE_UUID
+                          )
+                                  .setMultiSession(true)
+                                  .build();
+
+                  MediaItem mediaItem =
+                          new MediaItem.Builder()
+                                  .setUri(url)
+                                  .setMimeType(
+                                          "application/dash+xml"
+                                  )
+                                  .setDrmConfiguration(
+                                          drmConfiguration
+                                  )
+                                  .build();
+
+                  player = new ExoPlayer.Builder(this)
+                          .setMediaSourceFactory(
+                                  new androidx.media3.exoplayer.source.DefaultMediaSourceFactory(
+                                          httpDataSourceFactory
+                          ))
+                          .build();
+
+                  playerView.setPlayer(player);
+
+                  player.addListener(
+                          new Player.Listener() {
+
+                              @Override
+                              public void onPlayerError(
+                                      PlaybackException error
+                              ) {
+                                  showError(
+                                          "Erreur DRM / lecture :\\n\\n"
+                                          + error.getErrorCodeName()
+                                          + "\\n\\n"
+                                          + error.getMessage()
+                                  );
+                              }
+                          }
+                  );
+
+                  player.setMediaItem(mediaItem);
+
+                  player.prepare();
+                  player.play();
+              }
+
+              private void showError(String message) {
+                  if (errorText != null) {
+                      errorText.setText(message);
+                      errorText.setVisibility(TextView.VISIBLE);
+                  }
+              }
+
+              @Override
               protected void onStop() {
                   super.onStop();
 

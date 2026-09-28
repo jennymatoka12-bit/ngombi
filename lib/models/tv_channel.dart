@@ -32,7 +32,6 @@ List<TvChannel> parseEnigma2Bouquet(String content) {
   for (final line in content.split(RegExp(r'\r?\n'))) {
     final trimmed = line.trim();
 
-    // User-Agent associé au service suivant.
     if (trimmed.startsWith('#EXTVLCOPT:http-user-agent=')) {
       pendingUserAgent = trimmed
           .substring('#EXTVLCOPT:http-user-agent='.length)
@@ -46,20 +45,6 @@ List<TvChannel> parseEnigma2Bouquet(String content) {
     }
 
     final service = trimmed.substring('#SERVICE '.length);
-
-    /*
-     * Une ligne Enigma2 ressemble à :
-     *
-     * #SERVICE 4097:0:1:...:URL:Nom
-     *
-     * Le problème est que l'URL elle-même peut contenir
-     * plusieurs ':' comme dans :
-     *
-     * https://exemple.com/stream.m3u8
-     *
-     * On conserve donc les 10 premiers champs puis
-     * on reconstruit le reste.
-     */
     final parts = service.split(':');
 
     if (parts.length < 11) {
@@ -68,18 +53,21 @@ List<TvChannel> parseEnigma2Bouquet(String content) {
     }
 
     /*
-     * Les champs 0 à 9 correspondent à la partie technique
-     * de la référence Enigma2.
+     * Les 10 premiers champs correspondent à la référence
+     * technique Enigma2.
      *
-     * Tout ce qui suit contient :
+     * Le reste contient :
      *
      * URL:Nom de chaîne
      *
-     * On utilise le dernier ':' comme séparateur entre
-     * l'URL et le nom.
+     * On reconstruit cette partie afin de conserver les ':'
+     * présents dans les URL HTTP/HTTPS.
      */
     final rawUrlAndName = parts.sublist(10).join(':');
 
+    /*
+     * Le dernier ':' sépare l'URL du nom de la chaîne.
+     */
     final separatorIndex = rawUrlAndName.lastIndexOf(':');
 
     if (separatorIndex <= 0 ||
@@ -111,8 +99,7 @@ List<TvChannel> parseEnigma2Bouquet(String content) {
     }
 
     /*
-     * On ignore les services qui ne correspondent pas
-     * réellement à une URL exploitable.
+     * On ne conserve que les vrais flux HTTP/HTTPS.
      */
     final lowerUrl = url.toLowerCase();
 
@@ -124,17 +111,12 @@ List<TvChannel> parseEnigma2Bouquet(String content) {
 
     final headers = <String, String>{};
 
-    /*
-     * Si le bouquet fournit un User-Agent spécifique,
-     * on le conserve.
-     *
-     * Sinon, les flux TVRadioZap reçoivent un User-Agent
-     * navigateur standard.
-     */
     if (pendingUserAgent != null &&
-    pendingUserAgent.isNotEmpty) {
-  headers['User-Agent'] = pendingUserAgent;
-} else if (lowerUrl.contains('tvradiozap.eu')) {
+        pendingUserAgent.isNotEmpty) {
+      headers['User-Agent'] = pendingUserAgent;
+    } else if (lowerUrl.contains('tvradiozap.eu')) {
+      headers['User-Agent'] = 'Mozilla/5.0';
+    }
 
     channels.add(
       TvChannel(
@@ -156,22 +138,16 @@ String cleanStreamUrl(String rawUrl) {
   var url = rawUrl.trim();
 
   /*
-   * Certaines listes Enigma2 contiennent des URL
-   * partiellement encodées :
-   *
-   * https%3a//...
-   * https%3A%2F%2F...
-   *
-   * On tente donc de décoder les caractères percent-encodés.
+   * Certaines URL peuvent être partiellement encodées.
    */
   try {
     url = Uri.decodeFull(url);
   } catch (_) {
-    // Si le décodage échoue, on conserve l'URL originale.
+    // On conserve l'URL originale si le décodage échoue.
   }
 
   /*
-   * Nettoyage éventuel d'un fragment situé après l'URL.
+   * Supprime un éventuel fragment situé après l'URL.
    */
   final hashIndex = url.indexOf('#');
 

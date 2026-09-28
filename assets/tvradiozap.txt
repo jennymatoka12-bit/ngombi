@@ -128,3 +128,12 @@
 #SERVICE 4097:0:1:1992:0:0:0:0:0:0:https%3a//amg01736-harmonysecomgro-harmonymelody-samsungfr-n25pe.amagi.tv/playlist/amg01736-harmonysecomgro-harmonymelody-samsungfr/playlist.m3u8:Emotion
 #SERVICE 4097:0:1:1354:0:0:0:0:0:0:https%3a//generation-tv.vedge.infomaniak.com/livecast/generation-tv/manifest.m3u8:GÃ©nÃ©ration TV
 #SERVICE 4097:0:1:2590:0:0:0:
+#SERVICE 4097:0:1:1001:0:0:0:0:0:0:https://uvotv-aniview.global.ssl.fastly.net/hls/live/2119695/gabon1ere/playlist.m3u8:Gabon Première
+#SERVICE 4097:0:1:1002:0:0:0:0:0:0:https://uvotv-aniview.global.ssl.fastly.net/hls/live/2120686/gabon24/playlist.m3u8:Gabon 24
+
+#SERVICE 4097:0:1:1003:0:0:0:0:0:0:https://africa24.vedge.infomaniak.com/livecast/ik:africa24/manifest.m3u8:Africa 24
+#SERVICE 4097:0:1:1004:0:0:0:0:0:0:https://edge20.vedge.infomaniak.com/livecast/ik:africa24english/manifest.m3u8:Africa 24 English
+#SERVICE 4097:0:1:1005:0:0:0:0:0:0:https://africa24.vedge.infomaniak.com/livecast/ik:africa24sport/manifest.m3u8:Africa 24 Sport
+
+#SERVICE 4097:0:1:1006:0:0:0:0:0:0:https://cdn-euronews.akamaized.net/live/eds/africanews-en/25049/index.m3u8:Africanews English
+#SERVICE 4097:0:1:1007:0:0:0:0:0:0:https://cdn-euronews.akamaized.net/live/eds/africanews-fr/25050/index.m3u8:Africanews Français

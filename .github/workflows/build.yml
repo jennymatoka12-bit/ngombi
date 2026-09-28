@@ -44,22 +44,21 @@ jobs:
       # --------------------------------------------------
 
       - name: Configure Android project
+        shell: bash
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
+          set -e
 
-          java_dir = Path(
-              "android/app/src/main/java/com/example/ngombi"
-          )
+          JAVA_DIR="android/app/src/main/java/com/example/ngombi"
+          KOTLIN_FILE="android/app/src/main/kotlin/com/example/ngombi/MainActivity.kt"
 
-          java_dir.mkdir(parents=True, exist_ok=True)
+          mkdir -p "$JAVA_DIR"
 
           # ==================================================
           # MainActivity.java
           # ==================================================
 
-          (java_dir / "MainActivity.java").write_text(
-              """package com.example.ngombi;
+          cat > "$JAVA_DIR/MainActivity.java" <<'EOF'
+          package com.example.ngombi;
 
           import android.content.Intent;
 
@@ -116,105 +115,17 @@ jobs:
                   });
               }
           }
-          """
-          )
+          EOF
 
-          # Supprimer le MainActivity Kotlin généré.
-          kotlin_activity = Path(
-              "android/app/src/main/kotlin/com/example/ngombi/MainActivity.kt"
-          )
-
-          if kotlin_activity.exists():
-              kotlin_activity.unlink()
+          # Supprimer le MainActivity Kotlin généré par Flutter.
+          rm -f "$KOTLIN_FILE"
 
           # ==================================================
           # DashPlayerActivity.java
           # ==================================================
 
-          (java_dir / "DashPlayerActivity.java").write_text(
-              """package com.example.ngombi;
-
-          import android.app.Activity;
-          import android.net.Uri;
-          import android.os.Bundle;
-
-          import androidx.annotation.Nullable;
-          import androidx.media3.common.MediaItem;
-          import androidx.media3.common.MimeTypes;
-          import androidx.media3.common.util.UnstableApi;
-          import androidx.media3.datasource.DefaultHttpDataSource;
-          import androidx.media3.exoplayer.ExoPlayer;
-          import androidx.media3.exoplayer.dash.DashMediaSource;
-          import androidx.media3.exoplayer.source.MediaSource;
-          import androidx.media3.ui.PlayerView;
-
-          @UnstableApi
-          public class DashPlayerActivity extends Activity {
-
-              private ExoPlayer player;
-              private PlayerView playerView;
-
-              @Override
-              protected void onCreate(
-                      @Nullable Bundle savedInstanceState
-              ) {
-                  super.onCreate(savedInstanceState);
-
-                  playerView = new PlayerView(this);
-
-                  setContentView(playerView);
-
-                  String url =
-                          getIntent().getStringExtra("url");
-
-                  String userAgent =
-                          getIntent().getStringExtra("userAgent");
-
-                  if (url == null || url.isEmpty()) {
-                      finish();
-                      return;
-                  }
-
-                  if (userAgent == null || userAgent.isEmpty()) {
-                      userAgent = "Mozilla/5.0";
-                  }
-
-                  DefaultHttpDataSource.Factory
-                          httpDataSourceFactory =
-                          new DefaultHttpDataSource.Factory()
-                                  .setUserAgent(userAgent);
-
-                  MediaSource.Factory mediaSourceFactory =
-                          new DashMediaSource.Factory(
-                                  httpDataSourceFactory
-                          );
-
-                  player = new ExoPlayer.Builder(this)
-                          .setMediaSourceFactory(
-                                  mediaSourceFactory
-                          )
-                          .build();
-
-                  playerView.setPlayer(player);
-
-                  MediaItem mediaItem =
-                          new MediaItem.Builder()
-                                  .setUri(Uri.parse(url))
-                                  .setMimeType(
-                                          MimeTypes.APPLICATION_MPD
-                                  )
-                                  .build();
-
-                  player.setMediaItem(mediaItem);
-
-                  player.prepare();
-                  player.play();
-              }
-
-              @Override
-          # DashPlayerActivity.java
-          (java_dir / "DashPlayerActivity.java").write_text(
-              """package com.example.ngombi;
+          cat > "$JAVA_DIR/DashPlayerActivity.java" <<'EOF'
+          package com.example.ngombi;
 
           import android.app.Activity;
           import android.os.Bundle;
@@ -230,6 +141,7 @@ jobs:
           import androidx.media3.common.util.UnstableApi;
           import androidx.media3.datasource.DefaultHttpDataSource;
           import androidx.media3.exoplayer.ExoPlayer;
+          import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
           import androidx.media3.ui.PlayerView;
 
           @UnstableApi
@@ -294,6 +206,13 @@ jobs:
                           new DefaultHttpDataSource.Factory()
                                   .setUserAgent(userAgent);
 
+                  /*
+                   * Configuration Widevine officielle.
+                   *
+                   * NGOMBI ne contourne aucun DRM :
+                   * Media3 utilise le mécanisme DRM Android
+                   * prévu par le flux.
+                   */
                   MediaItem.DrmConfiguration
                           drmConfiguration =
                           new MediaItem.DrmConfiguration.Builder(
@@ -305,9 +224,7 @@ jobs:
                   MediaItem mediaItem =
                           new MediaItem.Builder()
                                   .setUri(url)
-                                  .setMimeType(
-                                          "application/dash+xml"
-                                  )
+                                  .setMimeType("application/dash+xml")
                                   .setDrmConfiguration(
                                           drmConfiguration
                                   )
@@ -315,9 +232,10 @@ jobs:
 
                   player = new ExoPlayer.Builder(this)
                           .setMediaSourceFactory(
-                                  new androidx.media3.exoplayer.source.DefaultMediaSourceFactory(
+                                  new DefaultMediaSourceFactory(
                                           httpDataSourceFactory
-                          ))
+                                  )
+                          )
                           .build();
 
                   playerView.setPlayer(player);
@@ -330,9 +248,9 @@ jobs:
                                       PlaybackException error
                               ) {
                                   showError(
-                                          "Erreur DRM / lecture :\\n\\n"
+                                          "Erreur DRM / lecture :\n\n"
                                           + error.getErrorCodeName()
-                                          + "\\n\\n"
+                                          + "\n\n"
                                           + error.getMessage()
                                   );
                               }
@@ -371,17 +289,19 @@ jobs:
                   super.onDestroy();
               }
           }
-          """
-          )
+          EOF
 
           # ==================================================
           # AndroidManifest.xml
           # ==================================================
 
-          manifest = Path(
-              "android/app/src/main/AndroidManifest.xml"
-          )
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
 
+          python3 - "$MANIFEST" <<'PY'
+          import sys
+          from pathlib import Path
+
+          manifest = Path(sys.argv[1])
           text = manifest.read_text()
 
           if "android.permission.INTERNET" not in text:
@@ -406,56 +326,43 @@ jobs:
               )
 
           if "DashPlayerActivity" not in text:
+              activity = (
+                  '        <activity\n'
+                  '            android:name=".DashPlayerActivity"\n'
+                  '            android:exported="false" />\n\n'
+              )
+
               text = text.replace(
                   "</application>",
-                  """        <activity
-              android:name=".DashPlayerActivity"
-              android:exported="false" />
-
-          </application>""",
+                  activity + "</application>",
                   1
               )
 
           manifest.write_text(text)
+          PY
 
           # ==================================================
           # app/build.gradle
           # ==================================================
 
-          gradle = Path(
-              "android/app/build.gradle"
-          )
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
 
+          gradle = Path("android/app/build.gradle")
           text = gradle.read_text()
 
-          # Media3 dependencies
-          if "androidx.media3:media3-exoplayer:1.11.1" not in text:
-              text = text.replace(
-                  "android {",
-                  """dependencies {
-              implementation "androidx.media3:media3-exoplayer:1.11.1"
-              implementation "androidx.media3:media3-exoplayer-dash:1.11.1"
-              implementation "androidx.media3:media3-ui:1.11.1"
-          }
-
-          android {""",
-                  1
-              )
-
-          # compileSdk
+          # Compile SDK
           text = text.replace(
               "compileSdk = flutter.compileSdkVersion",
               "compileSdk = 36"
           )
 
-          # minSdk
+          # Min SDK
           text = text.replace(
               "minSdk = flutter.minSdkVersion",
               "minSdk = 23"
           )
-
-          # Si Flutter a déjà écrit une valeur numérique.
-          import re
 
           text = re.sub(
               r"minSdk\s*=\s*\d+",
@@ -463,25 +370,36 @@ jobs:
               text
           )
 
-          # NDK : supprimer une éventuelle ancienne ligne.
+          # NDK
           text = re.sub(
-              r'^\s*ndkVersion.*$',
+              r"^\s*ndkVersion\s*=.*$",
               "",
               text,
               flags=re.MULTILINE
           )
 
-          # Ajouter la bonne syntaxe Gradle.
           text = text.replace(
               "compileSdk = 36",
-              """compileSdk = 36
-              ndkVersion = "27.0.12077973" """,
+              'compileSdk = 36\n    ndkVersion = "27.0.12077973"',
               1
           )
 
+          # Media3 dependencies
+          if "androidx.media3:media3-exoplayer:1.11.1" not in text:
+              dependencies = (
+                  "\n"
+                  "dependencies {\n"
+                  '    implementation "androidx.media3:media3-exoplayer:1.11.1"\n'
+                  '    implementation "androidx.media3:media3-exoplayer-dash:1.11.1"\n'
+                  '    implementation "androidx.media3:media3-ui:1.11.1"\n'
+                  "}\n"
+              )
+
+              text += dependencies
+
           gradle.write_text(text)
 
-          print("NGOMBI Android configuration completed.")
+          print("Android app configuration completed.")
           PY
 
       # --------------------------------------------------
@@ -489,12 +407,18 @@ jobs:
       # --------------------------------------------------
 
       - name: Upgrade Android build tools
+        shell: bash
         run: |
+          set -e
+
           python3 - <<'PY'
           from pathlib import Path
           import re
 
+          # ==================================================
           # settings.gradle
+          # ==================================================
+
           settings = Path("android/settings.gradle")
           text = settings.read_text()
 
@@ -512,7 +436,10 @@ jobs:
 
           settings.write_text(text)
 
+          # ==================================================
           # Gradle wrapper
+          # ==================================================
+
           wrapper = Path(
               "android/gradle/wrapper/gradle-wrapper.properties"
           )
@@ -521,7 +448,7 @@ jobs:
 
           text = re.sub(
               r"distributionUrl=.*",
-              "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.11.1-bin.zip",
+              r"distributionUrl=https\://services.gradle.org/distributions/gradle-8.11.1-bin.zip",
               text
           )
 
@@ -555,6 +482,14 @@ jobs:
           echo ""
           echo "===== AndroidManifest.xml ====="
           cat android/app/src/main/AndroidManifest.xml
+
+          echo ""
+          echo "===== MainActivity.java ====="
+          cat android/app/src/main/java/com/example/ngombi/MainActivity.java
+
+          echo ""
+          echo "===== DashPlayerActivity.java ====="
+          cat android/app/src/main/java/com/example/ngombi/DashPlayerActivity.java
 
       # --------------------------------------------------
       # Flutter

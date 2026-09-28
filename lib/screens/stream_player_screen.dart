@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 
 import '../models/tv_channel.dart';
@@ -12,10 +13,16 @@ class StreamPlayerScreen extends StatefulWidget {
   });
 
   @override
-  State<StreamPlayerScreen> createState() => _StreamPlayerScreenState();
+  State<StreamPlayerScreen> createState() =>
+      _StreamPlayerScreenState();
 }
 
-class _StreamPlayerScreenState extends State<StreamPlayerScreen> {
+class _StreamPlayerScreenState
+    extends State<StreamPlayerScreen> {
+
+  static const MethodChannel _nativePlayer =
+      MethodChannel('ngombi/player');
+
   VideoPlayerController? _controller;
 
   bool _initialized = false;
@@ -24,12 +31,52 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen> {
   @override
   void initState() {
     super.initState();
-    _initializePlayer();
+
+    if (widget.channel.type == StreamType.dash) {
+      _openNativeDashPlayer();
+    } else {
+      _initializeFlutterPlayer();
+    }
   }
 
-  Future<void> _initializePlayer() async {
+  Future<void> _openNativeDashPlayer() async {
     try {
-      final controller = VideoPlayerController.networkUrl(
+      await _nativePlayer.invokeMethod(
+        'playDash',
+        {
+          'url': widget.channel.url,
+          'userAgent': widget.channel.headers['User-Agent'] ??
+              'Mozilla/5.0',
+        },
+      );
+
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } on PlatformException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _errorMessage =
+            error.message ?? error.code;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _errorMessage = error.toString();
+      });
+    }
+  }
+
+  Future<void> _initializeFlutterPlayer() async {
+    try {
+      final controller =
+          VideoPlayerController.networkUrl(
         Uri.parse(widget.channel.url),
         httpHeaders: widget.channel.headers,
       );
@@ -102,8 +149,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Le flux peut être indisponible, géobloqué ou '
-              'nécessiter une protection non prise en charge.',
+              _errorMessage!,
               style: TextStyle(
                 color: Colors.grey.shade400,
               ),
@@ -112,18 +158,10 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen> {
             const SizedBox(height: 20),
             FilledButton.icon(
               onPressed: () {
-                setState(() {
-                  _errorMessage = null;
-                  _initialized = false;
-                });
-
-                _controller?.dispose();
-                _controller = null;
-
-                _initializePlayer();
+                Navigator.of(context).pop();
               },
-              icon: const Icon(Icons.refresh),
-              label: const Text('Réessayer'),
+              icon: const Icon(Icons.arrow_back),
+              label: const Text('Retour'),
             ),
           ],
         ),
@@ -153,9 +191,10 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           AspectRatio(
-            aspectRatio: controller.value.aspectRatio > 0
-                ? controller.value.aspectRatio
-                : 16 / 9,
+            aspectRatio:
+                controller.value.aspectRatio > 0
+                    ? controller.value.aspectRatio
+                    : 16 / 9,
             child: VideoPlayer(controller),
           ),
           const SizedBox(height: 12),
@@ -167,39 +206,29 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen> {
               vertical: 8,
             ),
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconButton(
-                color: Colors.white,
-                iconSize: 40,
-                icon: Icon(
-                  controller.value.isPlaying
-                      ? Icons.pause_circle_filled
-                      : Icons.play_circle_filled,
-                ),
-                onPressed: () {
-                  setState(() {
-                    if (controller.value.isPlaying) {
-                      controller.pause();
-                    } else {
-                      controller.play();
-                    }
-                  });
-                },
-              ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
+          IconButton(
+            color: Colors.white,
+            iconSize: 40,
+            icon: Icon(
+              controller.value.isPlaying
+                  ? Icons.pause_circle_filled
+                  : Icons.play_circle_filled,
             ),
-            child: Text(
-              '${widget.channel.category} • '
-              '${_streamTypeLabel(widget.channel.type)}',
-              style: TextStyle(
-                color: Colors.grey.shade400,
-              ),
+            onPressed: () {
+              setState(() {
+                if (controller.value.isPlaying) {
+                  controller.pause();
+                } else {
+                  controller.play();
+                }
+              });
+            },
+          ),
+          Text(
+            '${widget.channel.category} • '
+            '${_streamTypeLabel(widget.channel.type)}',
+            style: TextStyle(
+              color: Colors.grey.shade400,
             ),
           ),
         ],

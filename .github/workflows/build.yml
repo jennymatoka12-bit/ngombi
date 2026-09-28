@@ -47,11 +47,6 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
-
-          # ==================================================
-          # MainActivity.java
-          # ==================================================
 
           java_dir = Path(
               "android/app/src/main/java/com/example/ngombi"
@@ -59,9 +54,11 @@ jobs:
 
           java_dir.mkdir(parents=True, exist_ok=True)
 
-          main_activity = java_dir / "MainActivity.java"
+          # ==================================================
+          # MainActivity.java
+          # ==================================================
 
-          main_activity.write_text(
+          (java_dir / "MainActivity.java").write_text(
               """package com.example.ngombi;
 
           import android.content.Intent;
@@ -122,6 +119,7 @@ jobs:
           """
           )
 
+          # Supprimer le MainActivity Kotlin généré.
           kotlin_activity = Path(
               "android/app/src/main/kotlin/com/example/ngombi/MainActivity.kt"
           )
@@ -133,9 +131,7 @@ jobs:
           # DashPlayerActivity.java
           # ==================================================
 
-          dash_activity = java_dir / "DashPlayerActivity.java"
-
-          dash_activity.write_text(
+          (java_dir / "DashPlayerActivity.java").write_text(
               """package com.example.ngombi;
 
           import android.app.Activity;
@@ -247,29 +243,17 @@ jobs:
 
           text = manifest.read_text()
 
-          internet_permission = (
-              '    <uses-permission '
-              'android:name="android.permission.INTERNET" />'
-          )
-
-          network_permission = (
-              '    <uses-permission '
-              'android:name="android.permission.ACCESS_NETWORK_STATE" />'
-          )
-
           if "android.permission.INTERNET" not in text:
               text = text.replace(
                   "<application",
-                  internet_permission
-                  + "\n\n    <application",
+                  '    <uses-permission android:name="android.permission.INTERNET" />\n\n    <application',
                   1
               )
 
           if "android.permission.ACCESS_NETWORK_STATE" not in text:
               text = text.replace(
                   "<application",
-                  network_permission
-                  + "\n\n    <application",
+                  '    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\n\n    <application',
                   1
               )
 
@@ -280,17 +264,14 @@ jobs:
                   1
               )
 
-          dash_activity_declaration = """
-              <activity
-                  android:name=".DashPlayerActivity"
-                  android:exported="false" />
-          """
-
           if "DashPlayerActivity" not in text:
               text = text.replace(
                   "</application>",
-                  dash_activity_declaration
-                  + "\n    </application>",
+                  """        <activity
+              android:name=".DashPlayerActivity"
+              android:exported="false" />
+
+          </application>""",
                   1
               )
 
@@ -300,68 +281,70 @@ jobs:
           # app/build.gradle
           # ==================================================
 
-          app_gradle = Path(
+          gradle = Path(
               "android/app/build.gradle"
           )
 
-          gradle_text = app_gradle.read_text()
+          text = gradle.read_text()
 
-          media3_dependencies = """
-          dependencies {
+          # Media3 dependencies
+          if "androidx.media3:media3-exoplayer:1.11.1" not in text:
+              text = text.replace(
+                  "android {",
+                  """dependencies {
               implementation "androidx.media3:media3-exoplayer:1.11.1"
               implementation "androidx.media3:media3-exoplayer-dash:1.11.1"
               implementation "androidx.media3:media3-ui:1.11.1"
           }
 
-          """
-
-          if "androidx.media3:media3-exoplayer:1.11.1" not in gradle_text:
-              gradle_text = gradle_text.replace(
-                  "android {",
-                  media3_dependencies + "android {",
+          android {""",
                   1
               )
 
-          # Media3 1.11.1 nécessite au minimum Android 6.0 / API 23.
-          gradle_text = re.sub(
-              r"minSdk\s*=\s*flutter\.minSdkVersion",
-              "minSdk = 23",
-              gradle_text
+          # compileSdk
+          text = text.replace(
+              "compileSdk = flutter.compileSdkVersion",
+              "compileSdk = 36"
           )
 
-          gradle_text = re.sub(
+          # minSdk
+          text = text.replace(
+              "minSdk = flutter.minSdkVersion",
+              "minSdk = 23"
+          )
+
+          # Si Flutter a déjà écrit une valeur numérique.
+          import re
+
+          text = re.sub(
               r"minSdk\s*=\s*\d+",
               "minSdk = 23",
-              gradle_text
+              text
           )
 
-          # Media3 1.11.1 nécessite compileSdk 36.
-          gradle_text = re.sub(
-              r"compileSdk\s*=\s*flutter\.compileSdkVersion",
+          # NDK : supprimer une éventuelle ancienne ligne.
+          text = re.sub(
+              r'^\s*ndkVersion.*$',
+              "",
+              text,
+              flags=re.MULTILINE
+          )
+
+          # Ajouter la bonne syntaxe Gradle.
+          text = text.replace(
               "compileSdk = 36",
-              gradle_text
+              """compileSdk = 36
+              ndkVersion = "27.0.12077973" """,
+              1
           )
 
-          if "ndkVersion" in gradle_text:
-              gradle_text = re.sub(
-                  r'ndkVersion\s*=\s*[^\\n]+',
-                  'ndkVersion = "27.0.12077973"',
-                  gradle_text
-              )
-          else:
-              gradle_text = gradle_text.replace(
-                  "compileSdk = 36",
-                  'compileSdk = 36\n    ndkVersion = "27.0.12077973"',
-                  1
-              )
-
-          app_gradle.write_text(gradle_text)
+          gradle.write_text(text)
 
           print("NGOMBI Android configuration completed.")
           PY
 
       # --------------------------------------------------
-      # Upgrade Android build tools
+      # Android Gradle Plugin / Gradle
       # --------------------------------------------------
 
       - name: Upgrade Android build tools
@@ -370,14 +353,8 @@ jobs:
           from pathlib import Path
           import re
 
-          # ==================================================
           # settings.gradle
-          # ==================================================
-
-          settings = Path(
-              "android/settings.gradle"
-          )
-
+          settings = Path("android/settings.gradle")
           text = settings.read_text()
 
           text = re.sub(
@@ -394,10 +371,7 @@ jobs:
 
           settings.write_text(text)
 
-          # ==================================================
           # Gradle wrapper
-          # ==================================================
-
           wrapper = Path(
               "android/gradle/wrapper/gradle-wrapper.properties"
           )
@@ -421,44 +395,32 @@ jobs:
           PY
 
       # --------------------------------------------------
-      # Verify Android configuration
+      # Verification
       # --------------------------------------------------
 
       - name: Verify Android configuration
         run: |
-          echo "===== settings.gradle ====="
-          cat android/settings.gradle
-
-          echo ""
           echo "===== app/build.gradle ====="
           cat android/app/build.gradle
 
           echo ""
-          echo "===== AndroidManifest.xml ====="
-          cat android/app/src/main/AndroidManifest.xml
-
-          echo ""
-          echo "===== MainActivity.java ====="
-          cat android/app/src/main/java/com/example/ngombi/MainActivity.java
-
-          echo ""
-          echo "===== DashPlayerActivity.java ====="
-          cat android/app/src/main/java/com/example/ngombi/DashPlayerActivity.java
+          echo "===== settings.gradle ====="
+          cat android/settings.gradle
 
           echo ""
           echo "===== Gradle wrapper ====="
           cat android/gradle/wrapper/gradle-wrapper.properties
 
+          echo ""
+          echo "===== AndroidManifest.xml ====="
+          cat android/app/src/main/AndroidManifest.xml
+
       # --------------------------------------------------
-      # Flutter dependencies
+      # Flutter
       # --------------------------------------------------
 
       - name: Get Flutter dependencies
         run: flutter pub get
-
-      # --------------------------------------------------
-      # Clean
-      # --------------------------------------------------
 
       - name: Clean Flutter project
         run: flutter clean
@@ -466,22 +428,14 @@ jobs:
       - name: Get dependencies again
         run: flutter pub get
 
-      # --------------------------------------------------
-      # Remove default test
-      # --------------------------------------------------
-
       - name: Remove default Flutter test
         run: rm -f test/widget_test.dart
-
-      # --------------------------------------------------
-      # Analyze
-      # --------------------------------------------------
 
       - name: Analyze Flutter project
         run: flutter analyze
 
       # --------------------------------------------------
-      # Build APK
+      # Build
       # --------------------------------------------------
 
       - name: Build release APK

@@ -31,9 +31,7 @@ jobs:
 
       - name: Disable Flutter analytics
         run: flutter config --no-analytics
-
-      - name: Recreate Android project
-        run: flutter create . --platforms android
+        
 
       - name: Configure Android manifest
         run: |

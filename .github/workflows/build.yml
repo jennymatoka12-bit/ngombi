@@ -13,14 +13,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # --------------------------------------------------
+      # 1. Récupération du projet
+      # --------------------------------------------------
+
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # --------------------------------------------------
+      # 2. Java 17
+      # --------------------------------------------------
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
+
+      # --------------------------------------------------
+      # 3. Flutter
+      # --------------------------------------------------
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -32,17 +44,26 @@ jobs:
       - name: Disable Flutter analytics
         run: flutter config --no-analytics
 
+      # --------------------------------------------------
+      # 4. Recréation du projet Android
+      # --------------------------------------------------
+
       - name: Recreate Android project
         run: flutter create . --platforms android
+
+      # --------------------------------------------------
+      # 5. Configuration complète de NGOMBI Android
+      # --------------------------------------------------
 
       - name: Configure Android project
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
-          # -------------------------------------------------
-          # 1. MainActivity.java
-          # -------------------------------------------------
+          # ==================================================
+          # MainActivity.java
+          # ==================================================
 
           java_dir = Path(
               "android/app/src/main/java/com/example/ngombi"
@@ -97,8 +118,15 @@ jobs:
                                   DashPlayerActivity.class
                           );
 
-                          intent.putExtra("url", url);
-                          intent.putExtra("userAgent", userAgent);
+                          intent.putExtra(
+                                  "url",
+                                  url
+                          );
+
+                          intent.putExtra(
+                                  "userAgent",
+                                  userAgent
+                          );
 
                           startActivity(intent);
 
@@ -113,7 +141,7 @@ jobs:
           """
           )
 
-          # Supprime le MainActivity Kotlin généré par Flutter.
+          # Supprimer le MainActivity Kotlin généré
           kotlin_activity = Path(
               "android/app/src/main/kotlin/com/example/ngombi/MainActivity.kt"
           )
@@ -121,9 +149,9 @@ jobs:
           if kotlin_activity.exists():
               kotlin_activity.unlink()
 
-          # -------------------------------------------------
-          # 2. DashPlayerActivity.java
-          # -------------------------------------------------
+          # ==================================================
+          # DashPlayerActivity.java
+          # ==================================================
 
           dash_activity = java_dir / "DashPlayerActivity.java"
 
@@ -160,7 +188,9 @@ jobs:
 
                   setContentView(playerView);
 
-                  String url = getIntent().getStringExtra("url");
+                  String url =
+                          getIntent().getStringExtra("url");
+
                   String userAgent =
                           getIntent().getStringExtra("userAgent");
 
@@ -173,7 +203,8 @@ jobs:
                       userAgent = "Mozilla/5.0";
                   }
 
-                  DefaultHttpDataSource.Factory httpDataSourceFactory =
+                  DefaultHttpDataSource.Factory
+                          httpDataSourceFactory =
                           new DefaultHttpDataSource.Factory()
                                   .setUserAgent(userAgent);
 
@@ -183,7 +214,9 @@ jobs:
                           );
 
                   player = new ExoPlayer.Builder(this)
-                          .setMediaSourceFactory(mediaSourceFactory)
+                          .setMediaSourceFactory(
+                                  mediaSourceFactory
+                          )
                           .build();
 
                   playerView.setPlayer(player);
@@ -191,7 +224,9 @@ jobs:
                   MediaItem mediaItem =
                           new MediaItem.Builder()
                                   .setUri(Uri.parse(url))
-                                  .setMimeType(MimeTypes.APPLICATION_MPD)
+                                  .setMimeType(
+                                          MimeTypes.APPLICATION_MPD
+                                  )
                                   .build();
 
                   player.setMediaItem(mediaItem);
@@ -222,9 +257,9 @@ jobs:
           """
           )
 
-          # -------------------------------------------------
-          # 3. AndroidManifest.xml
-          # -------------------------------------------------
+          # ==================================================
+          # AndroidManifest.xml
+          # ==================================================
 
           manifest = Path(
               "android/app/src/main/AndroidManifest.xml"
@@ -232,12 +267,12 @@ jobs:
 
           text = manifest.read_text()
 
-          internet = (
+          internet_permission = (
               '    <uses-permission '
               'android:name="android.permission.INTERNET" />'
           )
 
-          network = (
+          network_permission = (
               '    <uses-permission '
               'android:name="android.permission.ACCESS_NETWORK_STATE" />'
           )
@@ -245,8 +280,16 @@ jobs:
           if "android.permission.INTERNET" not in text:
               text = text.replace(
                   "<application",
-                  internet + "\n" +
-                  network + "\n\n    <application",
+                  internet_permission
+                  + "\n\n    <application",
+                  1
+              )
+
+          if "android.permission.ACCESS_NETWORK_STATE" not in text:
+              text = text.replace(
+                  "<application",
+                  network_permission
+                  + "\n\n    <application",
                   1
               )
 
@@ -257,29 +300,33 @@ jobs:
                   1
               )
 
-          activity = """
-          <activity
-              android:name=".DashPlayerActivity"
-              android:exported="false" />
+          dash_activity_declaration = """
+              <activity
+                  android:name=".DashPlayerActivity"
+                  android:exported="false" />
           """
 
           if "DashPlayerActivity" not in text:
               text = text.replace(
                   "</application>",
-                  activity + "\n    </application>",
+                  dash_activity_declaration
+                  + "\n    </application>",
                   1
               )
 
           manifest.write_text(text)
 
-          # -------------------------------------------------
-          # 4. Media3 dans app/build.gradle
-          # -------------------------------------------------
+          # ==================================================
+          # Media3
+          # ==================================================
 
-          gradle = Path("android/app/build.gradle")
-          gradle_text = gradle.read_text()
+          app_gradle = Path(
+              "android/app/build.gradle"
+          )
 
-          dependencies = """
+          gradle_text = app_gradle.read_text()
+
+          media3_dependencies = """
           dependencies {
               implementation "androidx.media3:media3-exoplayer:1.11.1"
               implementation "androidx.media3:media3-exoplayer-dash:1.11.1"
@@ -291,37 +338,163 @@ jobs:
           if "androidx.media3:media3-exoplayer:1.11.1" not in gradle_text:
               gradle_text = gradle_text.replace(
                   "android {",
-                  dependencies + "android {",
+                  media3_dependencies + "android {",
                   1
               )
 
-          gradle.write_text(gradle_text)
+          # compileSdk 36
+          gradle_text = re.sub(
+              r"compileSdk\s*=\s*flutter\.compileSdkVersion",
+              "compileSdk = 36",
+              gradle_text
+          )
 
-          print("Android NGOMBI configure avec succes.")
+          app_gradle.write_text(gradle_text)
+
+          print("NGOMBI Android configuration completed.")
           PY
+
+      # --------------------------------------------------
+      # 6. Mise à niveau de Gradle / Android Gradle Plugin
+      # --------------------------------------------------
+
+      - name: Upgrade Android build tools
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          # ==================================================
+          # settings.gradle
+          # ==================================================
+
+          settings = Path(
+              "android/settings.gradle"
+          )
+
+          text = settings.read_text()
+
+          text = re.sub(
+              r'id "com\.android\.application" version "[^"]+" apply false',
+              'id "com.android.application" version "8.10.0" apply false',
+              text
+          )
+
+          text = re.sub(
+              r'id "org\.jetbrains\.kotlin\.android" version "[^"]+" apply false',
+              'id "org.jetbrains.kotlin.android" version "2.2.0" apply false',
+              text
+          )
+
+          settings.write_text(text)
+
+          # ==================================================
+          # Gradle wrapper
+          # ==================================================
+
+          wrapper = Path(
+              "android/gradle/wrapper/gradle-wrapper.properties"
+          )
+
+          text = wrapper.read_text()
+
+          text = re.sub(
+              r"distributionUrl=.*",
+              "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.11.1-bin.zip",
+              text
+          )
+
+          wrapper.write_text(text)
+
+          print("Android Gradle Plugin upgraded to 8.10.0.")
+          print("Gradle upgraded to 8.11.1.")
+          print("Compile SDK set to 36.")
+          print("Kotlin Android plugin set to 2.2.0.")
+          PY
+
+      # --------------------------------------------------
+      # 7. Vérification de la configuration Android
+      # --------------------------------------------------
+
+      - name: Verify Android configuration
+        run: |
+          echo "===== settings.gradle ====="
+          cat android/settings.gradle
+
+          echo ""
+          echo "===== app/build.gradle ====="
+          cat android/app/build.gradle
+
+          echo ""
+          echo "===== AndroidManifest.xml ====="
+          cat android/app/src/main/AndroidManifest.xml
+
+          echo ""
+          echo "===== MainActivity.java ====="
+          cat android/app/src/main/java/com/example/ngombi/MainActivity.java
+
+          echo ""
+          echo "===== DashPlayerActivity.java ====="
+          cat android/app/src/main/java/com/example/ngombi/DashPlayerActivity.java
+
+          echo ""
+          echo "===== Gradle wrapper ====="
+          cat android/gradle/wrapper/gradle-wrapper.properties
+
+      # --------------------------------------------------
+      # 8. Dépendances Flutter
+      # --------------------------------------------------
 
       - name: Get Flutter dependencies
         run: flutter pub get
 
+      # --------------------------------------------------
+      # 9. Nettoyage
+      # --------------------------------------------------
+
       - name: Clean Flutter project
         run: flutter clean
+
+      # --------------------------------------------------
+      # 10. Dépendances après nettoyage
+      # --------------------------------------------------
 
       - name: Get dependencies again
         run: flutter pub get
 
+      # --------------------------------------------------
+      # 11. Suppression du test Flutter par défaut
+      # --------------------------------------------------
+
       - name: Remove default Flutter test
         run: rm -f test/widget_test.dart
+
+      # --------------------------------------------------
+      # 12. Analyse
+      # --------------------------------------------------
 
       - name: Analyze Flutter project
         run: flutter analyze
 
+      # --------------------------------------------------
+      # 13. Construction APK
+      # --------------------------------------------------
+
       - name: Build release APK
         run: flutter build apk --release
+
+      # --------------------------------------------------
+      # 14. Vérification APK
+      # --------------------------------------------------
 
       - name: Verify APK
         run: |
           test -f build/app/outputs/flutter-apk/app-release.apk
           ls -lh build/app/outputs/flutter-apk/app-release.apk
+
+      # --------------------------------------------------
+      # 15. Upload APK
+      # --------------------------------------------------
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

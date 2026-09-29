@@ -137,3 +137,5 @@
 
 #SERVICE 4097:0:1:1006:0:0:0:0:0:0:https://cdn-euronews.akamaized.net/live/eds/africanews-en/25049/index.m3u8:Africanews English
 #SERVICE 4097:0:1:1007:0:0:0:0:0:0:https://cdn-euronews.akamaized.net/live/eds/africanews-fr/25050/index.m3u8:Africanews Français
+#SERVICE 4097:0:1:2591:0:0:0:0:0:0:https%3a//uvotv-aniview.global.ssl.fastly.net/hls/live/2119695/gabon1ere/playlist.m3u8:Gabon 1ère
+#SERVICE 4097:0:1:2592:0:0:0:0:0:0:https%3a//uvotv-aniview.global.ssl.fastly.net/hls/live/2120686/gabon24/playlist.m3u8:Gabon 24

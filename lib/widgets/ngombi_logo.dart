@@ -118,18 +118,3 @@ class NgombiLogo extends StatelessWidget {
     ),
   );
   }
-
-  Widget _waveBar(
-    double width,
-    double height,
-  ) {
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.75),
-        borderRadius: BorderRadius.circular(width),
-      ),
-    );
-  }
-}

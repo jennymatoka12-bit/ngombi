@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'widgets/ngombi_logo.dart';
 
 import 'models/tv_channel.dart';
 import 'screens/stream_player_screen.dart';
@@ -339,6 +340,73 @@ class NgombiHero extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  'Le monde en direct',
+                  style: TextStyle(
+                    fontSize: 25,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 7),
+                Text(
+                  'TV & Radio, où que vous soyez.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade400,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+// -----------------------------------------------------------------------------
+// HERO NGOMBI
+// -----------------------------------------------------------------------------
+
+class NgombiHero extends StatelessWidget {
+  const NgombiHero({
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+      height: 190,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF241010),
+            Color(0xFF111111),
+          ],
+        ),
+        border: Border.all(
+          color: const Color(0x33FF7043),
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -25,
+            top: -15,
+            child: CustomPaint(
+              size: const Size(210, 210),
+              painter: NgombiWavePainter(),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const NgombiLogo.full(
+                  height: 42,
                 ),
                 const SizedBox(height: 18),
                 const Text(

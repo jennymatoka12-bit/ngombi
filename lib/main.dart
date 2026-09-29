@@ -287,7 +287,7 @@ class NgombiHero extends StatelessWidget {
           ],
         ),
         border: Border.all(
-          color: Color(0x33FF7043),
+          color: const Color(0x33FF7043),
         ),
       ),
       child: Stack(

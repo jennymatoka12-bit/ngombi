@@ -68,8 +68,10 @@ class NgombiLogo extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         _buildIcon(height),
+
         const SizedBox(width: 10),
-        const Text(
+
+        Text(
           'NGOMBI',
           style: NgombiTypography.title.copyWith(
             color: NgombiColors.textPrimary,
@@ -86,8 +88,10 @@ class NgombiLogo extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         _buildIcon(height),
+
         const SizedBox(width: 8),
-        const Text(
+
+        Text(
           'NGOMBI',
           style: NgombiTypography.subtitle.copyWith(
             color: NgombiColors.textPrimary,
@@ -106,7 +110,9 @@ class NgombiLogo extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: NgombiColors.orange,
-          borderRadius: BorderRadius.circular(size * 0.28),
+          borderRadius: BorderRadius.circular(
+            size * 0.28,
+          ),
           boxShadow: [
             BoxShadow(
               color: NgombiColors.orange.withOpacity(0.25),
@@ -129,13 +135,31 @@ class NgombiLogo extends StatelessWidget {
               left: size * 0.20,
               right: size * 0.20,
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment:
+                    MainAxisAlignment.center,
                 children: [
-                  _waveBar(size * 0.10, size * 0.20),
-                  SizedBox(width: size * 0.045),
-                  _waveBar(size * 0.10, size * 0.30),
-                  SizedBox(width: size * 0.045),
-                  _waveBar(size * 0.10, size * 0.22),
+                  _waveBar(
+                    size * 0.10,
+                    size * 0.20,
+                  ),
+
+                  SizedBox(
+                    width: size * 0.045,
+                  ),
+
+                  _waveBar(
+                    size * 0.10,
+                    size * 0.30,
+                  ),
+
+                  SizedBox(
+                    width: size * 0.045,
+                  ),
+
+                  _waveBar(
+                    size * 0.10,
+                    size * 0.22,
+                  ),
                 ],
               ),
             ),
@@ -145,7 +169,10 @@ class NgombiLogo extends StatelessWidget {
     );
   }
 
-  Widget _waveBar(double width, double height) {
+  Widget _waveBar(
+    double width,
+    double height,
+  ) {
     return Container(
       width: width,
       height: height,

@@ -507,23 +507,8 @@ class HomeScreen extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 42,
+          const NgombiLogo.icon(  
             height: 42,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(13),
-              gradient: const LinearGradient(
-                colors: [
-                  Color(0xFFFF8A00),
-                  Color(0xFFFFB52E),
-                ],
-              ),
-            ),
-            child: const Icon(
-              Icons.play_arrow_rounded,
-              color: Colors.black,
-              size: 28,
-            ),
           ),
           const SizedBox(width: 12),
           const Expanded(

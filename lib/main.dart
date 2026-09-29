@@ -462,6 +462,41 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _openSearch(BuildContext context) async {
+  final result = await showSearch<NgombiSearchResult>(
+    context: context,
+    delegate: NgombiSearchDelegate(
+      tvChannels: tvChannels,
+      radioChannels: radioChannels,
+    ),
+  );
+
+  if (!context.mounted || result == null) {
+    return;
+  }
+
+  if (result.tvChannel != null) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => StreamPlayerScreen(
+          channel: result.tvChannel!,
+        ),
+      ),
+    );
+    return;
+  }
+
+  if (result.radioChannel != null) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => WebPlayerScreen(
+          title: result.radioChannel!.name,
+          url: result.radioChannel!.url,
+        ),
+      ),
+    );
+  }
+  }
   Widget _buildHeader(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -514,10 +549,10 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           IconButton(
-            onPressed: () {},
+            onPressed: () => _openSearch(context),
             icon: const Icon(
-              Icons.search_rounded,
-            ),
+              Icons.search_rounded, 
+            ),  
           ),
         ],
       ),
@@ -1416,5 +1451,294 @@ class _WebPlayerScreenState
         ],
       ),
     );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// RECHERCHE NGOMBI
+// -----------------------------------------------------------------------------
+
+class NgombiSearchResult {
+  final TvChannel? tvChannel;
+  final MediaItem? radioChannel;
+
+  const NgombiSearchResult.tv(
+    TvChannel channel,
+  )   : tvChannel = channel,
+        radioChannel = null;
+
+  const NgombiSearchResult.radio(
+    MediaItem channel,
+  )   : tvChannel = null,
+        radioChannel = channel;
+}
+
+class NgombiSearchDelegate
+    extends SearchDelegate<NgombiSearchResult> {
+  final List<TvChannel> tvChannels;
+  final List<MediaItem> radioChannels;
+
+  NgombiSearchDelegate({
+    required this.tvChannels,
+    required this.radioChannels,
+  }) : super(
+          searchFieldLabel:
+              'Rechercher une chaîne ou une radio',
+          textInputAction: TextInputAction.search,
+          keyboardType: TextInputType.text,
+        );
+
+  @override
+  List<Widget> buildActions(BuildContext context) {
+    if (query.isEmpty) {
+      return [];
+    }
+
+    return [
+      IconButton(
+        tooltip: 'Effacer',
+        onPressed: () {
+          query = '';
+        },
+        icon: const Icon(
+          Icons.clear_rounded,
+        ),
+      ),
+    ];
+  }
+
+  @override
+  Widget buildLeading(BuildContext context) {
+    return IconButton(
+      tooltip: 'Retour',
+      onPressed: () {
+        close(
+          context,
+          const NgombiSearchResult.radio(
+            MediaItem(
+              name: '',
+              url: '',
+              category: '',
+            ),
+          ),
+        );
+      },
+      icon: const Icon(
+        Icons.arrow_back_rounded,
+      ),
+    );
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return _buildResults(context);
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    return _buildResults(context);
+  }
+
+  Widget _buildResults(BuildContext context) {
+    final search = query.trim().toLowerCase();
+
+    if (search.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.search_rounded,
+              size: 56,
+              color: Colors.white24,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Rechercher une chaîne ou une radio',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 16,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    final matchingTv = tvChannels.where((channel) {
+      final name = channel.name.toLowerCase();
+      final category = channel.category.toLowerCase();
+
+      return name.contains(search) ||
+          category.contains(search);
+    }).toList();
+
+    final matchingRadio = radioChannels.where((radio) {
+      final name = radio.name.toLowerCase();
+      final category = radio.category.toLowerCase();
+
+      return name.contains(search) ||
+          category.contains(search);
+    }).toList();
+
+    final totalResults =
+        matchingTv.length + matchingRadio.length;
+
+    if (totalResults == 0) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.search_off_rounded,
+              size: 56,
+              color: Colors.white24,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Aucun résultat pour',
+              style: TextStyle(
+                color: Colors.grey.shade400,
+                fontSize: 15,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '"$query"',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.symmetric(
+        vertical: 12,
+      ),
+      children: [
+        if (matchingTv.isNotEmpty) ...[
+          const Padding(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              8,
+              20,
+              8,
+            ),
+            child: Text(
+              'TV',
+              style: TextStyle(
+                color: Colors.orange,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1,
+              ),
+            ),
+          ),
+          ...matchingTv.map(
+            (channel) {
+              return ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: Color(0x22FF8A00),
+                  child: Icon(
+                    Icons.tv_rounded,
+                    color: Colors.orange,
+                  ),
+                ),
+                title: Text(
+                  channel.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                subtitle: Text(
+                  '${channel.category} • '
+                  '${_searchStreamTypeLabel(channel.type)}',
+                ),
+                trailing: const Icon(
+                  Icons.chevron_right_rounded,
+                ),
+                onTap: () {
+                  close(
+                    context,
+                    NgombiSearchResult.tv(channel),
+                  );
+                },
+              );
+            },
+          ),
+        ],
+
+        if (matchingRadio.isNotEmpty) ...[
+          const Padding(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              20,
+              20,
+              8,
+            ),
+            child: Text(
+              'RADIO',
+              style: TextStyle(
+                color: Colors.orange,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1,
+              ),
+            ),
+          ),
+          ...matchingRadio.map(
+            (radio) {
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundColor:
+                      Colors.orange.withOpacity(0.12),
+                  child: Icon(
+                    radio.icon,
+                    color: Colors.orange,
+                  ),
+                ),
+                title: Text(
+                  radio.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                subtitle: Text(
+                  radio.category,
+                ),
+                trailing: const Icon(
+                  Icons.chevron_right_rounded,
+                ),
+                onTap: () {
+                  close(
+                    context,
+                    NgombiSearchResult.radio(radio),
+                  );
+                },
+              );
+            },
+          ),
+        ],
+      ],
+    );
+  }
+
+  static String _searchStreamTypeLabel(
+    StreamType type,
+  ) {
+    switch (type) {
+      case StreamType.hls:
+        return 'HLS';
+      case StreamType.dash:
+        return 'DASH';
+      case StreamType.unknown:
+        return 'Flux';
+    }
   }
 }

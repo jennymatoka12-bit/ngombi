@@ -138,14 +138,46 @@ class NgombiApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const orange = Color(0xFFFF8A00);
+    const gold = Color(0xFFFFB52E);
+    const background = Color(0xFF080808);
+
     return MaterialApp(
       title: 'NGOMBI - TV & Radio Direct',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
-        colorSchemeSeed: Colors.red,
-        scaffoldBackgroundColor: const Color(0xFF0B0B0B),
+        scaffoldBackgroundColor: background,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: orange,
+          brightness: Brightness.dark,
+        ).copyWith(
+          primary: orange,
+          secondary: gold,
+          surface: const Color(0xFF121212),
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: background,
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: const Color(0xFF111111),
+          indicatorColor: orange.withValues(alpha: 0.22),
+          labelTextStyle: WidgetStateProperty.all(
+            const TextStyle(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        cardTheme: CardThemeData(
+          color: const Color(0xFF151515),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
       ),
       home: MainTabScreen(
         tvChannels: tvChannels,
@@ -171,41 +203,38 @@ class _MainTabScreenState extends State<MainTabScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Row(
-          children: [
-            Icon(
-              Icons.play_circle_fill,
-              color: Colors.red,
-            ),
-            SizedBox(width: 10),
-            Text(
-              'NGOMBI',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
-              ),
-            ),
-          ],
-        ),
-        centerTitle: false,
+    final pages = [
+      HomeScreen(
+        tvChannels: widget.tvChannels,
+        radioChannels: radioChannels,
+        onOpenTv: () {
+          setState(() {
+            currentIndex = 1;
+          });
+        },
+        onOpenRadio: () {
+          setState(() {
+            currentIndex = 2;
+          });
+        },
       ),
+      MediaListScreen(
+        title: 'Télévision',
+        items: const [],
+        isTv: true,
+        tvChannels: widget.tvChannels,
+      ),
+      const MediaListScreen(
+        title: 'Radio',
+        items: radioChannels,
+        isTv: false,
+      ),
+    ];
+
+    return Scaffold(
       body: IndexedStack(
         index: currentIndex,
-        children: [
-          MediaListScreen(
-            title: 'TV en direct',
-            items: const [],
-            isTv: true,
-            tvChannels: widget.tvChannels,
-          ),
-          const MediaListScreen(
-            title: 'Radio en direct',
-            items: radioChannels,
-            isTv: false,
-          ),
-        ],
+        children: pages,
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: currentIndex,
@@ -216,13 +245,18 @@ class _MainTabScreenState extends State<MainTabScreen> {
         },
         destinations: const [
           NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home_rounded),
+            label: 'Accueil',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.tv_outlined),
-            selectedIcon: Icon(Icons.tv),
+            selectedIcon: Icon(Icons.tv_rounded),
             label: 'TV',
           ),
           NavigationDestination(
             icon: Icon(Icons.radio_outlined),
-            selectedIcon: Icon(Icons.radio),
+            selectedIcon: Icon(Icons.radio_rounded),
             label: 'Radio',
           ),
         ],
@@ -231,139 +265,214 @@ class _MainTabScreenState extends State<MainTabScreen> {
   }
 }
 
-class MediaListScreen extends StatefulWidget {
-  final String title;
-  final List<MediaItem> items;
-  final bool isTv;
+class HomeScreen extends StatelessWidget {
   final List<TvChannel> tvChannels;
+  final List<MediaItem> radioChannels;
+  final VoidCallback onOpenTv;
+  final VoidCallback onOpenRadio;
 
-  const MediaListScreen({
+  const HomeScreen({
     super.key,
-    required this.title,
-    required this.items,
-    required this.isTv,
-    this.tvChannels = const [],
+    required this.tvChannels,
+    required this.radioChannels,
+    required this.onOpenTv,
+    required this.onOpenRadio,
   });
 
   @override
-  State<MediaListScreen> createState() => _MediaListScreenState();
-}
-
-class _MediaListScreenState extends State<MediaListScreen> {
-  String selectedCategory = 'Toutes';
-
-  @override
   Widget build(BuildContext context) {
-    if (widget.isTv && widget.tvChannels.isNotEmpty) {
-      return _buildTvList(context);
-    }
+    final popularChannels = tvChannels.take(6).toList();
 
-    if (widget.isTv) {
-      return _buildEmptyTv(context);
-    }
-
-    return _buildRadioList(context);
-  }
-
-  Widget _buildTvList(BuildContext context) {
-    final categories = <String>{
-      'Toutes',
-      ...widget.tvChannels.map(
-        (channel) => channel.category,
-      ),
-    }.toList();
-
-    final filteredChannels = selectedCategory == 'Toutes'
-        ? widget.tvChannels
-        : widget.tvChannels
-            .where(
-              (channel) => channel.category == selectedCategory,
-            )
-            .toList();
+    final categories = <String>[
+      'Afrique',
+      'France',
+      'Information',
+      'Sport',
+      'Cinéma',
+      'Musique',
+      'Jeunesse',
+      'International',
+    ];
 
     return SafeArea(
       child: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                16,
-                18,
-                16,
-                8,
-              ),
-              child: Text(
-                widget.title,
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineSmall
-                    ?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
+            child: _buildHeader(context),
+          ),
+
+          SliverToBoxAdapter(
+            child: _buildHero(context),
+          ),
+
+          SliverToBoxAdapter(
+            child: _buildSectionTitle(
+              context,
+              title: 'En direct',
+              action: 'Voir tout',
+              onTap: onOpenTv,
             ),
           ),
+
+          if (popularChannels.isNotEmpty)
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 190,
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                  ),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: popularChannels.length,
+                  separatorBuilder: (_, __) {
+                    return const SizedBox(width: 12);
+                  },
+                  itemBuilder: (context, index) {
+                    return _buildChannelCard(
+                      context,
+                      popularChannels[index],
+                    );
+                  },
+                ),
+              ),
+            )
+          else
+            const SliverToBoxAdapter(
+              child: SizedBox(height: 20),
+            ),
+
+          SliverToBoxAdapter(
+            child: _buildSectionTitle(
+              context,
+              title: 'Catégories',
+              action: null,
+              onTap: null,
+            ),
+          ),
+
           SliverToBoxAdapter(
             child: SizedBox(
-              height: 54,
+              height: 105,
               child: ListView.separated(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
+                  horizontal: 16,
                 ),
                 scrollDirection: Axis.horizontal,
                 itemCount: categories.length,
                 separatorBuilder: (_, __) {
-                  return const SizedBox(width: 8);
+                  return const SizedBox(width: 10);
                 },
                 itemBuilder: (context, index) {
-                  final category = categories[index];
-
-                  return ChoiceChip(
-                    label: Text(category),
-                    selected: selectedCategory == category,
-                    onSelected: (_) {
-                      setState(() {
-                        selectedCategory = category;
-                      });
-                    },
+                  return _buildCategoryCard(
+                    context,
+                    categories[index],
                   );
                 },
               ),
             ),
           ),
+
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                16,
-                4,
-                16,
-                4,
-              ),
-              child: Text(
-                '${filteredChannels.length} chaîne(s)',
-                style: TextStyle(
-                  color: Colors.grey.shade400,
+            child: _buildSectionTitle(
+              context,
+              title: 'Radio',
+              action: 'Voir tout',
+              onTap: onOpenRadio,
+            ),
+          ),
+
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: 130,
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
                 ),
+                scrollDirection: Axis.horizontal,
+                itemCount: radioChannels.length.clamp(0, 6),
+                separatorBuilder: (_, __) {
+                  return const SizedBox(width: 12);
+                },
+                itemBuilder: (context, index) {
+                  final radio = radioChannels[index];
+
+                  return _buildRadioCard(
+                    context,
+                    radio,
+                  );
+                },
               ),
             ),
           ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(
-              12,
-              8,
-              12,
-              24,
-            ),
-            sliver: SliverList.builder(
-              itemCount: filteredChannels.length,
-              itemBuilder: (context, index) {
-                final channel = filteredChannels[index];
 
-                return _buildTvCard(
-                  context,
-                  channel,
-                );
-              },
+          const SliverToBoxAdapter(
+            child: SizedBox(height: 30),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        20,
+        18,
+        20,
+        10,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(15),
+              gradient: const LinearGradient(
+                colors: [
+                  Color(0xFFFF8A00),
+                  Color(0xFFFFB52E),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: const Icon(
+              Icons.play_arrow_rounded,
+              color: Colors.black,
+              size: 30,
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'NGOMBI',
+                  style: TextStyle(
+                    fontSize: 23,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 2,
+                  ),
+                ),
+                Text(
+                  'TV & RADIO',
+                  style: TextStyle(
+                    color: Color(0xFFFFA31A),
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(
+              Icons.search_rounded,
+              size: 27,
             ),
           ),
         ],
@@ -371,104 +480,122 @@ class _MediaListScreenState extends State<MediaListScreen> {
     );
   }
 
-  Widget _buildTvCard(
-    BuildContext context,
-    TvChannel channel,
-  ) {
-    return Card(
-      margin: const EdgeInsets.symmetric(
-        horizontal: 4,
-        vertical: 6,
+  Widget _buildHero(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        16,
+        10,
+        16,
+        8,
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 8,
-        ),
-        leading: CircleAvatar(
-          radius: 27,
-          child: channel.logo != null
-              ? ClipOval(
-                  child: Image.network(
-                    channel.logo!,
-                    width: 54,
-                    height: 54,
-                    fit: BoxFit.cover,
-                    errorBuilder: (
-                      context,
-                      error,
-                      stackTrace,
-                    ) {
-                      return _channelInitial(channel);
-                    },
-                  ),
-                )
-              : _channelInitial(channel),
-        ),
-        title: Text(
-          channel.name,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
+      child: Container(
+        height: 205,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(26),
+          gradient: const LinearGradient(
+            colors: [
+              Color(0xFF321900),
+              Color(0xFF17100A),
+              Color(0xFF0E0E0E),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          border: Border.all(
+            color: Color(0x33FF9D1A),
           ),
         ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 5),
-          child: Text(
-            '${channel.category} • '
-            '${_streamTypeLabel(channel.type)}',
-          ),
-        ),
-        trailing: const Icon(
-          Icons.play_arrow_rounded,
-        ),
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => StreamPlayerScreen(
-                channel: channel,
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _channelInitial(TvChannel channel) {
-    return Text(
-      channel.name.isNotEmpty
-          ? channel.name[0].toUpperCase()
-          : '?',
-      style: const TextStyle(
-        fontWeight: FontWeight.bold,
-      ),
-    );
-  }
-
-  Widget _buildEmptyTv(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Stack(
           children: [
-            Icon(
-              Icons.tv_off,
-              size: 64,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Aucune chaîne TV détectée.',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+            Positioned(
+              right: -35,
+              top: -40,
+              child: Container(
+                width: 180,
+                height: 180,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0x22FF9D1A),
+                    width: 25,
+                  ),
+                ),
               ),
-              textAlign: TextAlign.center,
             ),
-            SizedBox(height: 8),
-            Text(
-              'Vérifie le fichier assets/tvradiozap.txt.',
-              textAlign: TextAlign.center,
+            Padding(
+              padding: const EdgeInsets.all(22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF8A00),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.circle,
+                          size: 8,
+                          color: Colors.black,
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          'EN DIRECT',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  const Text(
+                    'Le monde en direct',
+                    style: TextStyle(
+                      fontSize: 27,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    'Regardez la télévision et écoutez la radio.',
+                    style: TextStyle(
+                      color: Colors.grey.shade300,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  FilledButton.icon(
+                    onPressed: onOpenTv,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF8A00),
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 11,
+                      ),
+                    ),
+                    icon: const Icon(
+                      Icons.play_arrow_rounded,
+                    ),
+                    label: const Text(
+                      'Regarder maintenant',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -476,148 +603,142 @@ class _MediaListScreenState extends State<MediaListScreen> {
     );
   }
 
-  Widget _buildRadioList(BuildContext context) {
-    return SafeArea(
-      child: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                16,
-                18,
-                16,
-                8,
-              ),
-              child: Text(
-                widget.title,
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineSmall
-                    ?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
+  Widget _buildSectionTitle(
+    BuildContext context, {
+    required String title,
+    required String? action,
+    required VoidCallback? onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        18,
+        22,
+        16,
+        12,
+      ),
+      child: Row(
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
             ),
           ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(
-              12,
-              8,
-              12,
-              24,
+          const Spacer(),
+          if (action != null && onTap != null)
+            TextButton(
+              onPressed: onTap,
+              child: const Text(
+                'Voir tout',
+                style: TextStyle(
+                  color: Color(0xFFFFA31A),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
-            sliver: SliverList.builder(
-              itemCount: widget.items.length,
-              itemBuilder: (context, index) {
-                final item = widget.items[index];
-
-                return Card(
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 6,
-                  ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    leading: CircleAvatar(
-                      radius: 27,
-                      child: Icon(item.icon),
-                    ),
-                    title: Text(
-                      item.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    subtitle: Padding(
-                      padding: const EdgeInsets.only(top: 5),
-                      child: Text(item.description),
-                    ),
-                    trailing: const Icon(
-                      Icons.play_arrow_rounded,
-                    ),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => WebPlayerScreen(
-                            title: item.name,
-                            url: item.url,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
-          ),
         ],
       ),
     );
   }
 
-  String _streamTypeLabel(StreamType type) {
-    switch (type) {
-      case StreamType.hls:
-        return 'HLS';
-      case StreamType.dash:
-        return 'DASH';
-      case StreamType.unknown:
-        return 'Flux';
-    }
-  }
-}
-
-class WebPlayerScreen extends StatefulWidget {
-  final String title;
-  final String url;
-
-  const WebPlayerScreen({
-    super.key,
-    required this.title,
-    required this.url,
-  });
-
-  @override
-  State<WebPlayerScreen> createState() => _WebPlayerScreenState();
-}
-
-class _WebPlayerScreenState extends State<WebPlayerScreen> {
-  late final WebViewController controller;
-
-  @override
-  void initState() {
-    super.initState();
-
-    controller = WebViewController()
-      ..setJavaScriptMode(
-        JavaScriptMode.unrestricted,
-      )
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onWebResourceError: (error) {
-            debugPrint(
-              'WebView error: ${error.description}',
+  Widget _buildChannelCard(
+    BuildContext context,
+    TvChannel channel,
+  ) {
+    return SizedBox(
+      width: 155,
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => StreamPlayerScreen(
+                  channel: channel,
+                ),
+              ),
             );
           },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  color: const Color(0xFF202020),
+                  child: channel.logo != null
+                      ? Image.network(
+                          channel.logo!,
+                          fit: BoxFit.contain,
+                          errorBuilder: (
+                            context,
+                            error,
+                            stackTrace,
+                          ) {
+                            return _channelPlaceholder(channel);
+                          },
+                        )
+                      : _channelPlaceholder(channel),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  12,
+                  8,
+                  12,
+                  10,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      channel.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.circle,
+                          size: 7,
+                          color: Color(0xFFFF8A00),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          'EN DIRECT',
+                          style: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-      )
-      ..loadRequest(
-        Uri.parse(widget.url),
-      );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
-      body: WebViewWidget(
-        controller: controller,
       ),
     );
   }
-}
+
+  Widget _channelPlaceholder(TvChannel channel) {
+    return Center(
+      child: Container(
+        width: 55,
+        height: 55,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: const Color(0xFFFF8A00).withValues(
+            alpha: 0.16,
+          ),
+        ),
+        child: Center(
+          child: 

@@ -23,6 +23,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
   assets:
     - assets/tvradiozap.txt
+    - assets/ngombi_icon.png

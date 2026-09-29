@@ -164,14 +164,14 @@ class NgombiApp extends StatelessWidget {
         ),
         navigationBarTheme: NavigationBarThemeData(
           backgroundColor: const Color(0xFF111111),
-          indicatorColor: orange.withValues(alpha: 0.22),
-          labelTextStyle: WidgetStateProperty.all(
-            const TextStyle(
+          indicatorColor: orange.withOpacity(0.22),
+          labelTextStyle: const MaterialStatePropertyAll(
+            TextStyle(
               fontWeight: FontWeight.w600,
             ),
           ),
         ),
-        cardTheme: CardThemeData(
+        cardTheme: CardTheme(
           color: const Color(0xFF151515),
           elevation: 0,
           shape: RoundedRectangleBorder(
@@ -263,9 +263,7 @@ class _MainTabScreenState extends State<MainTabScreen> {
       ),
     );
   }
-}
-
-class HomeScreen extends StatelessWidget {
+}class HomeScreen extends StatelessWidget {
   final List<TvChannel> tvChannels;
   final List<MediaItem> radioChannels;
   final VoidCallback onOpenTv;
@@ -294,17 +292,18 @@ class HomeScreen extends StatelessWidget {
       'International',
     ];
 
+    final radioCount =
+        radioChannels.length > 6 ? 6 : radioChannels.length;
+
     return SafeArea(
       child: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
             child: _buildHeader(context),
           ),
-
           SliverToBoxAdapter(
             child: _buildHero(context),
           ),
-
           SliverToBoxAdapter(
             child: _buildSectionTitle(
               context,
@@ -313,7 +312,6 @@ class HomeScreen extends StatelessWidget {
               onTap: onOpenTv,
             ),
           ),
-
           if (popularChannels.isNotEmpty)
             SliverToBoxAdapter(
               child: SizedBox(
@@ -340,7 +338,6 @@ class HomeScreen extends StatelessWidget {
             const SliverToBoxAdapter(
               child: SizedBox(height: 20),
             ),
-
           SliverToBoxAdapter(
             child: _buildSectionTitle(
               context,
@@ -349,7 +346,6 @@ class HomeScreen extends StatelessWidget {
               onTap: null,
             ),
           ),
-
           SliverToBoxAdapter(
             child: SizedBox(
               height: 105,
@@ -371,7 +367,6 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
           ),
-
           SliverToBoxAdapter(
             child: _buildSectionTitle(
               context,
@@ -380,7 +375,6 @@ class HomeScreen extends StatelessWidget {
               onTap: onOpenRadio,
             ),
           ),
-
           SliverToBoxAdapter(
             child: SizedBox(
               height: 130,
@@ -389,7 +383,7 @@ class HomeScreen extends StatelessWidget {
                   horizontal: 16,
                 ),
                 scrollDirection: Axis.horizontal,
-                itemCount: radioChannels.length.clamp(0, 6),
+                itemCount: radioCount,
                 separatorBuilder: (_, __) {
                   return const SizedBox(width: 12);
                 },
@@ -404,7 +398,6 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
           ),
-
           const SliverToBoxAdapter(
             child: SizedBox(height: 30),
           ),
@@ -502,7 +495,7 @@ class HomeScreen extends StatelessWidget {
             end: Alignment.bottomRight,
           ),
           border: Border.all(
-            color: Color(0x33FF9D1A),
+            color: const Color(0x33FF9D1A),
           ),
         ),
         child: Stack(
@@ -736,9 +729,549 @@ class HomeScreen extends StatelessWidget {
         height: 55,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: const Color(0xFFFF8A00).withValues(
-            alpha: 0.16,
-          ),
+          color: const Color(0xFFFF8A00).withOpacity(0.16),
         ),
         child: Center(
-          child: 
+          child: Text(
+            channel.name.isNotEmpty
+                ? channel.name[0].toUpperCase()
+                : '?',
+            style: const TextStyle(
+              color: Color(0xFFFFA31A),
+              fontSize: 25,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryCard(
+    BuildContext context,
+    String category,
+  ) {
+    IconData icon;
+
+    switch (category) {
+      case 'Afrique':
+        icon = Icons.public;
+        break;
+      case 'France':
+        icon = Icons.location_city;
+        break;
+      case 'Information':
+        icon = Icons.newspaper;
+        break;
+      case 'Sport':
+        icon = Icons.sports_soccer;
+        break;
+      case 'Cinéma':
+        icon = Icons.movie;
+        break;
+      case 'Musique':
+        icon = Icons.music_note;
+        break;
+      case 'Jeunesse':
+        icon = Icons.child_care;
+        break;
+      default:
+        icon = Icons.language;
+    }
+
+    return Container(
+      width: 120,
+      decoration: BoxDecoration(
+        color: const Color(0xFF151515),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: const Color(0x22181818),
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            color: const Color(0xFFFFA31A),
+            size: 28,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            category,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRadioCard(
+    BuildContext context,
+    MediaItem radio,
+  ) {
+    return SizedBox(
+      width: 190,
+      child: Card(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => WebPlayerScreen(
+                  title: radio.name,
+                  url: radio.url,
+                ),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF8A00).withOpacity(0.14),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.radio,
+                    color: Color(0xFFFFA31A),
+                  ),
+                ),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Text(
+                    radio.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}class MediaListScreen extends StatefulWidget {
+  final String title;
+  final List<MediaItem> items;
+  final bool isTv;
+  final List<TvChannel> tvChannels;
+
+  const MediaListScreen({
+    super.key,
+    required this.title,
+    required this.items,
+    required this.isTv,
+    this.tvChannels = const [],
+  });
+
+  @override
+  State<MediaListScreen> createState() => _MediaListScreenState();
+}
+
+class _MediaListScreenState extends State<MediaListScreen> {
+  String selectedCategory = 'Toutes';
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.isTv && widget.tvChannels.isNotEmpty) {
+      return _buildTvList(context);
+    }
+
+    if (widget.isTv) {
+      return _buildEmptyTv(context);
+    }
+
+    return _buildRadioList(context);
+  }
+
+  Widget _buildTvList(BuildContext context) {
+    final categories = <String>{
+      'Toutes',
+      ...widget.tvChannels.map(
+        (channel) => channel.category,
+      ),
+    }.toList();
+
+    final filteredChannels = selectedCategory == 'Toutes'
+        ? widget.tvChannels
+        : widget.tvChannels
+            .where(
+              (channel) => channel.category == selectedCategory,
+            )
+            .toList();
+
+    return SafeArea(
+      child: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                18,
+                20,
+                16,
+                8,
+              ),
+              child: Text(
+                widget.title,
+                style: const TextStyle(
+                  fontSize: 27,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: 54,
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                ),
+                scrollDirection: Axis.horizontal,
+                itemCount: categories.length,
+                separatorBuilder: (_, __) {
+                  return const SizedBox(width: 8);
+                },
+                itemBuilder: (context, index) {
+                  final category = categories[index];
+
+                  return ChoiceChip(
+                    label: Text(category),
+                    selected: selectedCategory == category,
+                    selectedColor: const Color(0xFFFF8A00),
+                    labelStyle: TextStyle(
+                      color: selectedCategory == category
+                          ? Colors.black
+                          : Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    onSelected: (_) {
+                      setState(() {
+                        selectedCategory = category;
+                      });
+                    },
+                  );
+                },
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                18,
+                8,
+                16,
+                4,
+              ),
+              child: Text(
+                '${filteredChannels.length} chaîne(s)',
+                style: TextStyle(
+                  color: Colors.grey.shade500,
+                ),
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(
+              12,
+              8,
+              12,
+              24,
+            ),
+            sliver: SliverList.builder(
+              itemCount: filteredChannels.length,
+              itemBuilder: (context, index) {
+                final channel = filteredChannels[index];
+
+                return _buildTvCard(
+                  context,
+                  channel,
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTvCard(
+    BuildContext context,
+    TvChannel channel,
+  ) {
+    return Card(
+      margin: const EdgeInsets.symmetric(
+        horizontal: 4,
+        vertical: 6,
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 8,
+        ),
+        leading: CircleAvatar(
+          radius: 27,
+          backgroundColor: const Color(0xFF242424),
+          child: channel.logo != null
+              ? ClipOval(
+                  child: Image.network(
+                    channel.logo!,
+                    width: 54,
+                    height: 54,
+                    fit: BoxFit.cover,
+                    errorBuilder: (
+                      context,
+                      error,
+                      stackTrace,
+                    ) {
+                      return _channelInitial(channel);
+                    },
+                  ),
+                )
+              : _channelInitial(channel),
+        ),
+        title: Text(
+          channel.name,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 5),
+          child: Text(
+            '${channel.category} • '
+            '${_streamTypeLabel(channel.type)}',
+          ),
+        ),
+        trailing: Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFF8A00).withOpacity(0.14),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.play_arrow_rounded,
+            color: Color(0xFFFFA31A),
+          ),
+        ),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => StreamPlayerScreen(
+                channel: channel,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _channelInitial(TvChannel channel) {
+    return Text(
+      channel.name.isNotEmpty
+          ? channel.name[0].toUpperCase()
+          : '?',
+      style: const TextStyle(
+        color: Color(0xFFFFA31A),
+        fontWeight: FontWeight.bold,
+        fontSize: 20,
+      ),
+    );
+  }
+
+  Widget _buildEmptyTv(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.tv_off,
+              size: 64,
+              color: Color(0xFFFF8A00),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Aucune chaîne TV détectée.',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Vérifie le fichier assets/tvradiozap.txt.',
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRadioList(BuildContext context) {
+    return SafeArea(
+      child: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                18,
+                20,
+                16,
+                8,
+              ),
+              child: Text(
+                widget.title,
+                style: const TextStyle(
+                  fontSize: 27,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(
+              12,
+              8,
+              12,
+              24,
+            ),
+            sliver: SliverList.builder(
+              itemCount: widget.items.length,
+              itemBuilder: (context, index) {
+                final item = widget.items[index];
+
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 6,
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    leading: CircleAvatar(
+                      radius: 27,
+                      backgroundColor: const Color(0xFF242424),
+                      child: Icon(
+                        item.icon,
+                        color: const Color(0xFFFFA31A),
+                      ),
+                    ),
+                    title: Text(
+                      item.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 5),
+                      child: Text(item.description),
+                    ),
+                    trailing: const Icon(
+                      Icons.play_arrow_rounded,
+                      color: Color(0xFFFFA31A),
+                    ),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => WebPlayerScreen(
+                            title: item.name,
+                            url: item.url,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _streamTypeLabel(StreamType type) {
+    switch (type) {
+      case StreamType.hls:
+        return 'HLS';
+      case StreamType.dash:
+        return 'DASH';
+      case StreamType.unknown:
+        return 'Flux';
+    }
+  }
+}
+
+class WebPlayerScreen extends StatefulWidget {
+  final String title;
+  final String url;
+
+  const WebPlayerScreen({
+    super.key,
+    required this.title,
+    required this.url,
+  });
+
+  @override
+  State<WebPlayerScreen> createState() => _WebPlayerScreenState();
+}
+
+class _WebPlayerScreenState extends State<WebPlayerScreen> {
+  late final WebViewController controller;
+
+  @override
+  void initState() {
+    super.initState();
+
+    controller = WebViewController()
+      ..setJavaScriptMode(
+        JavaScriptMode.unrestricted,
+      )
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onWebResourceError: (error) {
+            debugPrint(
+              'WebView error: ${error.description}',
+            );
+          },
+        ),
+      )
+      ..loadRequest(
+        Uri.parse(widget.url),
+      );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.title),
+      ),
+      body: WebViewWidget(
+        controller: controller,
+      ),
+    );
+  }
+}

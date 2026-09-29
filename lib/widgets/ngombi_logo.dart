@@ -68,9 +68,7 @@ class NgombiLogo extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         _buildIcon(height),
-
         const SizedBox(width: 10),
-
         Text(
           'NGOMBI',
           style: NgombiTypography.title.copyWith(
@@ -88,9 +86,7 @@ class NgombiLogo extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         _buildIcon(height),
-
         const SizedBox(width: 8),
-
         Text(
           'NGOMBI',
           style: NgombiTypography.subtitle.copyWith(
@@ -104,19 +100,18 @@ class NgombiLogo extends StatelessWidget {
   }
 
   Widget _buildIcon(double size) {
-  return SizedBox(
-    width: size,
-    height: size,
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(size * 0.22),
-      child: Image.asset(
-        'assets/ngombi_icon.png',
-        width: size,
-        height: size,
-        fit: BoxFit.cover,
+    return SizedBox(
+      width: size,
+      height: size,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(size * 0.22),
+        child: Image.asset(
+          'assets/ngombi_icon.png',
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+        ),
       ),
-    ),
-  );
+    );
   }
-
-  
+}

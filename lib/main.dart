@@ -165,9 +165,10 @@ class NgombiApp extends StatelessWidget {
         navigationBarTheme: NavigationBarThemeData(
           backgroundColor: const Color(0xFF111111),
           indicatorColor: orange.withOpacity(0.22),
-          labelTextStyle: const WidgetStatePropertyAll
-            TextStyle(
-              fontWeight: FontWeight.w600,
+          labelTextStyle: const WidgetStatePropertyAll<TextStyle>(
+  TextStyle(
+    fontWeight: FontWeight.w600,
+    
             ),
           ),
         ),

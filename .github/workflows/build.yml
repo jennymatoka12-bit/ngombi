@@ -503,6 +503,7 @@ jobs:
 
       - name: Get dependencies again
         run: flutter pub get
+             dart run flutter_launcher_icons
 
       - name: Remove default Flutter test
         run: rm -f test/widget_test.dart

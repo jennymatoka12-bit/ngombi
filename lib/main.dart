@@ -341,7 +341,18 @@ class NgombiWavePainter extends CustomPainter {
     Canvas canvas,
     Size size,
   ) {
-    final paint = Paint()        size.width * 0.25,
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..color = const Color(0x66FF7043);
+
+    for (int i = 0; i < 7; i++) {
+      final path = Path();
+      final y = 35.0 + (i * 22);
+
+      path.moveTo(10, y);
+
+      path.cubicTo(        size.width * 0.25,
         y - 25,
         size.width * 0.35,
         y + 25,

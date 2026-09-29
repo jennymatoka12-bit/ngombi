@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:video_player/video_player.dart';
 
 import 'models/tv_channel.dart';
 import 'screens/stream_player_screen.dart';

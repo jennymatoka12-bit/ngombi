@@ -104,69 +104,19 @@ class NgombiLogo extends StatelessWidget {
   }
 
   Widget _buildIcon(double size) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: NgombiColors.orange,
-          borderRadius: BorderRadius.circular(
-            size * 0.28,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: NgombiColors.orange.withOpacity(0.25),
-              blurRadius: 14,
-              spreadRadius: 1,
-            ),
-          ],
-        ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Icon(
-              Icons.play_arrow_rounded,
-              color: Colors.black,
-              size: size * 0.58,
-            ),
-
-            Positioned(
-              bottom: size * 0.12,
-              left: size * 0.20,
-              right: size * 0.20,
-              child: Row(
-                mainAxisAlignment:
-                    MainAxisAlignment.center,
-                children: [
-                  _waveBar(
-                    size * 0.10,
-                    size * 0.20,
-                  ),
-
-                  SizedBox(
-                    width: size * 0.045,
-                  ),
-
-                  _waveBar(
-                    size * 0.10,
-                    size * 0.30,
-                  ),
-
-                  SizedBox(
-                    width: size * 0.045,
-                  ),
-
-                  _waveBar(
-                    size * 0.10,
-                    size * 0.22,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+  return SizedBox(
+    width: size,
+    height: size,
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(size * 0.22),
+      child: Image.asset(
+        'assets/ngombi_icon.png',
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
       ),
-    );
+    ),
+  );
   }
 
   Widget _waveBar(

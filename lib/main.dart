@@ -307,104 +307,6 @@ class NgombiHero extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: const Color(0xFFFF7043),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFFFF7043)
-                                .withOpacity(0.30),
-                            blurRadius: 18,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.play_arrow_rounded,
-                        color: Colors.white,
-                        size: 27,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'NGOMBI',
-                      style: TextStyle(
-                        fontSize: 25,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 2,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                const Text(
-                  'Le monde en direct',
-                  style: TextStyle(
-                    fontSize: 25,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 7),
-                Text(
-                  'TV & Radio, où que vous soyez.',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade400,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-// -----------------------------------------------------------------------------
-// HERO NGOMBI
-// -----------------------------------------------------------------------------
-
-class NgombiHero extends StatelessWidget {
-  const NgombiHero({
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 10),
-      height: 190,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF241010),
-            Color(0xFF111111),
-          ],
-        ),
-        border: Border.all(
-          color: const Color(0x33FF7043),
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -25,
-            top: -15,
-            child: CustomPaint(
-              size: const Size(210, 210),
-              painter: NgombiWavePainter(),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
                 const NgombiLogo.full(
                   height: 42,
                 ),
@@ -439,19 +341,7 @@ class NgombiWavePainter extends CustomPainter {
     Canvas canvas,
     Size size,
   ) {
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..color = const Color(0x66FF7043);
-
-    for (int i = 0; i < 7; i++) {
-      final path = Path();
-      final y = 35.0 + (i * 22);
-
-      path.moveTo(10, y);
-
-      path.cubicTo(
-        size.width * 0.25,
+    final paint = Paint()        size.width * 0.25,
         y - 25,
         size.width * 0.35,
         y + 25,
@@ -482,6 +372,7 @@ class NgombiWavePainter extends CustomPainter {
     return false;
   }
 }
+
 // -----------------------------------------------------------------------------
 // ACCUEIL
 // -----------------------------------------------------------------------------
@@ -893,7 +784,6 @@ class _TvHomeCard extends StatelessWidget {
     );
   }
 }
-
 // -----------------------------------------------------------------------------
 // CARTE RADIO ACCUEIL
 // -----------------------------------------------------------------------------
@@ -1103,6 +993,7 @@ class _TvScreenState extends State<TvScreen> {
     );
   }
 }
+
 // -----------------------------------------------------------------------------
 // CARTE TV GRILLE
 // -----------------------------------------------------------------------------
@@ -1371,7 +1262,6 @@ class _RadioListCard extends StatelessWidget {
     );
   }
 }
-
 // -----------------------------------------------------------------------------
 // EN-TÊTE DE PAGE
 // -----------------------------------------------------------------------------

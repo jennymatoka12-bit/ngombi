@@ -1057,57 +1057,47 @@ class _TvGridCard extends StatelessWidget {
                     end: Alignment.bottomRight,
                     colors: [
                       Color(0xFF242424),
-                      Color(0xFF101010),
-                    ],
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    Center(
-                      child: ChannelLogo(
-                        channel: channel,
-                        size: 80,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.65),
-                          borderRadius:
-                              BorderRadius.circular(20),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.circle,
-                              size: 7,
-                              color: Colors.redAccent,
-                            ),
-                            SizedBox(width: 5),
-                            Text(
-                              'DIRECT',
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                13,
-                10,
-                13,
+                      child: Stack(
+                        children: [
+                      Center(
+  child: ChannelLogo(
+    channel: channel,
+    size: 80,
+    borderRadius: BorderRadius.circular(16),
+  ),
+),
+Positioned(
+  left: 10,
+  top: 10,
+  child: Container(
+    padding: const EdgeInsets.symmetric(
+      horizontal: 8,
+      vertical: 4,
+    ),
+    decoration: BoxDecoration(
+      color: Colors.black.withOpacity(0.65),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: const Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          Icons.circle,
+          size: 7,
+          color: Colors.redAccent,
+        ),
+        SizedBox(width: 5),
+        Text(
+          'DIRECT',
+          style: TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    ),
+  ),
+),
                 12,
               ),
               child: Column(

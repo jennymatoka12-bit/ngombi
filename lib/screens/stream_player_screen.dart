@@ -30,12 +30,20 @@ class _StreamPlayerScreenState
   bool _webLoading = true;
   String? _errorMessage;
 
+  // ============================================================
+  // GABON 24
+  // ============================================================
+
   bool get _isGabon24 {
     final name = widget.channel.name.toLowerCase();
 
     return name.contains('gabon 24') ||
         name.contains('gabon24');
   }
+
+  // ============================================================
+  // GABON PREMIÈRE
+  // ============================================================
 
   bool get _isGabonPremiere {
     final name = widget.channel.name.toLowerCase();
@@ -46,45 +54,61 @@ class _StreamPlayerScreenState
         name.contains('gabon première');
   }
 
+  // ============================================================
+  // CRTV
+  // ============================================================
+
   bool get _isCRTV {
     final name = widget.channel.name.toLowerCase();
 
     return name == 'crtv' ||
         name.contains('crtv cameroun') ||
-        name.contains('cameroon radio television');
+        name.contains('cameroon radio television') ||
+        name.startsWith('crtv ');
   }
+
+  // ============================================================
+  // NCI
+  // ============================================================
 
   bool get _isNCI {
     final name = widget.channel.name.toLowerCase();
 
     return name == 'nci' ||
+        name.startsWith('nci ') ||
         name.contains('nci côte d’ivoire') ||
-        name.contains("nci cote d'ivoire");
+        name.contains("nci cote d'ivoire") ||
+        name.contains('nouvelle chaîne ivoirienne');
   }
+
+  // ============================================================
+  // 2STV
+  // ============================================================
 
   bool get _is2STV {
     final name = widget.channel.name.toLowerCase();
 
     return name == '2stv' ||
+        name.startsWith('2stv ') ||
         name.contains('2stv sénégal') ||
         name.contains('2stv senegal');
   }
 
-  bool get _isCanal2International {
-    final name = widget.channel.name.toLowerCase();
-
-    return name.contains('canal 2 international') ||
-        name.contains('canal2 international');
-  }
+  // ============================================================
+  // LECTEUR WEB OFFICIEL
+  // ============================================================
 
   bool get _isOfficialWebPlayer {
     return _isGabon24 ||
         _isGabonPremiere ||
         _isCRTV ||
         _isNCI ||
-        _is2STV ||
-        _isCanal2International;
+        _is2STV;
   }
+
+  // ============================================================
+  // URL DU SITE OFFICIEL
+  // ============================================================
 
   String get _officialWebUrl {
     if (_isGabon24) {
@@ -104,11 +128,15 @@ class _StreamPlayerScreenState
     }
 
     if (_is2STV) {
-      return 'https://www.2stv.net/live';
+      return 'https://www.2stv.net/';
     }
 
-    return 'https://www.canal2international.net/';
+    return 'https://www.2stv.net/';
   }
+
+  // ============================================================
+  // INITIALISATION
+  // ============================================================
 
   @override
   void initState() {
@@ -127,7 +155,7 @@ class _StreamPlayerScreenState
   }
 
   // ============================================================
-  // CHAÎNES AFRICAINES — LECTEUR WEB OFFICIEL
+  // LECTEUR WEB OFFICIEL
   // ============================================================
 
   void _initializeOfficialWebPlayer() {
@@ -135,6 +163,9 @@ class _StreamPlayerScreenState
       final controller = WebViewController()
         ..setJavaScriptMode(
           JavaScriptMode.unrestricted,
+        )
+        ..setBackgroundColor(
+          Colors.black,
         )
         ..setUserAgent(
           'Mozilla/5.0 (Linux; Android 10; Mobile) '
@@ -153,12 +184,47 @@ class _StreamPlayerScreenState
                 _errorMessage = null;
               });
             },
-            onPageFinished: (String url) {
+            onPageFinished: (String url) async {
               if (!mounted) return;
 
               setState(() {
                 _webLoading = false;
               });
+
+              // --------------------------------------------------
+              // Tentative de démarrage des lecteurs vidéo HTML5.
+              //
+              // Certains sites utilisent un élément <video>.
+              // Cette commande ne contourne aucune protection :
+              // elle demande simplement au navigateur de lancer
+              // les lecteurs HTML5 déjà présents sur la page.
+              // --------------------------------------------------
+
+              if (_is2STV) {
+                try {
+                  await controller.runJavaScript(
+                    '''
+                    (function() {
+                      var videos = document.querySelectorAll('video');
+
+                      videos.forEach(function(video) {
+                        video.muted = false;
+
+                        var promise = video.play();
+
+                        if (promise !== undefined) {
+                          promise.catch(function() {});
+                        }
+                      });
+                    })();
+                    ''',
+                  );
+                } catch (_) {
+                  // Certains lecteurs refusent le lancement
+                  // automatique. Le site reste alors utilisable
+                  // normalement avec une interaction utilisateur.
+                }
+              }
             },
             onWebResourceError: (
               WebResourceError error,
@@ -173,6 +239,11 @@ class _StreamPlayerScreenState
                 });
               }
             },
+            onNavigationRequest: (
+              NavigationRequest request,
+            ) {
+              return NavigationDecision.navigate;
+            },
           ),
         )
         ..loadRequest(
@@ -181,7 +252,12 @@ class _StreamPlayerScreenState
 
       _webController = controller;
     } catch (error) {
-      _errorMessage = error.toString();
+      if (!mounted) return;
+
+      setState(() {
+        _errorMessage = error.toString();
+        _webLoading = false;
+      });
     }
   }
 
@@ -244,6 +320,7 @@ class _StreamPlayerScreenState
 
       setState(() {
         _initialized = true;
+        _errorMessage = null;
       });
 
       await controller.play();
@@ -257,11 +334,19 @@ class _StreamPlayerScreenState
     }
   }
 
+  // ============================================================
+  // DISPOSE
+  // ============================================================
+
   @override
   void dispose() {
     _controller?.dispose();
     super.dispose();
   }
+
+  // ============================================================
+  // BUILD PRINCIPAL
+  // ============================================================
 
   @override
   Widget build(BuildContext context) {
@@ -280,6 +365,11 @@ class _StreamPlayerScreenState
                 Icons.refresh,
               ),
               onPressed: () {
+                setState(() {
+                  _webLoading = true;
+                  _errorMessage = null;
+                });
+
                 _webController?.reload();
               },
             ),
@@ -294,7 +384,7 @@ class _StreamPlayerScreenState
   }
 
   // ============================================================
-  // WEBVIEW CHAÎNES AFRICAINES
+  // WEBVIEW
   // ============================================================
 
   Widget _buildOfficialWebPlayer() {
@@ -313,6 +403,7 @@ class _StreamPlayerScreenState
         WebViewWidget(
           controller: _webController!,
         ),
+
         if (_webLoading)
           Container(
             color: Colors.black,
@@ -326,6 +417,7 @@ class _StreamPlayerScreenState
                     'Chargement du direct…',
                     style: TextStyle(
                       color: Colors.white,
+                      fontSize: 16,
                     ),
                   ),
                 ],
@@ -364,21 +456,25 @@ class _StreamPlayerScreenState
 
     final controller = _controller!;
 
+    final aspectRatio =
+        controller.value.aspectRatio > 0
+            ? controller.value.aspectRatio
+            : 16 / 9;
+
     return SafeArea(
       child: Column(
         mainAxisAlignment:
             MainAxisAlignment.center,
         children: [
           AspectRatio(
-            aspectRatio:
-                controller.value.aspectRatio > 0
-                    ? controller.value.aspectRatio
-                    : 16 / 9,
+            aspectRatio: aspectRatio,
             child: VideoPlayer(
               controller,
             ),
           ),
+
           const SizedBox(height: 12),
+
           VideoProgressIndicator(
             controller,
             allowScrubbing: true,
@@ -388,6 +484,7 @@ class _StreamPlayerScreenState
               vertical: 8,
             ),
           ),
+
           IconButton(
             color: Colors.white,
             iconSize: 40,
@@ -406,6 +503,7 @@ class _StreamPlayerScreenState
               });
             },
           ),
+
           Text(
             '${widget.channel.category} • '
             '${_streamTypeLabel(widget.channel.type)}',
@@ -419,10 +517,14 @@ class _StreamPlayerScreenState
   }
 
   // ============================================================
-  // ERREUR
+  // MESSAGE D'ERREUR
   // ============================================================
 
   Widget _buildError() {
+    final message =
+        _errorMessage ??
+            'Une erreur inconnue est survenue.';
+
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Center(
@@ -434,7 +536,9 @@ class _StreamPlayerScreenState
               size: 56,
               color: Colors.redAccent,
             ),
+
             const SizedBox(height: 16),
+
             const Text(
               'Impossible de lire ce flux',
               style: TextStyle(
@@ -444,15 +548,19 @@ class _StreamPlayerScreenState
               ),
               textAlign: TextAlign.center,
             ),
+
             const SizedBox(height: 12),
+
             Text(
-              _errorMessage!,
+              message,
               style: TextStyle(
                 color: Colors.grey.shade400,
               ),
               textAlign: TextAlign.center,
             ),
+
             const SizedBox(height: 20),
+
             FilledButton.icon(
               onPressed: () {
                 Navigator.of(context).pop();
@@ -470,14 +578,20 @@ class _StreamPlayerScreenState
     );
   }
 
+  // ============================================================
+  // TYPE DE FLUX
+  // ============================================================
+
   String _streamTypeLabel(
     StreamType type,
   ) {
     switch (type) {
       case StreamType.hls:
         return 'HLS';
+
       case StreamType.dash:
         return 'DASH';
+
       case StreamType.unknown:
         return 'Flux';
     }

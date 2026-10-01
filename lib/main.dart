@@ -353,7 +353,8 @@ class NgombiWavePainter extends CustomPainter {
 
       path.moveTo(10, y);
 
-      path.cubicTo(        size.width * 0.25,
+      path.cubicTo(
+        size.width * 0.25,
         y - 25,
         size.width * 0.35,
         y + 25,
@@ -429,8 +430,7 @@ class HomeScreen extends StatelessWidget {
             child: _buildTvCarousel(context),
           ),
 
-          SliverToBoxAdapter(
-            child: _buildSectionTitle(
+          SliverToBoxAdapter(            child: _buildSectionTitle(
               context,
               'Catégories',
               null,
@@ -464,40 +464,41 @@ class HomeScreen extends StatelessWidget {
   }
 
   Future<void> _openSearch(BuildContext context) async {
-  final result = await showSearch<NgombiSearchResult>(
-    context: context,
-    delegate: NgombiSearchDelegate(
-      tvChannels: tvChannels,
-      radioChannels: radioChannels,
-    ),
-  );
-
-  if (!context.mounted || result == null) {
-    return;
-  }
-
-  if (result.tvChannel != null) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => StreamPlayerScreen(
-          channel: result.tvChannel!,
-        ),
+    final result = await showSearch<NgombiSearchResult>(
+      context: context,
+      delegate: NgombiSearchDelegate(
+        tvChannels: tvChannels,
+        radioChannels: radioChannels,
       ),
     );
-    return;
+
+    if (!context.mounted || result == null) {
+      return;
+    }
+
+    if (result.tvChannel != null) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => StreamPlayerScreen(
+            channel: result.tvChannel!,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (result.radioChannel != null) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => WebPlayerScreen(
+            title: result.radioChannel!.name,
+            url: result.radioChannel!.url,
+          ),
+        ),
+      );
+    }
   }
 
-  if (result.radioChannel != null) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => WebPlayerScreen(
-          title: result.radioChannel!.name,
-          url: result.radioChannel!.url,
-        ),
-      ),
-    );
-  }
-  }
   Widget _buildHeader(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -508,7 +509,7 @@ class HomeScreen extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const NgombiLogo.icon(  
+          const NgombiLogo.icon(
             height: 42,
           ),
           const SizedBox(width: 12),
@@ -537,8 +538,8 @@ class HomeScreen extends StatelessWidget {
           IconButton(
             onPressed: () => _openSearch(context),
             icon: const Icon(
-              Icons.search_rounded, 
-            ),  
+              Icons.search_rounded,
+            ),
           ),
         ],
       ),
@@ -816,6 +817,7 @@ class _TvHomeCard extends StatelessWidget {
     );
   }
 }
+
 // -----------------------------------------------------------------------------
 // CARTE RADIO ACCUEIL
 // -----------------------------------------------------------------------------
@@ -862,7 +864,7 @@ class _RadioHomeCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                                    Text(
                     radio.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -1057,47 +1059,60 @@ class _TvGridCard extends StatelessWidget {
                     end: Alignment.bottomRight,
                     colors: [
                       Color(0xFF242424),
-                      child: Stack(
-                        children: [
-                      Center(
-  child: ChannelLogo(
-    channel: channel,
-    size: 80,
-    borderRadius: BorderRadius.circular(16),
-  ),
-),
-Positioned(
-  left: 10,
-  top: 10,
-  child: Container(
-    padding: const EdgeInsets.symmetric(
-      horizontal: 8,
-      vertical: 4,
-    ),
-    decoration: BoxDecoration(
-      color: Colors.black.withOpacity(0.65),
-      borderRadius: BorderRadius.circular(20),
-    ),
-    child: const Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          Icons.circle,
-          size: 7,
-          color: Colors.redAccent,
-        ),
-        SizedBox(width: 5),
-        Text(
-          'DIRECT',
-          style: TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ],
-    ),
-  ),
-),
+                      Color(0xFF101010),
+                    ],
+                  ),
+                ),
+                child: Stack(
+                  children: [
+                    Center(
+                      child: ChannelLogo(
+                        channel: channel,
+                        size: 80,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    Positioned(
+                      left: 10,
+                      top: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.65),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.circle,
+                              size: 7,
+                              color: Colors.redAccent,
+                            ),
+                            SizedBox(width: 5),
+                            Text(
+                              'DIRECT',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                13,
+                10,
+                13,
                 12,
               ),
               child: Column(

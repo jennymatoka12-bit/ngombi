@@ -469,7 +469,7 @@ class HomeScreen extends StatelessWidget {
   }
 
   Future<void> _openSearch(BuildContext context) async {
-    final result = await showSearch<NgombiSearchResult>(
+    final result = await showSearch<NgombiSearchResult?>(
       context: context,
       delegate: NgombiSearchDelegate(
         tvChannels: tvChannels,
@@ -1466,7 +1466,7 @@ class NgombiSearchResult {
 }
 
 class NgombiSearchDelegate
-    extends SearchDelegate<NgombiSearchResult> {
+    extends SearchDelegate<NgombiSearchResult?> {
   final List<TvChannel> tvChannels;
   final List<MediaItem> radioChannels;
 

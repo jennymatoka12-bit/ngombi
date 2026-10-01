@@ -783,11 +783,11 @@ class _TvHomeCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.tv_rounded,
-                      size: 42,
-                      color: Color(0xFFFFA21A),
+                  child: Center(
+                    child: ChannelLogo(
+                      channel: channel,
+                      size: 72,
+                      borderRadius: BorderRadius.circular(16),
                     ),
                   ),
                 ),

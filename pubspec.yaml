@@ -27,6 +27,7 @@ flutter:
   assets:
     - assets/tvradiozap.txt
     - assets/ngombi_icon.png
+    - assets/logos/
 
 flutter_launcher_icons:
   android: "launcher_icon"

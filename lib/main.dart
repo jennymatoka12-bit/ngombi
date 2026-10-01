@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:video_player_media_kit/video_player_media_kit.dart';
 import 'widgets/ngombi_logo.dart';
 
 import 'models/tv_channel.dart';
@@ -11,9 +13,10 @@ import 'widgets/channel_logo.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  VideoPlayerMediaKit.ensureInitialized(
-    windows: true,
-  );
+  if (!kIsWeb &&
+      defaultTargetPlatform == TargetPlatform.windows) {
+    MediaKit.ensureInitialized();
+  }
 
   String bouquetContent = '';
 
@@ -1390,52 +1393,159 @@ class WebPlayerScreen extends StatefulWidget {
 
 class _WebPlayerScreenState
     extends State<WebPlayerScreen> {
-  late final WebViewController controller;
-
+  WebViewController? controller;
   bool loading = true;
+  String? errorMessage;
+
+  bool get _isWindows =>
+      !kIsWeb &&
+      defaultTargetPlatform == TargetPlatform.windows;
 
   @override
   void initState() {
     super.initState();
 
-    controller = WebViewController()
-      ..setJavaScriptMode(
-        JavaScriptMode.unrestricted,
-      )
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageStarted: (_) {
-            if (mounted) {
+    if (_isWindows) {
+      loading = false;
+      return;
+    }
+
+    _initializeWebView();
+  }
+
+  void _initializeWebView() {
+    try {
+      final webController = WebViewController()
+        ..setJavaScriptMode(
+          JavaScriptMode.unrestricted,
+        )
+        ..setNavigationDelegate(
+          NavigationDelegate(
+            onPageStarted: (_) {
+              if (!mounted) return;
               setState(() {
                 loading = true;
+                errorMessage = null;
               });
-            }
-          },
-          onPageFinished: (_) {
-            if (mounted) {
+            },
+            onPageFinished: (_) {
+              if (!mounted) return;
               setState(() {
                 loading = false;
               });
-            }
-          },
-        ),
-      )
-      ..loadRequest(
-        Uri.parse(widget.url),
-      );
+            },
+            onWebResourceError: (error) {
+              if (!mounted ||
+                  error.isForMainFrame != true) {
+                return;
+              }
+
+              setState(() {
+                loading = false;
+                errorMessage = error.description;
+              });
+            },
+          ),
+        )
+        ..loadRequest(
+          Uri.parse(widget.url),
+        );
+
+      controller = webController;
+    } catch (error) {
+      errorMessage = error.toString();
+      loading = false;
+    }
+  }
+
+  Future<void> _openInBrowser() async {
+    final uri = Uri.parse(widget.url);
+
+    final opened = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!opened && mounted) {
+      setState(() {
+        errorMessage =
+            'Impossible d’ouvrir ce lien dans le navigateur.';
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isWindows) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(widget.title),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.open_in_browser_rounded,
+                  size: 58,
+                  color: Color(0xFFFFA21A),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Cette radio utilise son lecteur web officiel.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.grey.shade300,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                FilledButton.icon(
+                  onPressed: _openInBrowser,
+                  icon: const Icon(
+                    Icons.open_in_new_rounded,
+                  ),
+                  label: const Text(
+                    'Ouvrir le lecteur officiel',
+                  ),
+                ),
+                if (errorMessage != null) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    errorMessage!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.redAccent,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
       ),
       body: Stack(
         children: [
-          WebViewWidget(
-            controller: controller,
-          ),
+          if (controller != null)
+            WebViewWidget(
+              controller: controller!,
+            )
+          else
+            Center(
+              child: Text(
+                errorMessage ??
+                    'Impossible d’initialiser le lecteur web.',
+                textAlign: TextAlign.center,
+              ),
+            ),
           if (loading)
             const Center(
               child: CircularProgressIndicator(),

@@ -24,7 +24,6 @@ class _StreamPlayerScreenState
       MethodChannel('ngombi/player');
 
   VideoPlayerController? _controller;
-
   WebViewController? _webController;
 
   bool _initialized = false;
@@ -38,12 +37,33 @@ class _StreamPlayerScreenState
         name.contains('gabon24');
   }
 
+  bool get _isGabonPremiere {
+    final name = widget.channel.name.toLowerCase();
+
+    return name.contains('gabon 1ere') ||
+        name.contains('gabon 1ère') ||
+        name.contains('gabon premiere') ||
+        name.contains('gabon première');
+  }
+
+  bool get _isOfficialGabonWebPlayer {
+    return _isGabon24 || _isGabonPremiere;
+  }
+
+  String get _officialWebUrl {
+    if (_isGabon24) {
+      return 'https://gabon24.tv/direct';
+    }
+
+    return 'https://gabontelevisions.ga/';
+  }
+
   @override
   void initState() {
     super.initState();
 
-    if (_isGabon24) {
-      _initializeGabon24();
+    if (_isOfficialGabonWebPlayer) {
+      _initializeOfficialGabonPlayer();
       return;
     }
 
@@ -55,10 +75,10 @@ class _StreamPlayerScreenState
   }
 
   // ============================================================
-  // GABON 24 — DIRECT OFFICIEL
+  // GABON 24 / GABON PREMIÈRE — LECTEUR OFFICIEL
   // ============================================================
 
-  void _initializeGabon24() {
+  void _initializeOfficialGabonPlayer() {
     try {
       final controller = WebViewController()
         ..setJavaScriptMode(
@@ -104,9 +124,7 @@ class _StreamPlayerScreenState
           ),
         )
         ..loadRequest(
-          Uri.parse(
-            'https://gabon24.tv/direct',
-          ),
+          Uri.parse(_officialWebUrl),
         );
 
       _webController = controller;
@@ -202,7 +220,7 @@ class _StreamPlayerScreenState
           widget.channel.name,
         ),
         actions: [
-          if (_isGabon24 &&
+          if (_isOfficialGabonWebPlayer &&
               _webController != null)
             IconButton(
               tooltip: 'Actualiser',
@@ -215,8 +233,8 @@ class _StreamPlayerScreenState
             ),
         ],
       ),
-      body: _isGabon24
-          ? _buildGabon24Player()
+      body: _isOfficialGabonWebPlayer
+          ? _buildOfficialGabonPlayer()
           : Center(
               child: _buildPlayer(),
             ),
@@ -224,10 +242,10 @@ class _StreamPlayerScreenState
   }
 
   // ============================================================
-  // WEBVIEW GABON 24
+  // WEBVIEW GABON
   // ============================================================
 
-  Widget _buildGabon24Player() {
+  Widget _buildOfficialGabonPlayer() {
     if (_errorMessage != null) {
       return _buildError();
     }
@@ -253,7 +271,7 @@ class _StreamPlayerScreenState
                   CircularProgressIndicator(),
                   SizedBox(height: 16),
                   Text(
-                    'Chargement du direct Gabon 24…',
+                    'Chargement du direct…',
                     style: TextStyle(
                       color: Colors.white,
                     ),

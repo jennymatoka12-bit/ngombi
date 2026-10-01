@@ -46,8 +46,44 @@ class _StreamPlayerScreenState
         name.contains('gabon première');
   }
 
-  bool get _isOfficialGabonWebPlayer {
-    return _isGabon24 || _isGabonPremiere;
+  bool get _isCRTV {
+    final name = widget.channel.name.toLowerCase();
+
+    return name == 'crtv' ||
+        name.contains('crtv cameroun') ||
+        name.contains('cameroon radio television');
+  }
+
+  bool get _isNCI {
+    final name = widget.channel.name.toLowerCase();
+
+    return name == 'nci' ||
+        name.contains('nci côte d’ivoire') ||
+        name.contains("nci cote d'ivoire");
+  }
+
+  bool get _is2STV {
+    final name = widget.channel.name.toLowerCase();
+
+    return name == '2stv' ||
+        name.contains('2stv sénégal') ||
+        name.contains('2stv senegal');
+  }
+
+  bool get _isCanal2International {
+    final name = widget.channel.name.toLowerCase();
+
+    return name.contains('canal 2 international') ||
+        name.contains('canal2 international');
+  }
+
+  bool get _isOfficialWebPlayer {
+    return _isGabon24 ||
+        _isGabonPremiere ||
+        _isCRTV ||
+        _isNCI ||
+        _is2STV ||
+        _isCanal2International;
   }
 
   String get _officialWebUrl {
@@ -55,15 +91,31 @@ class _StreamPlayerScreenState
       return 'https://gabon24.tv/direct';
     }
 
-    return 'https://gabontelevisions.ga/';
+    if (_isGabonPremiere) {
+      return 'https://gabontelevisions.ga/';
+    }
+
+    if (_isCRTV) {
+      return 'https://www.crtv.cm/live/crtv';
+    }
+
+    if (_isNCI) {
+      return 'https://www.nci.ci/';
+    }
+
+    if (_is2STV) {
+      return 'https://www.2stv.net/live';
+    }
+
+    return 'https://www.canal2international.net/';
   }
 
   @override
   void initState() {
     super.initState();
 
-    if (_isOfficialGabonWebPlayer) {
-      _initializeOfficialGabonPlayer();
+    if (_isOfficialWebPlayer) {
+      _initializeOfficialWebPlayer();
       return;
     }
 
@@ -75,10 +127,10 @@ class _StreamPlayerScreenState
   }
 
   // ============================================================
-  // GABON 24 / GABON PREMIÈRE — LECTEUR OFFICIEL
+  // CHAÎNES AFRICAINES — LECTEUR WEB OFFICIEL
   // ============================================================
 
-  void _initializeOfficialGabonPlayer() {
+  void _initializeOfficialWebPlayer() {
     try {
       final controller = WebViewController()
         ..setJavaScriptMode(
@@ -220,7 +272,7 @@ class _StreamPlayerScreenState
           widget.channel.name,
         ),
         actions: [
-          if (_isOfficialGabonWebPlayer &&
+          if (_isOfficialWebPlayer &&
               _webController != null)
             IconButton(
               tooltip: 'Actualiser',
@@ -233,8 +285,8 @@ class _StreamPlayerScreenState
             ),
         ],
       ),
-      body: _isOfficialGabonWebPlayer
-          ? _buildOfficialGabonPlayer()
+      body: _isOfficialWebPlayer
+          ? _buildOfficialWebPlayer()
           : Center(
               child: _buildPlayer(),
             ),
@@ -242,10 +294,10 @@ class _StreamPlayerScreenState
   }
 
   // ============================================================
-  // WEBVIEW GABON
+  // WEBVIEW CHAÎNES AFRICAINES
   // ============================================================
 
-  Widget _buildOfficialGabonPlayer() {
+  Widget _buildOfficialWebPlayer() {
     if (_errorMessage != null) {
       return _buildError();
     }

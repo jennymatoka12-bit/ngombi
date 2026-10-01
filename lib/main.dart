@@ -173,7 +173,7 @@ class NgombiApp extends StatelessWidget {
             ),
           ),
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           color: const Color(0xFF151515),
           elevation: 0,
           shape: RoundedRectangleBorder(

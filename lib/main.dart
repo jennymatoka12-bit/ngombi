@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:video_player_media_kit/video_player_media_kit.dart';
 import 'widgets/ngombi_logo.dart';
 
 import 'models/tv_channel.dart';
@@ -9,6 +10,10 @@ import 'widgets/channel_logo.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  VideoPlayerMediaKit.ensureInitialized(
+    windows: true,
+  );
 
   String bouquetContent = '';
 
@@ -1499,16 +1504,7 @@ class NgombiSearchDelegate
     return IconButton(
       tooltip: 'Retour',
       onPressed: () {
-        close(
-          context,
-          const NgombiSearchResult.radio(
-            MediaItem(
-              name: '',
-              url: '',
-              category: '',
-            ),
-          ),
-        );
+        close(context, null);
       },
       icon: const Icon(
         Icons.arrow_back_rounded,

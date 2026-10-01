@@ -15,6 +15,8 @@ dependencies:
   url_launcher: ^6.2.5
   webview_flutter: ^4.7.0
   video_player: ^2.9.1
+  video_player_media_kit: ^2.0.0
+  media_kit_libs_windows_video: ^1.0.11
 
 dev_dependencies:
   flutter_test:
@@ -33,4 +35,8 @@ flutter_launcher_icons:
   android: "launcher_icon"
   image_path: "assets/ngombi_icon.png"
   adaptive_icon_background: "#080808"
+  windows:
+    generate: true
+    image_path: "assets/ngombi_icon.png"
+    icon_size: 256
   min_sdk_android: 23

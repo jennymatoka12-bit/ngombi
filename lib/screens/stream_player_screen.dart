@@ -314,7 +314,7 @@ class _StreamPlayerScreenState
 
       _controller = playerController;
 
-      await playerController.initialize();
+      // Sous Windows, certains serveurs HLS peuvent ne jamais terminer\n      // la phase d'initialisation. On évite de laisser l'écran bloqué\n      // indéfiniment ; Android conserve exactement son comportement actuel.\n      await playerController.initialize().timeout(\n        const Duration(seconds: 20),\n        onTimeout: () {\n          throw Exception(\n            'Délai de connexion au flux dépassé.',\n          );\n        },\n      );
 
       if (!mounted) {
         playerController.dispose();

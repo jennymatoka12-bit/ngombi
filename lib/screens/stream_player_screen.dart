@@ -1,5 +1,11 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -26,13 +32,17 @@ class _StreamPlayerScreenState
   VideoPlayerController? _controller;
   WebViewController? _webController;
 
+  Player? _windowsPlayer;
+  VideoController? _windowsVideoController;
+  StreamSubscription<String>? _windowsErrorSubscription;
+
   bool _initialized = false;
   bool _webLoading = true;
   String? _errorMessage;
 
-  // ============================================================
-  // GABON 24
-  // ============================================================
+  bool get _isWindows =>
+      !kIsWeb &&
+      defaultTargetPlatform == TargetPlatform.windows;
 
   bool get _isGabon24 {
     final name = widget.channel.name.toLowerCase();
@@ -40,10 +50,6 @@ class _StreamPlayerScreenState
     return name.contains('gabon 24') ||
         name.contains('gabon24');
   }
-
-  // ============================================================
-  // GABON PREMIÈRE
-  // ============================================================
 
   bool get _isGabonPremiere {
     final name = widget.channel.name.toLowerCase();
@@ -54,10 +60,6 @@ class _StreamPlayerScreenState
         name.contains('gabon première');
   }
 
-  // ============================================================
-  // CRTV
-  // ============================================================
-
   bool get _isCRTV {
     final name = widget.channel.name.toLowerCase();
 
@@ -66,10 +68,6 @@ class _StreamPlayerScreenState
         name.contains('cameroon radio television') ||
         name.startsWith('crtv ');
   }
-
-  // ============================================================
-  // NCI
-  // ============================================================
 
   bool get _isNCI {
     final name = widget.channel.name.toLowerCase();
@@ -81,10 +79,6 @@ class _StreamPlayerScreenState
         name.contains('nouvelle chaîne ivoirienne');
   }
 
-  // ============================================================
-  // 2STV
-  // ============================================================
-
   bool get _is2STV {
     final name = widget.channel.name.toLowerCase();
 
@@ -94,10 +88,6 @@ class _StreamPlayerScreenState
         name.contains('2stv senegal');
   }
 
-  // ============================================================
-  // LECTEUR WEB OFFICIEL
-  // ============================================================
-
   bool get _isOfficialWebPlayer {
     return _isGabon24 ||
         _isGabonPremiere ||
@@ -105,10 +95,6 @@ class _StreamPlayerScreenState
         _isNCI ||
         _is2STV;
   }
-
-  // ============================================================
-  // URL DU SITE OFFICIEL
-  // ============================================================
 
   String get _officialWebUrl {
     if (_isGabon24) {
@@ -131,19 +117,24 @@ class _StreamPlayerScreenState
       return 'https://www.2stv.net/';
     }
 
-    return 'https://www.2stv.net/';
+    return widget.channel.url;
   }
-
-  // ============================================================
-  // INITIALISATION
-  // ============================================================
 
   @override
   void initState() {
     super.initState();
 
     if (_isOfficialWebPlayer) {
-      _initializeOfficialWebPlayer();
+      if (_isWindows) {
+        _webLoading = false;
+      } else {
+        _initializeOfficialWebPlayer();
+      }
+      return;
+    }
+
+    if (_isWindows) {
+      _initializeWindowsPlayer();
       return;
     }
 
@@ -153,10 +144,6 @@ class _StreamPlayerScreenState
       _initializeFlutterPlayer();
     }
   }
-
-  // ============================================================
-  // LECTEUR WEB OFFICIEL
-  // ============================================================
 
   void _initializeOfficialWebPlayer() {
     try {
@@ -193,22 +180,12 @@ class _StreamPlayerScreenState
                 _webLoading = false;
               });
 
-              // --------------------------------------------------
-              // Tentative de démarrage des lecteurs vidéo HTML5.
-              //
-              // Certains sites utilisent un élément <video>.
-              // Cette commande ne contourne aucune protection :
-              // elle demande simplement au navigateur de lancer
-              // les lecteurs HTML5 déjà présents sur la page.
-              // --------------------------------------------------
-
               if (_is2STV) {
                 try {
                   await controller.runJavaScript(
                     '''
                     (function() {
-                      var videos =
-                          document.querySelectorAll('video');
+                      var videos = document.querySelectorAll('video');
 
                       videos.forEach(function(video) {
                         video.muted = false;
@@ -223,9 +200,7 @@ class _StreamPlayerScreenState
                     ''',
                   );
                 } catch (_) {
-                  // Certains lecteurs refusent le lancement
-                  // automatique. Le site reste alors utilisable
-                  // normalement avec une interaction utilisateur.
+                  // Le site reste utilisable avec une interaction utilisateur.
                 }
               }
             },
@@ -237,8 +212,7 @@ class _StreamPlayerScreenState
               if (error.isForMainFrame == true) {
                 setState(() {
                   _webLoading = false;
-                  _errorMessage =
-                      error.description;
+                  _errorMessage = error.description;
                 });
               }
             },
@@ -264,9 +238,21 @@ class _StreamPlayerScreenState
     }
   }
 
-  // ============================================================
-  // DASH NATIF
-  // ============================================================
+  Future<void> _openOfficialWebsiteOnWindows() async {
+    final uri = Uri.parse(_officialWebUrl);
+
+    final opened = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!opened && mounted) {
+      setState(() {
+        _errorMessage =
+            'Impossible d’ouvrir le lecteur officiel dans le navigateur.';
+      });
+    }
+  }
 
   Future<void> _openNativeDashPlayer() async {
     try {
@@ -294,15 +280,64 @@ class _StreamPlayerScreenState
       if (!mounted) return;
 
       setState(() {
-        _errorMessage =
-            error.toString();
+        _errorMessage = error.toString();
       });
     }
   }
 
-  // ============================================================
-  // HLS / FLUX CLASSIQUE
-  // ============================================================
+  Future<void> _initializeWindowsPlayer() async {
+    try {
+      final player = Player();
+      final videoController = VideoController(player);
+
+      _windowsPlayer = player;
+      _windowsVideoController = videoController;
+
+      _windowsErrorSubscription =
+          player.stream.error.listen((message) {
+        if (!mounted || message.trim().isEmpty) {
+          return;
+        }
+
+        setState(() {
+          _errorMessage = message;
+        });
+      });
+
+      await player
+          .open(
+            Media(
+              widget.channel.url,
+              httpHeaders: widget.channel.headers,
+            ),
+            play: true,
+          )
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () {
+              throw TimeoutException(
+                'Délai de connexion au flux dépassé.',
+              );
+            },
+          );
+
+      if (!mounted) {
+        await player.dispose();
+        return;
+      }
+
+      setState(() {
+        _initialized = true;
+        _errorMessage = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _errorMessage = error.toString();
+      });
+    }
+  }
 
   Future<void> _initializeFlutterPlayer() async {
     try {
@@ -314,7 +349,7 @@ class _StreamPlayerScreenState
 
       _controller = playerController;
 
-      // Sous Windows, certains serveurs HLS peuvent ne jamais terminer\n      // la phase d'initialisation. On évite de laisser l'écran bloqué\n      // indéfiniment ; Android conserve exactement son comportement actuel.\n      await playerController.initialize().timeout(\n        const Duration(seconds: 20),\n        onTimeout: () {\n          throw Exception(\n            'Délai de connexion au flux dépassé.',\n          );\n        },\n      );
+      await playerController.initialize();
 
       if (!mounted) {
         playerController.dispose();
@@ -331,25 +366,18 @@ class _StreamPlayerScreenState
       if (!mounted) return;
 
       setState(() {
-        _errorMessage =
-            error.toString();
+        _errorMessage = error.toString();
       });
     }
   }
 
-  // ============================================================
-  // DISPOSE
-  // ============================================================
-
   @override
   void dispose() {
     _controller?.dispose();
+    _windowsErrorSubscription?.cancel();
+    _windowsPlayer?.dispose();
     super.dispose();
   }
-
-  // ============================================================
-  // BUILD PRINCIPAL
-  // ============================================================
 
   @override
   Widget build(BuildContext context) {
@@ -361,6 +389,7 @@ class _StreamPlayerScreenState
         ),
         actions: [
           if (_isOfficialWebPlayer &&
+              !_isWindows &&
               _webController != null)
             IconButton(
               tooltip: 'Actualiser',
@@ -386,11 +415,11 @@ class _StreamPlayerScreenState
     );
   }
 
-  // ============================================================
-  // WEBVIEW
-  // ============================================================
-
   Widget _buildOfficialWebPlayer() {
+    if (_isWindows) {
+      return _buildWindowsOfficialLink();
+    }
+
     if (_errorMessage != null) {
       return _buildError();
     }
@@ -406,7 +435,6 @@ class _StreamPlayerScreenState
         WebViewWidget(
           controller: _webController!,
         ),
-
         if (_webLoading)
           Container(
             color: Colors.black,
@@ -431,17 +459,68 @@ class _StreamPlayerScreenState
     );
   }
 
-  // ============================================================
-  // LECTEUR CLASSIQUE
-  // ============================================================
+  Widget _buildWindowsOfficialLink() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.open_in_browser_rounded,
+              size: 64,
+              color: Color(0xFFFFA21A),
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Cette chaîne utilise son lecteur web officiel.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Sous Windows, NGOMBI ouvre ce lecteur dans le navigateur afin d’éviter un écran blanc ou noir.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey.shade400,
+              ),
+            ),
+            const SizedBox(height: 22),
+            FilledButton.icon(
+              onPressed: _openOfficialWebsiteOnWindows,
+              icon: const Icon(
+                Icons.open_in_new_rounded,
+              ),
+              label: const Text(
+                'Ouvrir le direct officiel',
+              ),
+            ),
+            if (_errorMessage != null) ...[
+              const SizedBox(height: 16),
+              Text(
+                _errorMessage!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.redAccent,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildPlayer() {
     if (_errorMessage != null) {
       return _buildError();
     }
 
-    if (!_initialized ||
-        _controller == null) {
+    if (!_initialized) {
       return const Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -457,7 +536,33 @@ class _StreamPlayerScreenState
       );
     }
 
-    final controller = _controller!;
+    if (_isWindows) {
+      final windowsController =
+          _windowsVideoController;
+
+      if (windowsController == null) {
+        return _buildErrorWithMessage(
+          'Le lecteur Windows n’a pas pu être initialisé.',
+        );
+      }
+
+      return SafeArea(
+        child: SizedBox.expand(
+          child: Video(
+            controller: windowsController,
+            fit: BoxFit.contain,
+          ),
+        ),
+      );
+    }
+
+    final controller = _controller;
+
+    if (controller == null) {
+      return _buildErrorWithMessage(
+        'Le lecteur vidéo n’a pas pu être initialisé.',
+      );
+    }
 
     final aspectRatio =
         controller.value.aspectRatio > 0
@@ -475,19 +580,15 @@ class _StreamPlayerScreenState
               controller,
             ),
           ),
-
           const SizedBox(height: 12),
-
           VideoProgressIndicator(
             controller,
             allowScrubbing: true,
-            padding:
-                const EdgeInsets.symmetric(
+            padding: const EdgeInsets.symmetric(
               horizontal: 12,
               vertical: 8,
             ),
           ),
-
           IconButton(
             color: Colors.white,
             iconSize: 40,
@@ -506,7 +607,6 @@ class _StreamPlayerScreenState
               });
             },
           ),
-
           Text(
             '${widget.channel.category} • '
             '${_streamTypeLabel(widget.channel.type)}',
@@ -519,9 +619,12 @@ class _StreamPlayerScreenState
     );
   }
 
-  // ============================================================
-  // MESSAGE D'ERREUR
-  // ============================================================
+  Widget _buildErrorWithMessage(
+    String message,
+  ) {
+    _errorMessage = message;
+    return _buildError();
+  }
 
   Widget _buildError() {
     final message =
@@ -539,9 +642,7 @@ class _StreamPlayerScreenState
               size: 56,
               color: Colors.redAccent,
             ),
-
             const SizedBox(height: 16),
-
             const Text(
               'Impossible de lire ce flux',
               style: TextStyle(
@@ -551,9 +652,7 @@ class _StreamPlayerScreenState
               ),
               textAlign: TextAlign.center,
             ),
-
             const SizedBox(height: 12),
-
             Text(
               message,
               style: TextStyle(
@@ -561,9 +660,7 @@ class _StreamPlayerScreenState
               ),
               textAlign: TextAlign.center,
             ),
-
             const SizedBox(height: 20),
-
             FilledButton.icon(
               onPressed: () {
                 Navigator.of(context).pop();
@@ -580,10 +677,6 @@ class _StreamPlayerScreenState
       ),
     );
   }
-
-  // ============================================================
-  // TYPE DE FLUX
-  // ============================================================
 
   String _streamTypeLabel(
     StreamType type,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 import '../models/tv_channel.dart';
 
@@ -19,18 +20,32 @@ class StreamPlayerScreen extends StatefulWidget {
 
 class _StreamPlayerScreenState
     extends State<StreamPlayerScreen> {
-
   static const MethodChannel _nativePlayer =
       MethodChannel('ngombi/player');
 
   VideoPlayerController? _controller;
 
+  WebViewController? _webController;
+
   bool _initialized = false;
+  bool _webLoading = true;
   String? _errorMessage;
+
+  bool get _isGabon24 {
+    final name = widget.channel.name.toLowerCase();
+
+    return name.contains('gabon 24') ||
+        name.contains('gabon24');
+  }
 
   @override
   void initState() {
     super.initState();
+
+    if (_isGabon24) {
+      _initializeGabon24();
+      return;
+    }
 
     if (widget.channel.type == StreamType.dash) {
       _openNativeDashPlayer();
@@ -39,14 +54,80 @@ class _StreamPlayerScreenState
     }
   }
 
+  // ============================================================
+  // GABON 24 — DIRECT OFFICIEL
+  // ============================================================
+
+  void _initializeGabon24() {
+    try {
+      final controller = WebViewController()
+        ..setJavaScriptMode(
+          JavaScriptMode.unrestricted,
+        )
+        ..setUserAgent(
+          'Mozilla/5.0 (Linux; Android 10; Mobile) '
+          'AppleWebKit/537.36 '
+          '(KHTML, like Gecko) '
+          'Chrome/120.0.0.0 '
+          'Mobile Safari/537.36',
+        )
+        ..setNavigationDelegate(
+          NavigationDelegate(
+            onPageStarted: (String url) {
+              if (!mounted) return;
+
+              setState(() {
+                _webLoading = true;
+                _errorMessage = null;
+              });
+            },
+            onPageFinished: (String url) {
+              if (!mounted) return;
+
+              setState(() {
+                _webLoading = false;
+              });
+            },
+            onWebResourceError: (
+              WebResourceError error,
+            ) {
+              if (!mounted) return;
+
+              if (error.isForMainFrame == true) {
+                setState(() {
+                  _webLoading = false;
+                  _errorMessage =
+                      error.description;
+                });
+              }
+            },
+          ),
+        )
+        ..loadRequest(
+          Uri.parse(
+            'https://gabon24.tv/direct',
+          ),
+        );
+
+      _webController = controller;
+    } catch (error) {
+      _errorMessage = error.toString();
+    }
+  }
+
+  // ============================================================
+  // DASH NATIF
+  // ============================================================
+
   Future<void> _openNativeDashPlayer() async {
     try {
       await _nativePlayer.invokeMethod(
         'playDash',
         {
           'url': widget.channel.url,
-          'userAgent': widget.channel.headers['User-Agent'] ??
-              'Mozilla/5.0',
+          'userAgent':
+              widget.channel.headers['User-Agent'] ??
+                  'Mozilla/5.0',
         },
       );
 
@@ -54,24 +135,25 @@ class _StreamPlayerScreenState
         Navigator.of(context).pop();
       }
     } on PlatformException catch (error) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       setState(() {
         _errorMessage =
             error.message ?? error.code;
       });
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       setState(() {
-        _errorMessage = error.toString();
+        _errorMessage =
+            error.toString();
       });
     }
   }
+
+  // ============================================================
+  // HLS / FLUX CLASSIQUE
+  // ============================================================
 
   Future<void> _initializeFlutterPlayer() async {
     try {
@@ -96,12 +178,11 @@ class _StreamPlayerScreenState
 
       await controller.play();
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       setState(() {
-        _errorMessage = error.toString();
+        _errorMessage =
+            error.toString();
       });
     }
   }
@@ -115,60 +196,87 @@ class _StreamPlayerScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.channel.name),
-      ),
       backgroundColor: Colors.black,
-      body: Center(
-        child: _buildPlayer(),
+      appBar: AppBar(
+        title: Text(
+          widget.channel.name,
+        ),
+        actions: [
+          if (_isGabon24 &&
+              _webController != null)
+            IconButton(
+              tooltip: 'Actualiser',
+              icon: const Icon(
+                Icons.refresh,
+              ),
+              onPressed: () {
+                _webController?.reload();
+              },
+            ),
+        ],
       ),
+      body: _isGabon24
+          ? _buildGabon24Player()
+          : Center(
+              child: _buildPlayer(),
+            ),
     );
   }
 
-  Widget _buildPlayer() {
+  // ============================================================
+  // WEBVIEW GABON 24
+  // ============================================================
+
+  Widget _buildGabon24Player() {
     if (_errorMessage != null) {
-      return Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.error_outline,
-              size: 56,
-              color: Colors.redAccent,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Impossible de lire ce flux',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              _errorMessage!,
-              style: TextStyle(
-                color: Colors.grey.shade400,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              icon: const Icon(Icons.arrow_back),
-              label: const Text('Retour'),
-            ),
-          ],
-        ),
+      return _buildError();
+    }
+
+    if (_webController == null) {
+      return const Center(
+        child: CircularProgressIndicator(),
       );
     }
 
-    if (!_initialized || _controller == null) {
+    return Stack(
+      children: [
+        WebViewWidget(
+          controller: _webController!,
+        ),
+        if (_webLoading)
+          Container(
+            color: Colors.black,
+            child: const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text(
+                    'Chargement du direct Gabon 24…',
+                    style: TextStyle(
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // ============================================================
+  // LECTEUR CLASSIQUE
+  // ============================================================
+
+  Widget _buildPlayer() {
+    if (_errorMessage != null) {
+      return _buildError();
+    }
+
+    if (!_initialized ||
+        _controller == null) {
       return const Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -188,20 +296,24 @@ class _StreamPlayerScreenState
 
     return SafeArea(
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment:
+            MainAxisAlignment.center,
         children: [
           AspectRatio(
             aspectRatio:
                 controller.value.aspectRatio > 0
                     ? controller.value.aspectRatio
                     : 16 / 9,
-            child: VideoPlayer(controller),
+            child: VideoPlayer(
+              controller,
+            ),
           ),
           const SizedBox(height: 12),
           VideoProgressIndicator(
             controller,
             allowScrubbing: true,
-            padding: const EdgeInsets.symmetric(
+            padding:
+                const EdgeInsets.symmetric(
               horizontal: 12,
               vertical: 8,
             ),
@@ -236,7 +348,61 @@ class _StreamPlayerScreenState
     );
   }
 
-  String _streamTypeLabel(StreamType type) {
+  // ============================================================
+  // ERREUR
+  // ============================================================
+
+  Widget _buildError() {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 56,
+              color: Colors.redAccent,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Impossible de lire ce flux',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _errorMessage!,
+              style: TextStyle(
+                color: Colors.grey.shade400,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              icon: const Icon(
+                Icons.arrow_back,
+              ),
+              label: const Text(
+                'Retour',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _streamTypeLabel(
+    StreamType type,
+  ) {
     switch (type) {
       case StreamType.hls:
         return 'HLS';

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -285,8 +286,73 @@ class _StreamPlayerScreenState
     }
   }
 
+  Future<String> _resolveWindowsStreamUrl() async {
+    final client = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 15)
+      ..autoUncompress = false;
+
+    try {
+      var uri = Uri.parse(widget.channel.url);
+
+      for (var attempt = 0; attempt < 5; attempt++) {
+        final request = await client.getUrl(uri);
+        request.followRedirects = false;
+
+        widget.channel.headers.forEach((key, value) {
+          request.headers.set(key, value);
+        });
+
+        if (!request.headers.value(HttpHeaders.acceptHeader).isNotEmpty) {
+          request.headers.set(
+            HttpHeaders.acceptHeader,
+            'application/vnd.apple.mpegurl, application/x-mpegURL, */*',
+          );
+        }
+
+        final response = await request.close();
+        final status = response.statusCode;
+
+        if (status >= 300 && status < 400) {
+          final location = response.headers.value(HttpHeaders.locationHeader);
+
+          if (location == null || location.isEmpty) {
+            throw HttpException(
+              'Redirection HLS reçue sans adresse de destination.',
+              uri: uri,
+            );
+          }
+
+          uri = uri.resolve(location);
+          await response.drain<void>();
+          continue;
+        }
+
+        if (status >= 200 && status < 300) {
+          await response.drain<void>();
+          return uri.toString();
+        }
+
+        await response.drain<void>();
+        throw HttpException(
+          'Le serveur HLS a répondu HTTP $status.',
+          uri: uri,
+        );
+      }
+
+      throw TimeoutException(
+        'Trop de redirections lors de la résolution du flux HLS.',
+      );
+    } finally {
+      client.close(force: true);
+    }
+  }
+
   Future<void> _initializeWindowsPlayer() async {
     try {
+      final resolvedUrl = await _resolveWindowsStreamUrl();
+
+      if (!mounted) return;
+
       final player = Player();
       final videoController = VideoController(player);
 
@@ -307,7 +373,7 @@ class _StreamPlayerScreenState
       await player
           .open(
             Media(
-              widget.channel.url,
+              resolvedUrl,
               httpHeaders: widget.channel.headers,
             ),
             play: true,

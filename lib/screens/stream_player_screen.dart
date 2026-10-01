@@ -160,7 +160,9 @@ class _StreamPlayerScreenState
 
   void _initializeOfficialWebPlayer() {
     try {
-      final controller = WebViewController()
+      late final WebViewController controller;
+
+      controller = WebViewController()
         ..setJavaScriptMode(
           JavaScriptMode.unrestricted,
         )
@@ -205,7 +207,8 @@ class _StreamPlayerScreenState
                   await controller.runJavaScript(
                     '''
                     (function() {
-                      var videos = document.querySelectorAll('video');
+                      var videos =
+                          document.querySelectorAll('video');
 
                       videos.forEach(function(video) {
                         video.muted = false;
@@ -303,18 +306,18 @@ class _StreamPlayerScreenState
 
   Future<void> _initializeFlutterPlayer() async {
     try {
-      final controller =
+      final playerController =
           VideoPlayerController.networkUrl(
         Uri.parse(widget.channel.url),
         httpHeaders: widget.channel.headers,
       );
 
-      _controller = controller;
+      _controller = playerController;
 
-      await controller.initialize();
+      await playerController.initialize();
 
       if (!mounted) {
-        controller.dispose();
+        playerController.dispose();
         return;
       }
 
@@ -323,7 +326,7 @@ class _StreamPlayerScreenState
         _errorMessage = null;
       });
 
-      await controller.play();
+      await playerController.play();
     } catch (error) {
       if (!mounted) return;
 

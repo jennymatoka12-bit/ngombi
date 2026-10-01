@@ -302,7 +302,7 @@ class _StreamPlayerScreenState
           request.headers.set(key, value);
         });
 
-        if (!request.headers.value(HttpHeaders.acceptHeader).isNotEmpty) {
+        if (request.headers.value(HttpHeaders.acceptHeader) == null) {
           request.headers.set(
             HttpHeaders.acceptHeader,
             'application/vnd.apple.mpegurl, application/x-mpegURL, */*',

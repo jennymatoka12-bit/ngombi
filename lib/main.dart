@@ -1061,15 +1061,13 @@ class _TvGridCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                child: Stack(
-                  children: [
-                    const Center(
-                      child: Icon(
-                        Icons.tv_rounded,
-                        size: 48,
-                        color: Color(0xFFFFA21A),
-                      ),
-                    ),
+                child: Center(
+                  child: ChannelLogo(
+                    channel: channel,
+                    size: 80,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
                     Positioned(
                       left: 10,
                       top: 10,

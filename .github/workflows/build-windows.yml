@@ -1,0 +1,50 @@
+name: Build NGOMBI Windows Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - windows-test
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.3'
+          channel: stable
+          cache: true
+
+      - name: Enable Windows
+        run: flutter config --enable-windows-desktop
+
+      - name: Generate Windows project
+        run: flutter create --platforms=windows .
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+        continue-on-error: true
+
+      - name: Build Windows
+        run: flutter build windows --release
+
+      - name: Package Windows build
+        shell: pwsh
+        run: |
+          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath NGOMBI-Windows-Test.zip
+
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: NGOMBI-Windows-Test
+          path: NGOMBI-Windows-Test.zip
+          if-no-files-found: error

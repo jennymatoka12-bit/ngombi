@@ -5,6 +5,7 @@ import 'widgets/ngombi_logo.dart';
 
 import 'models/tv_channel.dart';
 import 'screens/stream_player_screen.dart';
+import 'widgets/channel_logo.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

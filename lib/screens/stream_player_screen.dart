@@ -89,8 +89,17 @@ class _StreamPlayerScreenState
         name.contains('2stv senegal');
   }
 
+  bool get _isTF1 {
+    final name = widget.channel.name.toLowerCase();
+
+    return name == 'tf1' ||
+        name.startsWith('tf1 ') ||
+        name.contains('tf1 direct');
+  }
+
   bool get _isOfficialWebPlayer {
-    return _isGabon24 ||
+    return _isTF1 ||
+        _isGabon24 ||
         _isGabonPremiere ||
         _isCRTV ||
         _isNCI ||
@@ -98,6 +107,10 @@ class _StreamPlayerScreenState
   }
 
   String get _officialWebUrl {
+    if (_isTF1) {
+      return 'https://www.tf1.fr/tf1/direct';
+    }
+
     if (_isGabon24) {
       return 'https://gabon24.tv/direct';
     }

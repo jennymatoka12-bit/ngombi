@@ -509,7 +509,10 @@ class HomeScreen extends StatelessWidget {
 
     if (result.radioChannel != null) {
       final radio = result.radioChannel!;
-      NgombiStore.instance.recordRadio(radio);
+      NgombiStore.instance.recordRadio(
+        name: radio.name,
+        url: radio.url,
+      );
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => WebPlayerScreen(

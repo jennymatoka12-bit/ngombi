@@ -369,9 +369,9 @@ jobs:
           text = gradle.read_text()
 
           if gradle.suffix == ".kts":
-              text = re.sub(r'compileSdk\\s*=\\s*[^\\n]+', 'compileSdk = 36', text, count=1)
-              text = re.sub(r'ndkVersion\\s*=\\s*[^\\n]+', 'ndkVersion = "27.0.12077973"', text, count=1)
-              text = re.sub(r'minSdk\\s*=\\s*[^\\n]+', 'minSdk = 23', text, count=1)
+              text = re.sub(r'compileSdk\s*=\s*[^\n]+', 'compileSdk = 36', text, count=1)
+              text = re.sub(r'ndkVersion\s*=\s*[^\n]+', 'ndkVersion = "27.0.12077973"', text, count=1)
+              text = re.sub(r'minSdk\s*=\s*[^\n]+', 'minSdk = 23', text, count=1)
 
               if 'androidx.media3:media3-exoplayer:1.11.1' not in text:
                   text += '''
@@ -382,9 +382,9 @@ jobs:
           }
           '''
           else:
-              text = re.sub(r'compileSdk\\s*=\\s*[^\\n]+', 'compileSdk = 36', text, count=1)
-              text = re.sub(r'minSdk\\s*=\\s*[^\\n]+', 'minSdk = 23', text, count=1)
-              text = re.sub(r'ndkVersion\\s*=\\s*[^\\n]+', 'ndkVersion = "27.0.12077973"', text, count=1)
+              text = re.sub(r'compileSdk\s*=\s*[^\n]+', 'compileSdk = 36', text, count=1)
+              text = re.sub(r'minSdk\s*=\s*[^\n]+', 'minSdk = 23', text, count=1)
+              text = re.sub(r'ndkVersion\s*=\s*[^\n]+', 'ndkVersion = "27.0.12077973"', text, count=1)
 
               if 'androidx.media3:media3-exoplayer:1.11.1' not in text:
                   text += '''

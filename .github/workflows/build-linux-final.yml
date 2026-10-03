@@ -44,6 +44,11 @@ jobs:
       - name: Generate icons
         run: dart run flutter_launcher_icons
 
+      - name: Apply NGOMBI Linux icon
+        run: |
+          mkdir -p linux/runner/resources
+          cp assets/ngombi_icon.png linux/runner/resources/app_icon.png
+
       - name: Analyze
         run: flutter analyze
 

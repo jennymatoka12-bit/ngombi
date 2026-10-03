@@ -19,7 +19,7 @@ class TvChannel {
     this.headers = const {},
   });
 
-  String get id => name.trim().toLowerCase() + '|' + url;
+  String get id => '${name.trim().toLowerCase()}|$url';
 }
 
 List<TvChannel> parseEnigma2Bouquet(String content) {

@@ -494,14 +494,14 @@ jobs:
 
           text = re.sub(
               r"distributionUrl=.*",
-              r"distributionUrl=https\://services.gradle.org/distributions/gradle-8.11.1-bin.zip",
+              r"distributionUrl=https\://services.gradle.org/distributions/gradle-8.14-bin.zip",
               text
           )
 
           wrapper.write_text(text)
 
           print("Android Gradle Plugin: 8.10.0")
-          print("Gradle: 8.11.1")
+          print("Gradle: 8.14")
           print("Compile SDK: 36")
           print("Min SDK: 23")
           print("NDK: 27.0.12077973")

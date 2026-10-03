@@ -28,7 +28,7 @@ class ChannelLogo extends StatelessWidget {
         color: const Color(0xFF202020),
         borderRadius: radius,
         border: Border.all(
-          color: Colors.white.withOpacity(0.08),
+          color: Colors.white.withValues(alpha: 0.08),
         ),
       ),
       clipBehavior: Clip.antiAlias,

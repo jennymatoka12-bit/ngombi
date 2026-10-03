@@ -1,5 +1,3 @@
-String _mediaId(String name, String url) => '$name|$url';
-
 import 'dart:async';
 import 'dart:io';
 
@@ -14,6 +12,9 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../models/tv_channel.dart';
 import '../app/ngombi_store.dart';
+
+String _mediaId(String name, String url) => '$name|$url';
+
 
 class StreamPlayerScreen extends StatefulWidget {
   final TvChannel channel;

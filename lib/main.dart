@@ -1794,15 +1794,27 @@ class _WebPlayerScreenState
   bool loading = true;
   String? errorMessage;
 
-  bool get _isWindows =>
+  bool get _isDesktop =>
       !kIsWeb &&
-      defaultTargetPlatform == TargetPlatform.windows;
+      (defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.linux ||
+          defaultTargetPlatform == TargetPlatform.macOS);
 
   @override
   void initState() {
     super.initState();
 
-    if (_isWindows) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      NgombiStoreScope.read(context).addHistory(
+        id: _mediaId(widget.title, widget.url),
+        name: widget.title,
+        url: widget.url,
+        isRadio: true,
+      );
+    });
+
+    if (_isDesktop) {
       loading = false;
       return;
     }
@@ -1873,7 +1885,7 @@ class _WebPlayerScreenState
 
   @override
   Widget build(BuildContext context) {
-    if (_isWindows) {
+    if (_isDesktop) {
       return Scaffold(
         appBar: AppBar(
           title: Text(widget.title),

@@ -13,7 +13,7 @@ class NgombiTheme {
         shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18),side:const BorderSide(color:NgombiColors.border))),
       appBarTheme:const AppBarTheme(backgroundColor:NgombiColors.background,foregroundColor:NgombiColors.textPrimary,elevation:0),
       navigationBarTheme:NavigationBarThemeData(
-        backgroundColor:NgombiColors.surface,indicatorColor:NgombiColors.orange.withOpacity(.18),
+        backgroundColor:NgombiColors.surface,indicatorColor:NgombiColors.orange.withValues(alpha:.18),
         labelTextStyle:const WidgetStatePropertyAll(TextStyle(fontWeight:FontWeight.w700,fontSize:11))),
       inputDecorationTheme:InputDecorationTheme(
         filled:true,fillColor:NgombiColors.card,

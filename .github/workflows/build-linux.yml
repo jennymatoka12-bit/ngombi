@@ -22,7 +22,6 @@ jobs:
       - run: flutter config --enable-linux-desktop
       - run: flutter create --platforms=linux .
       - run: flutter pub get
-      - run: dart run flutter_launcher_icons
       - run: flutter analyze
       - run: flutter build linux --release
       - name: Add Linux runtime note

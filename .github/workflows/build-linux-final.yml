@@ -49,6 +49,10 @@ jobs:
       - name: Remove generated Flutter test
         run: rm -f test/widget_test.dart
 
+      - name: Remove generated Flutter example test
+        shell: bash
+        run: rm -f test/widget_test.dart
+
       - name: Analyze
         run: flutter analyze
 

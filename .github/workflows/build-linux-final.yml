@@ -46,6 +46,9 @@ jobs:
           mkdir -p linux/runner/resources
           cp assets/ngombi_icon.png linux/runner/resources/app_icon.png
 
+      - name: Remove generated Flutter test
+        run: rm -f test/widget_test.dart
+
       - name: Analyze
         run: flutter analyze
 

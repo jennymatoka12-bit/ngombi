@@ -1,0 +1,56 @@
+name: NGOMBI Final - iOS
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - release-candidate
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.3'
+          channel: stable
+          cache: true
+
+      - name: Doctor
+        run: flutter doctor -v
+
+      - name: Generate platform project
+        run: flutter create --platforms=ios .
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Generate icons
+        run: dart run flutter_launcher_icons
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Tests
+        run: flutter test
+
+      - name: Build unsigned IPA
+        run: flutter build ipa --release --no-codesign
+
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: NGOMBI-iOS-Unsigned
+          path: build/ios/ipa/*.ipa
+          if-no-files-found: error
+
+      - name: Upload Xcode archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: NGOMBI-iOS-Archive
+          path: build/ios/archive/*.xcarchive
+          if-no-files-found: warn

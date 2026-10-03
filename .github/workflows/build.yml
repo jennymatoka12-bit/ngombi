@@ -522,7 +522,18 @@ jobs:
       # --------------------------------------------------
 
       - name: Generate NGOMBI launcher icon
-        run: dart run flutter_launcher_icons -f flutter_launcher_icons_android.yaml
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("pubspec.yaml")
+          t = p.read_text()
+          t = t.replace('  ios: true\n', '')
+          t = t.replace('  macos:\n    generate: true\n    image_path: "assets/ngombi_icon.png"\n', '')
+          t = t.replace('  windows:\n    generate: true\n    image_path: "assets/ngombi_icon.png"\n    icon_size: 256\n', '')
+          p.write_text(t)
+          PY
+          dart run flutter_launcher_icons -f flutter_launcher_icons_android.yaml
 
       # --------------------------------------------------
       # Force NGOMBI launcher icon in Android manifest

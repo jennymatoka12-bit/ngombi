@@ -465,7 +465,7 @@ jobs:
               )
               text = re.sub(
                   r'id\("org\.jetbrains\.kotlin\.android"\) version "[^"]+" apply false',
-                  'id("org.jetbrains.kotlin.android") version "2.2.0" apply false',
+                  'id("org.jetbrains.kotlin.android") version "2.2.20" apply false',
                   text
               )
           else:
@@ -476,7 +476,7 @@ jobs:
               )
               text = re.sub(
                   r'id "org\.jetbrains\.kotlin\.android" version "[^"]+" apply false',
-                  'id "org.jetbrains.kotlin.android" version "2.2.0" apply false',
+                  'id "org.jetbrains.kotlin.android" version "2.2.20" apply false',
                   text
               )
 
@@ -505,7 +505,7 @@ jobs:
           print("Compile SDK: 36")
           print("Min SDK: 23")
           print("NDK: 27.0.12077973")
-          print("Kotlin: 2.2.0")
+          print("Kotlin: 2.2.20")
           PY
 
       # --------------------------------------------------

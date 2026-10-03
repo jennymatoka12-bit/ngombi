@@ -460,7 +460,7 @@ jobs:
           if settings.suffix == ".kts":
               text = re.sub(
                   r'id\("com\.android\.application"\) version "[^"]+" apply false',
-                  'id("com.android.application") version "8.10.0" apply false',
+                  'id("com.android.application") version "8.11.1" apply false',
                   text
               )
               text = re.sub(
@@ -471,7 +471,7 @@ jobs:
           else:
               text = re.sub(
                   r'id "com\.android\.application" version "[^"]+" apply false',
-                  'id "com.android.application" version "8.10.0" apply false',
+                  'id "com.android.application" version "8.11.1" apply false',
                   text
               )
               text = re.sub(

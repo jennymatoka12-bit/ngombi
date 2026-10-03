@@ -754,6 +754,7 @@ class HomeScreen extends StatelessWidget {
           return _RadioHomeCard(
             radio: radio,
             onTap: () {
+              NgombiStore.instance.recordRadio(radio);
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => WebPlayerScreen(
@@ -1419,15 +1420,17 @@ class _WebPlayerScreenState
   bool loading = true;
   String? errorMessage;
 
-  bool get _isWindows =>
+  bool get _isDesktop =>
       !kIsWeb &&
-      defaultTargetPlatform == TargetPlatform.windows;
+      (defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.linux ||
+          defaultTargetPlatform == TargetPlatform.macOS);
 
   @override
   void initState() {
     super.initState();
 
-    if (_isWindows) {
+    if (_isDesktop) {
       loading = false;
       return;
     }
@@ -1498,7 +1501,7 @@ class _WebPlayerScreenState
 
   @override
   Widget build(BuildContext context) {
-    if (_isWindows) {
+    if (_isDesktop) {
       return Scaffold(
         appBar: AppBar(
           title: Text(widget.title),

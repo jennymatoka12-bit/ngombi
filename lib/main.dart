@@ -245,41 +245,99 @@ class _MainTabScreenState extends State<MainTabScreen> {
       const RadioScreen(),
     ];
 
-    return Scaffold(
-      body: IndexedStack(
-        index: currentIndex,
-        children: pages,
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: currentIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            currentIndex = index;
-          });
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Accueil',
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final desktopLayout = constraints.maxWidth >= 900;
+
+        if (desktopLayout) {
+          return Scaffold(
+            body: Row(
+              children: [
+                NavigationRail(
+                  selectedIndex: currentIndex,
+                  onDestinationSelected: (index) {
+                    setState(() {
+                      currentIndex = index;
+                    });
+                  },
+                  labelType: NavigationRailLabelType.all,
+                  groupAlignment: -0.75,
+                  leading: const Padding(
+                    padding: EdgeInsets.only(bottom: 24),
+                    child: NgombiLogo.icon(height: 42),
+                  ),
+                  destinations: const [
+                    NavigationRailDestination(
+                      icon: Icon(Icons.home_outlined),
+                      selectedIcon: Icon(Icons.home_rounded),
+                      label: Text('Accueil'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.tv_outlined),
+                      selectedIcon: Icon(Icons.tv_rounded),
+                      label: Text('TV'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.radio_outlined),
+                      selectedIcon: Icon(Icons.radio_rounded),
+                      label: Text('Radio'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.star_border_rounded),
+                      selectedIcon: Icon(Icons.star_rounded),
+                      label: Text('Bibliothèque'),
+                    ),
+                  ],
+                ),
+                const VerticalDivider(width: 1),
+                Expanded(
+                  child: IndexedStack(
+                    index: currentIndex,
+                    children: pages,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return Scaffold(
+          body: IndexedStack(
+            index: currentIndex,
+            children: pages,
           ),
-          NavigationDestination(
-            icon: Icon(Icons.tv_outlined),
-            selectedIcon: Icon(Icons.tv_rounded),
-            label: 'TV',
+          bottomNavigationBar: NavigationBar(
+            selectedIndex: currentIndex,
+            onDestinationSelected: (index) {
+              setState(() {
+                currentIndex = index;
+              });
+            },
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home_rounded),
+                label: 'Accueil',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.tv_outlined),
+                selectedIcon: Icon(Icons.tv_rounded),
+                label: 'TV',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.radio_outlined),
+                selectedIcon: Icon(Icons.radio_rounded),
+                label: 'Radio',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.star_border_rounded),
+                selectedIcon: Icon(Icons.star_rounded),
+                label: 'Bibliothèque',
+              ),
+            ],
           ),
-          NavigationDestination(
-            icon: Icon(Icons.radio_outlined),
-            selectedIcon: Icon(Icons.radio_rounded),
-            label: 'Radio',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.star_border_rounded),
-            selectedIcon: Icon(Icons.star_rounded),
-            label: 'Ma bibliothèque',
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

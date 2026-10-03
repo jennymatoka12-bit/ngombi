@@ -366,7 +366,9 @@ jobs:
           from pathlib import Path
           import re
 
-          gradle = Path("android/app/build.gradle")
+          gradle = Path("android/app/build.gradle.kts")
+          if not gradle.exists():
+              gradle = Path("android/app/build.gradle")
           text = gradle.read_text()
 
           # Compile SDK
@@ -403,14 +405,24 @@ jobs:
 
           # Media3 dependencies
           if "androidx.media3:media3-exoplayer:1.11.1" not in text:
-              dependencies = (
-                  "\n"
-                  "dependencies {\n"
-                  '    implementation "androidx.media3:media3-exoplayer:1.11.1"\n'
-                  '    implementation "androidx.media3:media3-exoplayer-dash:1.11.1"\n'
-                  '    implementation "androidx.media3:media3-ui:1.11.1"\n'
-                  "}\n"
-              )
+              if gradle.suffix == ".kts":
+                  dependencies = (
+                      "\n"
+                      "dependencies {\n"
+                      '    implementation("androidx.media3:media3-exoplayer:1.11.1")\n'
+                      '    implementation("androidx.media3:media3-exoplayer-dash:1.11.1")\n'
+                      '    implementation("androidx.media3:media3-ui:1.11.1")\n'
+                      "}\n"
+                  )
+              else:
+                  dependencies = (
+                      "\n"
+                      "dependencies {\n"
+                      '    implementation "androidx.media3:media3-exoplayer:1.11.1"\n'
+                      '    implementation "androidx.media3:media3-exoplayer-dash:1.11.1"\n'
+                      '    implementation "androidx.media3:media3-ui:1.11.1"\n'
+                      "}\n"
+                  )
 
               text += dependencies
 
@@ -436,20 +448,33 @@ jobs:
           # settings.gradle
           # ==================================================
 
-          settings = Path("android/settings.gradle")
+          settings = Path("android/settings.gradle.kts")
+          if not settings.exists():
+              settings = Path("android/settings.gradle")
           text = settings.read_text()
 
-          text = re.sub(
-              r'id "com\.android\.application" version "[^"]+" apply false',
-              'id "com.android.application" version "8.10.0" apply false',
-              text
-          )
-
-          text = re.sub(
-              r'id "org\.jetbrains\.kotlin\.android" version "[^"]+" apply false',
-              'id "org.jetbrains.kotlin.android" version "2.2.0" apply false',
-              text
-          )
+          if settings.suffix == ".kts":
+              text = re.sub(
+                  r'id\("com\.android\.application"\) version "[^"]+" apply false',
+                  'id("com.android.application") version "8.10.0" apply false',
+                  text
+              )
+              text = re.sub(
+                  r'id\("org\.jetbrains\.kotlin\.android"\) version "[^"]+" apply false',
+                  'id("org.jetbrains.kotlin.android") version "2.2.0" apply false',
+                  text
+              )
+          else:
+              text = re.sub(
+                  r'id "com\.android\.application" version "[^"]+" apply false',
+                  'id "com.android.application" version "8.10.0" apply false',
+                  text
+              )
+              text = re.sub(
+                  r'id "org\.jetbrains\.kotlin\.android" version "[^"]+" apply false',
+                  'id "org.jetbrains.kotlin.android" version "2.2.0" apply false',
+                  text
+              )
 
           settings.write_text(text)
 

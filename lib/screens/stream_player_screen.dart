@@ -858,6 +858,8 @@ class _StreamPlayerScreenState
   }
 
 
+  }
+
   String _streamTypeLabel(
     StreamType type,
   ) {
@@ -902,5 +904,3 @@ class _FullscreenVideoScreen extends StatelessWidget {
     );
   }
 }
-
-

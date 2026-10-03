@@ -36,8 +36,12 @@ flutter:
 
 flutter_launcher_icons:
   android: "launcher_icon"
+  ios: true
   image_path: "assets/ngombi_icon.png"
   adaptive_icon_background: "#080808"
+  macos:
+    generate: true
+    image_path: "assets/ngombi_icon.png"
   windows:
     generate: true
     image_path: "assets/ngombi_icon.png"

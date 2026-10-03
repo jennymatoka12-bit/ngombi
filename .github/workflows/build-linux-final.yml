@@ -52,7 +52,7 @@ jobs:
       - name: Package
         run: |
           cd build/linux/x64/release
-          zip -r ../../../NGOMBI-Linux-Final.zip bundle
+          zip -r ../../../../NGOMBI-Linux-Final.zip bundle
 
       - name: Upload
         uses: actions/upload-artifact@v4

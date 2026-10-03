@@ -1,1731 +1,393 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'widgets/ngombi_logo.dart';
-
 import 'models/tv_channel.dart';
-import 'screens/stream_player_screen.dart';
+import 'theme/ngombi_colors.dart';
+import 'theme/ngombi_theme.dart';
 import 'widgets/channel_logo.dart';
+import 'widgets/ngombi_logo.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  String bouquetContent = '';
-
-  try {
-    bouquetContent = await rootBundle.loadString(
-      'assets/tvradiozap.txt',
-    );
-  } catch (_) {
-    bouquetContent = '';
-  }
-
-  final tvChannels = parseEnigma2Bouquet(bouquetContent);
-
-  runApp(
-    NgombiApp(
-      tvChannels: tvChannels,
-    ),
-  );
+  if (!kIsWeb) MediaKit.ensureInitialized();
+  String bouquet = '';
+  try { bouquet = await rootBundle.loadString('assets/tvradiozap.txt'); } catch (_) {}
+  final app = await NgombiState.create(parseEnigma2Bouquet(bouquet));
+  runApp(NgombiApp(state: app));
 }
 
-// -----------------------------------------------------------------------------
-// RADIO
-// -----------------------------------------------------------------------------
-
-class MediaItem {
-  final String name;
-  final String url;
-  final String category;
-  final IconData icon;
-
-  const MediaItem({
-    required this.name,
-    required this.url,
-    required this.category,
-    this.icon = Icons.radio_rounded,
-  });
+class RadioChannel {
+  final String name, url, category;
+  const RadioChannel({required this.name, required this.url, required this.category});
 }
-
-const List<MediaItem> radioChannels = [
-  MediaItem(
-    name: 'RFI Afrique',
-    url: 'https://www.rfi.fr/fr/en-direct-radio',
-    category: 'Afrique',
-  ),
-  MediaItem(
-    name: 'Africa Radio',
-    url: 'https://www.africaradio.com/',
-    category: 'Afrique',
-  ),
-  MediaItem(
-    name: 'Radio Gabon',
-    url: 'https://www.facebook.com/RadioGabon/',
-    category: 'Afrique',
-  ),
-  MediaItem(
-    name: 'Urban FM',
-    url: 'https://www.urbanfm.net/',
-    category: 'Musique',
-  ),
-  MediaItem(
-    name: 'BBC Afrique',
-    url: 'https://www.bbc.com/afrique',
-    category: 'Information',
-  ),
-  MediaItem(
-    name: 'Skyrock',
-    url: 'https://skyrock.fm/',
-    category: 'Musique',
-  ),
-  MediaItem(
-    name: 'Trace FM',
-    url: 'https://trace.fm/',
-    category: 'Musique',
-  ),
-  MediaItem(
-    name: 'NRJ',
-    url: 'https://www.nrj.fr/',
-    category: 'Musique',
-  ),
-  MediaItem(
-    name: 'Nostalgie',
-    url: 'https://www.nostalgie.fr/',
-    category: 'Musique',
-  ),
-  MediaItem(
-    name: 'RFI Monde',
-    url: 'https://www.rfi.fr/fr/en-direct-radio',
-    category: 'International',
-  ),
-  MediaItem(
-    name: 'France Info',
-    url: 'https://www.franceinfo.fr/en-direct/radio',
-    category: 'Information',
-  ),
-  MediaItem(
-    name: 'RMC',
-    url: 'https://rmc.bfmtv.com/',
-    category: 'Information',
-  ),
-  MediaItem(
-    name: 'RTL',
-    url: 'https://www.rtl.fr/',
-    category: 'Information',
-  ),
-  MediaItem(
-    name: 'Europe 1',
-    url: 'https://www.europe1.fr/',
-    category: 'Information',
-  ),
-  MediaItem(
-    name: 'TVRadioZap',
-    url: 'https://tvradiozap.eu/',
-    category: 'International',
-  ),
+const radios = <RadioChannel>[
+  RadioChannel(name:'RFI Afrique',url:'https://www.rfi.fr/fr/en-direct-radio',category:'Afrique'),
+  RadioChannel(name:'Africa Radio',url:'https://www.africaradio.com/',category:'Afrique'),
+  RadioChannel(name:'BBC Afrique',url:'https://www.bbc.com/afrique',category:'Information'),
+  RadioChannel(name:'Urban FM',url:'https://www.urbanfm.net/',category:'Musique'),
+  RadioChannel(name:'Skyrock',url:'https://skyrock.fm/',category:'Musique'),
+  RadioChannel(name:'Trace FM',url:'https://trace.fm/',category:'Musique'),
+  RadioChannel(name:'NRJ',url:'https://www.nrj.fr/',category:'Musique'),
+  RadioChannel(name:'Nostalgie',url:'https://www.nostalgie.fr/',category:'Musique'),
+  RadioChannel(name:'France Info',url:'https://www.franceinfo.fr/en-direct/radio',category:'Information'),
+  RadioChannel(name:'RMC',url:'https://rmc.bfmtv.com/',category:'Information'),
+  RadioChannel(name:'RTL',url:'https://www.rtl.fr/',category:'Information'),
+  RadioChannel(name:'Europe 1',url:'https://www.europe1.fr/',category:'Information'),
 ];
 
-// -----------------------------------------------------------------------------
-// APPLICATION
-// -----------------------------------------------------------------------------
+class NgombiState extends ChangeNotifier {
+  final List<TvChannel> channels;
+  final SharedPreferences prefs;
+  final Set<String> favorites;
+  final List<String> history;
+  NgombiState._(this.channels,this.prefs,this.favorites,this.history);
+  static Future<NgombiState> create(List<TvChannel> c) async {
+    final p=await SharedPreferences.getInstance();
+    return NgombiState._(c,p,{...p.getStringList('favorites')??const[]},[...p.getStringList('history')??const[]]);
+  }
+  bool isFav(TvChannel c)=>favorites.contains(c.id);
+  List<TvChannel> get favs=>channels.where((c)=>favorites.contains(c.id)).toList();
+  List<TvChannel> get recent=>history.map((id){for(final c in channels){if(c.id==id)return c;}return null;}).whereType<TvChannel>().toList();
+  Future<void> toggle(TvChannel c) async {
+    if(!favorites.add(c.id)) favorites.remove(c.id);
+    await prefs.setStringList('favorites',favorites.toList()); notifyListeners();
+  }
+  Future<void> seen(TvChannel c) async {
+    history.remove(c.id); history.insert(0,c.id);
+    if(history.length>30)history.removeRange(30,history.length);
+    await prefs.setStringList('history',history); notifyListeners();
+  }
+  Future<void> clearHistory() async { history.clear(); await prefs.remove('history'); notifyListeners(); }
+}
 
 class NgombiApp extends StatelessWidget {
-  final List<TvChannel> tvChannels;
-
-  const NgombiApp({
-    super.key,
-    required this.tvChannels,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const orange = Color(0xFFFF8A00);
-    const gold = Color(0xFFFFB52E);
-    const background = Color(0xFF080808);
-
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'NGOMBI - TV & RADIO Direct',
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: background,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: orange,
-          brightness: Brightness.dark,
-        ).copyWith(
-          primary: orange,
-          secondary: gold,
-          surface: const Color(0xFF121212),
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: background,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          centerTitle: false,
-        ),
-        navigationBarTheme: NavigationBarThemeData(
-          backgroundColor: const Color(0xFF111111),
-          indicatorColor: orange.withOpacity(0.22),
-          labelTextStyle: const WidgetStatePropertyAll<TextStyle>(
-            TextStyle(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        cardTheme: CardTheme(
-          color: const Color(0xFF151515),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-        ),
-      ),
-      home: MainTabScreen(
-        tvChannels: tvChannels,
-      ),
-    );
-  }
+  final NgombiState state;
+  const NgombiApp({super.key,required this.state});
+  @override Widget build(BuildContext context)=>MaterialApp(
+    debugShowCheckedModeBanner:false,title:'NGOMBI',theme:NgombiTheme.dark(),home:Shell(state:state));
 }
 
-// -----------------------------------------------------------------------------
-// NAVIGATION PRINCIPALE
-// -----------------------------------------------------------------------------
-
-class MainTabScreen extends StatefulWidget {
-  final List<TvChannel> tvChannels;
-
-  const MainTabScreen({
-    super.key,
-    required this.tvChannels,
-  });
-
-  @override
-  State<MainTabScreen> createState() => _MainTabScreenState();
+class Shell extends StatefulWidget {
+  final NgombiState state;
+  const Shell({super.key,required this.state});
+  @override State<Shell> createState()=>_ShellState();
 }
-
-class _MainTabScreenState extends State<MainTabScreen> {
-  int currentIndex = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    final pages = [
-      HomeScreen(
-        tvChannels: widget.tvChannels,
-        radioChannels: radioChannels,
-        onOpenTv: () {
-          setState(() {
-            currentIndex = 1;
-          });
-        },
-        onOpenRadio: () {
-          setState(() {
-            currentIndex = 2;
-          });
-        },
-      ),
-      TvScreen(
-        tvChannels: widget.tvChannels,
-      ),
-      const RadioScreen(),
+class _ShellState extends State<Shell>{
+  int index=0;
+  void nav(int i)=>setState(()=>index=i);
+  @override Widget build(BuildContext context){
+    final pages=[
+      Home(state:widget.state,nav:nav),TvPage(state:widget.state),const RadioPage(),
+      FavoritesPage(state:widget.state),SettingsPage(state:widget.state)
     ];
-
-    return Scaffold(
-      body: IndexedStack(
-        index: currentIndex,
-        children: pages,
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: currentIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            currentIndex = index;
-          });
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Accueil',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.tv_outlined),
-            selectedIcon: Icon(Icons.tv_rounded),
-            label: 'TV',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.radio_outlined),
-            selectedIcon: Icon(Icons.radio_rounded),
-            label: 'Radio',
-          ),
-        ],
-      ),
-    );
+    return AnimatedBuilder(
+      animation:widget.state,
+      builder:(_,__)=>LayoutBuilder(builder:(context,c){
+        final wide=c.maxWidth>=900;
+        return Scaffold(
+          body:Row(children:[if(wide)SideBar(index:index,nav:nav),Expanded(child:IndexedStack(index:index,children:pages))]),
+          bottomNavigationBar:wide?null:NavigationBar(
+            selectedIndex:index.clamp(0,4) as int,onDestinationSelected:nav,
+            destinations:const[
+              NavigationDestination(icon:Icon(Icons.home_outlined),selectedIcon:Icon(Icons.home),label:'Accueil'),
+              NavigationDestination(icon:Icon(Icons.tv_outlined),selectedIcon:Icon(Icons.tv),label:'TV'),
+              NavigationDestination(icon:Icon(Icons.radio_outlined),selectedIcon:Icon(Icons.radio),label:'Radio'),
+              NavigationDestination(icon:Icon(Icons.favorite_border),selectedIcon:Icon(Icons.favorite),label:'Favoris'),
+              NavigationDestination(icon:Icon(Icons.settings_outlined),selectedIcon:Icon(Icons.settings),label:'Réglages')
+            ]));
+      }));
   }
 }
 
-// -----------------------------------------------------------------------------
-// HERO NGOMBI
-// -----------------------------------------------------------------------------
+class SideBar extends StatelessWidget {
+  final int index; final ValueChanged<int> nav;
+  const SideBar({super.key,required this.index,required this.nav});
+  @override Widget build(BuildContext context)=>Container(
+    width:235,decoration:const BoxDecoration(color:NgombiColors.surface,border:Border(right:BorderSide(color:NgombiColors.border))),
+    child:SafeArea(child:Padding(padding:const EdgeInsets.all(18),child:Column(children:[
+      const Align(alignment:Alignment.centerLeft,child:NgombiLogo.full(height:42)),const SizedBox(height:28),
+      _item(0,Icons.home,'Accueil'),_item(1,Icons.tv,'Télévision'),_item(2,Icons.radio,'Radio'),_item(3,Icons.favorite,'Favoris'),
+      const Spacer(),_item(4,Icons.settings,'Réglages'),const SizedBox(height:10),
+      const Text('NGOMBI • TV & RADIO',style:TextStyle(color:NgombiColors.textMuted,fontSize:11))
+    ])));
+  Widget _item(int i,IconData icon,String label)=>Padding(
+    padding:const EdgeInsets.only(bottom:5),child:ListTile(
+      onTap:()=>nav(i),selected:index==i,selectedTileColor:NgombiColors.orange.withOpacity(.14),
+      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(14)),
+      leading:Icon(icon,color:index==i?NgombiColors.orange:NgombiColors.textSecondary),
+      title:Text(label,style:TextStyle(fontWeight:index==i?FontWeight.w800:FontWeight.w600,color:index==i?Colors.white:NgombiColors.textSecondary))));
+}
 
-class NgombiHero extends StatelessWidget {
-  const NgombiHero({
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 10),
-      height: 190,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF241010),
-            Color(0xFF111111),
-          ],
-        ),
-        border: Border.all(
-          color: const Color(0x33FF7043),
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -25,
-            top: -15,
-            child: CustomPaint(
-              size: const Size(210, 210),
-              painter: NgombiWavePainter(),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const NgombiLogo.full(
-                  height: 42,
-                ),
-                const SizedBox(height: 18),
-                const Text(
-                  'Le monde en direct',
-                  style: TextStyle(
-                    fontSize: 25,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 7),
-                Text(
-                  'TV & Radio, où que vous soyez.',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade400,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+class Home extends StatelessWidget {
+  final NgombiState state; final ValueChanged<int> nav;
+  const Home({super.key,required this.state,required this.nav});
+  Future<void> search(BuildContext context) async {
+    final r=await showSearch<Pick?>(context:context,delegate:Search(state));
+    if(!context.mounted||r==null)return;
+    if(r.tv!=null)openTv(context,r.tv!); else if(r.radio!=null)openRadio(context,r.radio!);
+  }
+  void openTv(BuildContext c,TvChannel ch){state.seen(ch);Navigator.push(c,MaterialPageRoute(builder:(_)=>PlayerPage(state:state,channel:ch)));}
+  void openRadio(BuildContext c,RadioChannel r)=>Navigator.push(c,MaterialPageRoute(builder:(_)=>WebPage(title:r.name,url:r.url)));
+  @override Widget build(BuildContext context){
+    final recent=state.recent.take(8).toList(),live=state.channels.take(12).toList();
+    final cats=state.channels.map((c)=>c.category).where((x)=>x.isNotEmpty).toSet().take(8).toList();
+    return SafeArea(child:CustomScrollView(slivers:[
+      SliverToBoxAdapter(child:Padding(padding:const EdgeInsets.fromLTRB(20,18,20,8),child:Row(children:[
+        const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          Text('Bonjour 👋',style:TextStyle(color:NgombiColors.textSecondary)),SizedBox(height:4),
+          Text('Que voulez-vous regarder ?',style:TextStyle(fontSize:21,fontWeight:FontWeight.w800))])),
+        IconButton(onPressed:()=>search(context),icon:const Icon(Icons.search_rounded,size:28))])),
+      const SliverToBoxAdapter(child:HeroCard()),
+      if(recent.isNotEmpty)...[
+        SliverToBoxAdapter(child:TitleRow(title:'Reprendre',action:'Historique',tap:()=>nav(3))),
+        SliverToBoxAdapter(child:CardsRow(state:state,channels:recent))],
+      SliverToBoxAdapter(child:TitleRow(title:'En direct',action:'Tout voir',tap:()=>nav(1))),
+      SliverToBoxAdapter(child:CardsRow(state:state,channels:live)),
+      SliverToBoxAdapter(child:TitleRow(title:'Explorer',action:null,tap:null)),
+      SliverToBoxAdapter(child:Categories(cats)),
+      SliverToBoxAdapter(child:TitleRow(title:'Radios',action:'Toutes',tap:()=>nav(2))),
+      SliverToBoxAdapter(child:RadioRow(items:radios)),
+      const SliverToBoxAdapter(child:SizedBox(height:30))
+    ]));
   }
 }
 
-class NgombiWavePainter extends CustomPainter {
-  @override
-  void paint(
-    Canvas canvas,
-    Size size,
-  ) {
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..color = const Color(0x66FF7043);
+class HeroCard extends StatelessWidget {
+  const HeroCard({super.key});
+  @override Widget build(BuildContext context)=>Container(
+    margin:const EdgeInsets.fromLTRB(20,12,20,6),padding:const EdgeInsets.all(24),constraints:const BoxConstraints(minHeight:205),
+    decoration:BoxDecoration(borderRadius:BorderRadius.circular(28),
+      gradient:const LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,
+        colors:[Color(0xFF2A1408),Color(0xFF14100C),Color(0xFF0D0D0D)]),
+      border:Border.all(color:Color(0x33FF8A00))),
+    child:Row(children:[
+      const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisAlignment:MainAxisAlignment.center,children:[
+        NgombiLogo.full(height:40),SizedBox(height:18),Text('Le monde en direct.',style:TextStyle(fontSize:28,fontWeight:FontWeight.w900)),
+        SizedBox(height:8),Text('TV, radio et chaînes africaines dans une seule application.',style:TextStyle(color:NgombiColors.textSecondary))])),
+      if(MediaQuery.sizeOf(context).width>650)const Icon(Icons.live_tv_rounded,size:92,color:NgombiColors.orange)
+    ]));
+}
 
-    for (int i = 0; i < 7; i++) {
-      final path = Path();
-      final y = 35.0 + (i * 22);
+class TitleRow extends StatelessWidget {
+  final String title; final String? action; final VoidCallback? tap;
+  const TitleRow({super.key,required this.title,required this.action,required this.tap});
+  @override Widget build(BuildContext context)=>Padding(
+    padding:const EdgeInsets.fromLTRB(20,24,20,12),
+    child:Row(children:[Expanded(child:Text(title,style:const TextStyle(fontSize:20,fontWeight:FontWeight.w800))),
+      if(action!=null)TextButton(onPressed:tap,child:Text(action!))]));
+}
 
-      path.moveTo(10, y);
+class CardsRow extends StatelessWidget {
+  final NgombiState state; final List<TvChannel> channels;
+  const CardsRow({super.key,required this.state,required this.channels});
+  @override Widget build(BuildContext context){
+    final w=MediaQuery.sizeOf(context).width,cw=w>=1200?220.0:w>=700?190.0:158.0;
+    return SizedBox(height:205,child:ListView.separated(
+      padding:const EdgeInsets.symmetric(horizontal:20),scrollDirection:Axis.horizontal,itemCount:channels.length,
+      separatorBuilder:(_,__)=>const SizedBox(width:12),
+      itemBuilder:(_,i)=>ChannelCard(state:state,channel:channels[i],width:cw)));
+  }
+}
 
-      path.cubicTo(
-        size.width * 0.25,
-        y - 25,
-        size.width * 0.35,
-        y + 25,
-        size.width * 0.55,
-        y,
-      );
+class ChannelCard extends StatelessWidget {
+  final NgombiState state; final TvChannel channel; final double width;
+  const ChannelCard({super.key,required this.state,required this.channel,required this.width});
+  @override Widget build(BuildContext context)=>SizedBox(width:width,child:Card(child:InkWell(
+    borderRadius:BorderRadius.circular(18),
+    onTap:(){state.seen(channel);Navigator.push(context,MaterialPageRoute(builder:(_)=>PlayerPage(state:state,channel:channel)));},
+    child:Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Expanded(child:Stack(children:[Center(child:ChannelLogo(channel:channel,size:width>180?90:74)),
+        Positioned(right:0,top:0,child:Icon(state.isFav(channel)?Icons.favorite:Icons.favorite_border,size:18,color:state.isFav(channel)?NgombiColors.orange:NgombiColors.textMuted))])),
+      const SizedBox(height:10),Text(channel.name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800)),
+      const SizedBox(height:4),Text(channel.category,style:const TextStyle(color:NgombiColors.textSecondary,fontSize:11))
+    ]))));
+}
 
-      path.cubicTo(
-        size.width * 0.72,
-        y - 22,
-        size.width * 0.82,
-        y + 22,
-        size.width,
-        y,
-      );
+class Categories extends StatelessWidget {
+  final List<String> items; const Categories(this.items,{super.key});
+  @override Widget build(BuildContext context)=>SizedBox(height:92,child:ListView.separated(
+    padding:const EdgeInsets.symmetric(horizontal:20),scrollDirection:Axis.horizontal,itemCount:items.length,
+    separatorBuilder:(_,__)=>const SizedBox(width:10),itemBuilder:(_,i){
+      final x=items[i],icon=switch(x){'Sport'=>Icons.sports_soccer,'Cinéma'=>Icons.movie,'Information'=>Icons.newspaper,'Musique'=>Icons.music_note,'Afrique'=>Icons.public,'Jeunesse'=>Icons.child_care,_=>Icons.explore};
+      return Container(width:112,padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:NgombiColors.card,borderRadius:BorderRadius.circular(16),border:Border.all(color:NgombiColors.border)),
+        child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[Icon(icon,color:NgombiColors.orange),const SizedBox(height:7),Text(x,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700))]));
+    }));
+}
 
-      canvas.drawPath(
-        path,
-        paint,
-      );
+class RadioRow extends StatelessWidget {
+  final List<RadioChannel> items; const RadioRow({super.key,required this.items});
+  @override Widget build(BuildContext context)=>SizedBox(height:118,child:ListView.separated(
+    padding:const EdgeInsets.symmetric(horizontal:20),scrollDirection:Axis.horizontal,itemCount:items.length,
+    separatorBuilder:(_,__)=>const SizedBox(width:12),
+    itemBuilder:(_,i)=>SizedBox(width:180,child:Card(child:ListTile(
+      onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>WebPage(title:items[i].name,url:items[i].url))),
+      leading:const CircleAvatar(backgroundColor:NgombiColors.orange,child:Icon(Icons.radio,color:Colors.black)),
+      title:Text(items[i].name,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800)))))));
+}
+
+class TvPage extends StatefulWidget {
+  final NgombiState state; const TvPage({super.key,required this.state});
+  @override State<TvPage> createState()=>_TvPageState();
+}
+class _TvPageState extends State<TvPage>{
+  String cat='Toutes',q='';
+  @override Widget build(BuildContext context){
+    final cats=['Toutes',...widget.state.channels.map((c)=>c.category).toSet()];
+    final list=widget.state.channels.where((c)=>(cat=='Toutes'||c.category==cat)&&(q.isEmpty||c.name.toLowerCase().contains(q.toLowerCase()))).toList();
+    return SafeArea(child:Column(children:[
+      const Padding(padding:EdgeInsets.fromLTRB(20,18,20,10),child:Align(alignment:Alignment.centerLeft,child:Text('Télévision',style:TextStyle(fontSize:27,fontWeight:FontWeight.w900)))),
+      Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:TextField(onChanged:(v)=>setState(()=>q=v),decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Rechercher une chaîne'))),
+      const SizedBox(height:10),
+      SizedBox(height:40,child:ListView.separated(padding:const EdgeInsets.symmetric(horizontal:20),scrollDirection:Axis.horizontal,itemCount:cats.length,
+        separatorBuilder:(_,__)=>const SizedBox(width:8),itemBuilder:(_,i)=>ChoiceChip(label:Text(cats[i]),selected:cat==cats[i],onSelected:(_)=>setState(()=>cat=cats[i])))),
+      Expanded(child:LayoutBuilder(builder:(_,c){
+        final n=c.maxWidth>=1400?6:c.maxWidth>=1050?5:c.maxWidth>=750?4:c.maxWidth>=520?3:2;
+        return GridView.builder(padding:const EdgeInsets.all(20),gridDelegate:SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:n,crossAxisSpacing:12,mainAxisSpacing:12,childAspectRatio:.88),
+          itemCount:list.length,itemBuilder:(_,i)=>ChannelCard(state:widget.state,channel:list[i],width:180));
+      }))
+    ]));
+  }
+}
+
+class RadioPage extends StatefulWidget { const RadioPage({super.key}); @override State<RadioPage> createState()=>_RadioPageState(); }
+class _RadioPageState extends State<RadioPage>{
+  String q='';
+  @override Widget build(BuildContext context){
+    final list=radios.where((r)=>r.name.toLowerCase().contains(q.toLowerCase())).toList();
+    return SafeArea(child:Column(children:[
+      const Padding(padding:EdgeInsets.fromLTRB(20,18,20,10),child:Align(alignment:Alignment.centerLeft,child:Text('Radio',style:TextStyle(fontSize:27,fontWeight:FontWeight.w900)))),
+      Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:TextField(onChanged:(v)=>setState(()=>q=v),decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Rechercher une radio'))),
+      Expanded(child:ListView.separated(padding:const EdgeInsets.all(20),itemCount:list.length,separatorBuilder:(_,__)=>const SizedBox(height:10),
+        itemBuilder:(_,i)=>ListTile(tileColor:NgombiColors.card,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)),
+          leading:const CircleAvatar(backgroundColor:NgombiColors.orange,child:Icon(Icons.radio,color:Colors.black)),
+          title:Text(list[i].name,style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text(list[i].category),trailing:const Icon(Icons.open_in_new),
+          onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>WebPage(title:list[i].name,url:list[i].url)))))
+    ]));
+  }
+}
+
+class FavoritesPage extends StatelessWidget {
+  final NgombiState state; const FavoritesPage({super.key,required this.state});
+  @override Widget build(BuildContext context)=>SafeArea(child:state.favs.isEmpty
+    ?const Empty(icon:Icons.favorite_border,title:'Aucun favori',message:'Ajoutez vos chaînes préférées pour les retrouver ici.')
+    :GridView.builder(padding:const EdgeInsets.fromLTRB(20,18,20,20),gridDelegate:const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent:240,crossAxisSpacing:12,mainAxisSpacing:12,childAspectRatio:.88),itemCount:state.favs.length,itemBuilder:(_,i)=>ChannelCard(state:state,channel:state.favs[i],width:180)));
+}
+
+class SettingsPage extends StatelessWidget {
+  final NgombiState state; const SettingsPage({super.key,required this.state});
+  @override Widget build(BuildContext context)=>SafeArea(child:ListView(padding:const EdgeInsets.all(20),children:[
+    const Text('Réglages',style:TextStyle(fontSize:27,fontWeight:FontWeight.w900)),const SizedBox(height:18),
+    Card(child:Column(children:[
+      ListTile(leading:const Icon(Icons.history),title:const Text('Historique'),subtitle:Text(state.recent.length.toString()+' chaîne(s)'),trailing:const Icon(Icons.delete_outline),
+        onTap:()=>showDialog(context:context,builder:(_)=>AlertDialog(title:const Text('Effacer l’historique ?'),content:const Text('Les chaînes récentes seront supprimées.'),
+          actions:[TextButton(onPressed:()=>Navigator.pop(context),child:const Text('Annuler')),FilledButton(onPressed:(){state.clearHistory();Navigator.pop(context);},child:const Text('Effacer'))]))),
+      const Divider(height:1),const ListTile(leading:Icon(Icons.palette_outlined),title:Text('Apparence'),subtitle:Text('Thème sombre NGOMBI')),
+      const Divider(height:1),const ListTile(leading:Icon(Icons.info_outline),title:Text('NGOMBI'),subtitle:Text('TV & RADIO Direct • version 2.0.0'))
+    ])),const SizedBox(height:18),const Card(child:Padding(padding:EdgeInsets.all(18),child:Text('NGOMBI ne contourne aucun DRM et ne garantit pas la disponibilité des flux publiés par des tiers.',style:TextStyle(color:NgombiColors.textSecondary,height:1.45))))
+  ]));
+}
+
+class Empty extends StatelessWidget {
+  final IconData icon;final String title,message;
+  const Empty({super.key,required this.icon,required this.title,required this.message});
+  @override Widget build(BuildContext context)=>Center(child:Padding(padding:const EdgeInsets.all(30),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+    Icon(icon,size:58,color:NgombiColors.textMuted),const SizedBox(height:14),Text(title,style:const TextStyle(fontSize:20,fontWeight:FontWeight.w800)),const SizedBox(height:7),
+    Text(message,textAlign:TextAlign.center,style:const TextStyle(color:NgombiColors.textSecondary))])));
+}
+
+class Pick { final TvChannel? tv; final RadioChannel? radio; const Pick.tv(this.tv):radio=null; const Pick.radio(this.radio):tv=null; }
+class Search extends SearchDelegate<Pick?> {
+  final NgombiState state; Search(this.state):super(searchFieldLabel:'Rechercher TV ou radio');
+  @override List<Widget>? buildActions(BuildContext c)=>[if(query.isNotEmpty)IconButton(onPressed:()=>query='',icon:const Icon(Icons.clear))];
+  @override Widget? buildLeading(BuildContext c)=>IconButton(onPressed:()=>close(c,null),icon:const Icon(Icons.arrow_back));
+  @override Widget buildResults(BuildContext c)=>body(c); @override Widget buildSuggestions(BuildContext c)=>body(c);
+  Widget body(BuildContext c){
+    final q=query.toLowerCase().trim();
+    final tv=state.channels.where((x)=>q.isEmpty||x.name.toLowerCase().contains(q)||x.category.toLowerCase().contains(q)).take(30).toList();
+    final r=radios.where((x)=>q.isEmpty||x.name.toLowerCase().contains(q)||x.category.toLowerCase().contains(q)).toList();
+    return ListView(children:[
+      if(tv.isNotEmpty)const ListTile(title:Text('Télévision',style:TextStyle(fontWeight:FontWeight.w800))),
+      ...tv.map((x)=>ListTile(leading:ChannelLogo(channel:x,size:46),title:Text(x.name),subtitle:Text(x.category),onTap:()=>close(c,Pick.tv(x)))),
+      if(r.isNotEmpty)const ListTile(title:Text('Radio',style:TextStyle(fontWeight:FontWeight.w800))),
+      ...r.map((x)=>ListTile(leading:const CircleAvatar(backgroundColor:NgombiColors.orange,child:Icon(Icons.radio,color:Colors.black)),title:Text(x.name),subtitle:Text(x.category),onTap:()=>close(c,Pick.radio(x))))
+    ]);
+  }
+}
+
+class PlayerPage extends StatefulWidget {
+  final NgombiState state; final TvChannel channel;
+  const PlayerPage({super.key,required this.state,required this.channel});
+  @override State<PlayerPage> createState()=>_PlayerPageState();
+}
+class _PlayerPageState extends State<PlayerPage>{
+  Player? player;VideoController? video;StreamSubscription<String>? errorSub;String? error;bool loading=true;bool opened=false;
+  static const dash=MethodChannel('ngombi/player');
+  @override void initState(){super.initState();start();}
+  Future<void> start()async{
+    final official=officialUrl(widget.channel.name);
+    if(official!=null){if(mounted)setState(()=>loading=false);return;}
+    if(widget.channel.type==StreamType.dash&&!kIsWeb&&defaultTargetPlatform==TargetPlatform.android){
+      try{await dash.invokeMethod('playDash',{'url':widget.channel.url,'userAgent':widget.channel.headers['User-Agent']??'Mozilla/5.0'});if(mounted)setState((){loading=false;opened=true;});}
+      catch(e){if(mounted)setState((){loading=false;error=e.toString();});}return;
     }
+    if(widget.channel.type==StreamType.dash){if(mounted)setState((){loading=false;error='Ce flux DASH est actuellement pris en charge par le lecteur Android.';});return;}
+    try{
+      final p=Player();player=p;video=VideoController(p);
+      errorSub=p.stream.error.listen((m){if(mounted&&m.isNotEmpty)setState((){loading=false;error=m;});});
+      await p.open(Media(widget.channel.url,httpHeaders:widget.channel.headers),play:true).timeout(const Duration(seconds:25));
+      if(!mounted){await p.dispose();return;}setState((){loading=false;opened=true;error=null;});
+    }catch(e){if(mounted)setState((){loading=false;error='Impossible de lire ce flux.\n\n$e';});}
   }
-
-  @override
-  bool shouldRepaint(
-    covariant CustomPainter oldDelegate,
-  ) {
-    return false;
-  }
-}
-
-// -----------------------------------------------------------------------------
-// ACCUEIL
-// -----------------------------------------------------------------------------
-
-class HomeScreen extends StatelessWidget {
-  final List<TvChannel> tvChannels;
-  final List<MediaItem> radioChannels;
-  final VoidCallback onOpenTv;
-  final VoidCallback onOpenRadio;
-
-  const HomeScreen({
-    super.key,
-    required this.tvChannels,
-    required this.radioChannels,
-    required this.onOpenTv,
-    required this.onOpenRadio,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: _buildHeader(context),
-          ),
-
-          const SliverToBoxAdapter(
-            child: NgombiHero(),
-          ),
-
-          SliverToBoxAdapter(
-            child: _buildSectionTitle(
-              context,
-              'En direct',
-              'Voir les chaînes TV',
-              onOpenTv,
-            ),
-          ),
-
-          SliverToBoxAdapter(
-            child: _buildTvCarousel(context),
-          ),
-
-          SliverToBoxAdapter(            child: _buildSectionTitle(
-              context,
-              'Catégories',
-              null,
-              null,
-            ),
-          ),
-
-          SliverToBoxAdapter(
-            child: _buildCategories(context),
-          ),
-
-          SliverToBoxAdapter(
-            child: _buildSectionTitle(
-              context,
-              'Radio',
-              'Toutes les radios',
-              onOpenRadio,
-            ),
-          ),
-
-          SliverToBoxAdapter(
-            child: _buildRadioCarousel(context),
-          ),
-
-          const SliverToBoxAdapter(
-            child: SizedBox(height: 24),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _openSearch(BuildContext context) async {
-    final result = await showSearch<NgombiSearchResult>(
-      context: context,
-      delegate: NgombiSearchDelegate(
-        tvChannels: tvChannels,
-        radioChannels: radioChannels,
-      ),
-    );
-
-    if (!context.mounted || result == null) {
-      return;
-    }
-
-    if (result.tvChannel != null) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => StreamPlayerScreen(
-            channel: result.tvChannel!,
-          ),
-        ),
-      );
-      return;
-    }
-
-    if (result.radioChannel != null) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => WebPlayerScreen(
-            title: result.radioChannel!.name,
-            url: result.radioChannel!.url,
-          ),
-        ),
-      );
-    }
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        20,
-        18,
-        20,
-        4,
-      ),
-      child: Row(
-        children: [
-          const NgombiLogo.icon(
-            height: 42,
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'NGOMBI',
-                  style: TextStyle(
-                    fontSize: 21,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 2,
-                  ),
-                ),
-                Text(
-                  'TV & RADIO Direct',
-                  style: TextStyle(
-                    color: Colors.white54,
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            onPressed: () => _openSearch(context),
-            icon: const Icon(
-              Icons.search_rounded,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle(
-    BuildContext context,
-    String title,
-    String? action,
-    VoidCallback? onPressed,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        20,
-        22,
-        20,
-        12,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          if (action != null && onPressed != null)
-            TextButton(
-              onPressed: onPressed,
-              child: Text(action),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTvCarousel(BuildContext context) {
-    if (tvChannels.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: 20,
-        ),
-        child: Text(
-          'Aucune chaîne TV disponible.',
-          style: TextStyle(
-            color: Colors.white54,
-          ),
-        ),
-      );
-    }
-
-    final visibleChannels = tvChannels.take(10).toList();
-
-    return SizedBox(
-      height: 155,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 20,
-        ),
-        scrollDirection: Axis.horizontal,
-        itemCount: visibleChannels.length,
-        separatorBuilder: (_, __) {
-          return const SizedBox(width: 12);
-        },
-        itemBuilder: (context, index) {
-          final channel = visibleChannels[index];
-
-          return _TvHomeCard(
-            channel: channel,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => StreamPlayerScreen(
-                    channel: channel,
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildCategories(BuildContext context) {
-    final categories = [
-      (
-        'Afrique',
-        Icons.public_rounded,
-      ),
-      (
-        'Sport',
-        Icons.sports_soccer_rounded,
-      ),
-      (
-        'Information',
-        Icons.newspaper_rounded,
-      ),
-      (
-        'Musique',
-        Icons.music_note_rounded,
-      ),
-      (
-        'Cinéma',
-        Icons.movie_rounded,
-      ),
-      (
-        'Jeunesse',
-        Icons.child_care_rounded,
-      ),
-    ];
-
-    return SizedBox(
-      height: 94,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 20,
-        ),
-        scrollDirection: Axis.horizontal,
-        itemCount: categories.length,
-        separatorBuilder: (_, __) {
-          return const SizedBox(width: 10);
-        },
-        itemBuilder: (context, index) {
-          final item = categories[index];
-
-          return Container(
-            width: 105,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF151515),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.06),
-              ),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  item.$2,
-                  color: const Color(0xFFFFA21A),
-                  size: 28,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  item.$1,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildRadioCarousel(BuildContext context) {
-    return SizedBox(
-      height: 125,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 20,
-        ),
-        scrollDirection: Axis.horizontal,
-        itemCount: radioChannels.take(8).length,
-        separatorBuilder: (_, __) {
-          return const SizedBox(width: 12);
-        },
-        itemBuilder: (context, index) {
-          final radio = radioChannels[index];
-
-          return _RadioHomeCard(
-            radio: radio,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => WebPlayerScreen(
-                    title: radio.name,
-                    url: radio.url,
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
-    );
+  Future<void> retry()async{await disposePlayer();if(mounted)setState((){loading=true;error=null;opened=false;});await start();}
+  Future<void> disposePlayer()async{await errorSub?.cancel();errorSub=null;final p=player;player=null;video=null;await p?.dispose();}
+  @override void dispose(){unawaited(disposePlayer());super.dispose();}
+  @override Widget build(BuildContext context){
+    final official=officialUrl(widget.channel.name);
+    if(official!=null)return WebPage(title:widget.channel.name,url:official,favoriteState:widget.state,channel:widget.channel);
+    return Scaffold(backgroundColor:Colors.black,appBar:AppBar(title:Text(widget.channel.name),backgroundColor:Colors.black,actions:[
+      IconButton(onPressed:()=>widget.state.toggle(widget.channel),icon:Icon(widget.state.isFav(widget.channel)?Icons.favorite:Icons.favorite_border,color:widget.state.isFav(widget.channel)?NgombiColors.orange:null))]),
+      body:Column(children:[
+        Expanded(child:loading?const Center(child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[CircularProgressIndicator(color:NgombiColors.orange),SizedBox(height:14),Text('Connexion au flux…',style:TextStyle(color:Colors.white70))]))
+          :error!=null?ErrorPanel(message:error!,retry:retry):video!=null?Video(controller:video!,fit:BoxFit.contain):const SizedBox.shrink()),
+        if(opened)Container(color:NgombiColors.surface,padding:const EdgeInsets.all(14),child:Row(children:[
+          ChannelLogo(channel:widget.channel,size:44),const SizedBox(width:12),Expanded(child:Text(widget.channel.name,style:const TextStyle(fontWeight:FontWeight.w800))),
+          Text(widget.channel.category,style:const TextStyle(color:NgombiColors.textSecondary))]))
+      ]));
   }
 }
-
-// -----------------------------------------------------------------------------
-// CARTE TV ACCUEIL
-// -----------------------------------------------------------------------------
-
-class _TvHomeCard extends StatelessWidget {
-  final TvChannel channel;
-  final VoidCallback onTap;
-
-  const _TvHomeCard({
-    required this.channel,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: onTap,
-      child: Container(
-        width: 210,
-        decoration: BoxDecoration(
-          color: const Color(0xFF151515),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: Colors.white.withOpacity(0.06),
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(13),
-                    gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFF292929),
-                        Color(0xFF171717),
-                      ],
-                    ),
-                  ),
-                  child: Center(
-                    child: ChannelLogo(
-                      channel: channel,
-                      size: 72,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 9),
-              Text(
-                channel.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                channel.category,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: Colors.white54,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+class ErrorPanel extends StatelessWidget{
+  final String message;final VoidCallback retry;const ErrorPanel({super.key,required this.message,required this.retry});
+  @override Widget build(BuildContext context)=>Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+    const Icon(Icons.error_outline,size:58,color:NgombiColors.error),const SizedBox(height:16),Text(message,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white70)),
+    const SizedBox(height:20),FilledButton.icon(onPressed:retry,icon:const Icon(Icons.refresh),label:const Text('Réessayer'))])));
 }
-
-// -----------------------------------------------------------------------------
-// CARTE RADIO ACCUEIL
-// -----------------------------------------------------------------------------
-
-class _RadioHomeCard extends StatelessWidget {
-  final MediaItem radio;
-  final VoidCallback onTap;
-
-  const _RadioHomeCard({
-    required this.radio,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: onTap,
-      child: Container(
-        width: 190,
-        padding: const EdgeInsets.all(15),
-        decoration: BoxDecoration(
-          color: const Color(0xFF151515),
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFFFF8A00)
-                    .withOpacity(0.14),
-              ),
-              child: const Icon(
-                Icons.radio_rounded,
-                color: Color(0xFFFFA21A),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                                    Text(
-                    radio.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    radio.category,
-                    style: const TextStyle(
-                      color: Colors.white54,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+String? officialUrl(String name){
+  final n=name.toLowerCase();
+  if(n=='tf1'||n.startsWith('tf1 '))return'https://www.tf1.fr/tf1/direct';
+  if(n.contains('gabon 24'))return'https://gabon24.tv/direct';
+  if(n.contains('gabon premiere')||n.contains('gabon première'))return'https://www.gabonpremiere.ga/';
+  return null;
 }
-
-// -----------------------------------------------------------------------------
-// TV
-// -----------------------------------------------------------------------------
-
-class TvScreen extends StatefulWidget {
-  final List<TvChannel> tvChannels;
-
-  const TvScreen({
-    super.key,
-    required this.tvChannels,
-  });
-
-  @override
-  State<TvScreen> createState() => _TvScreenState();
+class WebPage extends StatefulWidget{
+  final String title,url;final NgombiState? favoriteState;final TvChannel? channel;
+  const WebPage({super.key,required this.title,required this.url,this.favoriteState,this.channel});
+  @override State<WebPage> createState()=>_WebPageState();
 }
-
-class _TvScreenState extends State<TvScreen> {
-  String selectedCategory = 'Toutes';
-
-  @override
-  Widget build(BuildContext context) {
-    final categories = [
-      'Toutes',
-      ...widget.tvChannels
-          .map((channel) => channel.category)
-          .toSet(),
-    ];
-
-    final filteredChannels = selectedCategory == 'Toutes'
-        ? widget.tvChannels
-        : widget.tvChannels
-            .where(
-              (channel) =>
-                  channel.category == selectedCategory,
-            )
-            .toList();
-
-    return SafeArea(
-      child: CustomScrollView(
-        slivers: [
-          const SliverToBoxAdapter(
-            child: _PageHeader(
-              title: 'Télévision',
-              subtitle: 'Les chaînes TV en direct',
-              icon: Icons.tv_rounded,
-            ),
-          ),
-
-          const SliverToBoxAdapter(
-            child: NgombiHero(),
-          ),
-
-          SliverToBoxAdapter(
-            child: SizedBox(
-              height: 52,
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                ),
-                scrollDirection: Axis.horizontal,
-                itemCount: categories.length,
-                separatorBuilder: (_, __) {
-                  return const SizedBox(width: 8);
-                },
-                itemBuilder: (context, index) {
-                  final category = categories[index];
-
-                  return ChoiceChip(
-                    label: Text(category),
-                    selected:
-                        selectedCategory == category,
-                    onSelected: (_) {
-                      setState(() {
-                        selectedCategory = category;
-                      });
-                    },
-                  );
-                },
-              ),
-            ),
-          ),
-
-          if (filteredChannels.isEmpty)
-            const SliverFillRemaining(
-              child: Center(
-                child: Text(
-                  'Aucune chaîne disponible.',
-                  style: TextStyle(
-                    color: Colors.white54,
-                  ),
-                ),
-              ),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(
-                16,
-                8,
-                16,
-                24,
-              ),
-              sliver: SliverGrid(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final channel =
-                        filteredChannels[index];
-
-                    return _TvGridCard(
-                      channel: channel,
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                StreamPlayerScreen(
-                              channel: channel,
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                  childCount: filteredChannels.length,
-                ),
-                gridDelegate:
-                    const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 320,
-                  mainAxisExtent: 205,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-// -----------------------------------------------------------------------------
-// CARTE TV GRILLE
-// -----------------------------------------------------------------------------
-
-class _TvGridCard extends StatelessWidget {
-  final TvChannel channel;
-  final VoidCallback onTap;
-
-  const _TvGridCard({
-    required this.channel,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF242424),
-                      Color(0xFF101010),
-                    ],
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    Center(
-                      child: ChannelLogo(
-                        channel: channel,
-                        size: 80,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    Positioned(
-                      left: 10,
-                      top: 10,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.65),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.circle,
-                              size: 7,
-                              color: Colors.redAccent,
-                            ),
-                            SizedBox(width: 5),
-                            Text(
-                              'DIRECT',
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                13,
-                10,
-                13,
-                12,
-              ),
-              child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    channel.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${channel.category} • '
-                    '${_streamTypeLabel(channel.type)}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white54,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _streamTypeLabel(StreamType type) {
-    switch (type) {
-      case StreamType.hls:
-        return 'HLS';
-      case StreamType.dash:
-        return 'DASH';
-      case StreamType.unknown:
-        return 'Flux';
-    }
-  }
-}
-
-// -----------------------------------------------------------------------------
-// RADIO
-// -----------------------------------------------------------------------------
-
-class RadioScreen extends StatelessWidget {
-  const RadioScreen({
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: CustomScrollView(
-        slivers: [
-          const SliverToBoxAdapter(
-            child: _PageHeader(
-              title: 'Radio',
-              subtitle: 'Écoutez vos radios préférées',
-              icon: Icons.radio_rounded,
-            ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(
-              16,
-              8,
-              16,
-              24,
-            ),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final radio = radioChannels[index];
-
-                  return Padding(
-                    padding: const EdgeInsets.only(
-                      bottom: 10,
-                    ),
-                    child: _RadioListCard(
-                      radio: radio,
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                WebPlayerScreen(
-                              title: radio.name,
-                              url: radio.url,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  );
-                },
-                childCount: radioChannels.length,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// -----------------------------------------------------------------------------
-// CARTE RADIO
-// -----------------------------------------------------------------------------
-
-class _RadioListCard extends StatelessWidget {
-  final MediaItem radio;
-  final VoidCallback onTap;
-
-  const _RadioListCard({
-    required this.radio,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Container(
-                width: 58,
-                height: 58,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFFFF8A00)
-                      .withOpacity(0.14),
-                ),
-                child: Icon(
-                  radio.icon,
-                  color: const Color(0xFFFFA21A),
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      radio.name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      radio.category,
-                      style: const TextStyle(
-                        color: Colors.white54,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(
-                Icons.play_circle_fill_rounded,
-                color: Color(0xFFFFA21A),
-                size: 36,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-// -----------------------------------------------------------------------------
-// EN-TÊTE DE PAGE
-// -----------------------------------------------------------------------------
-
-class _PageHeader extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-
-  const _PageHeader({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        20,
-        20,
-        20,
-        8,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFF8A00)
-                  .withOpacity(0.13),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(
-              icon,
-              color: const Color(0xFFFFA21A),
-            ),
-          ),
-          const SizedBox(width: 13),
-          Expanded(
-            child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: Colors.white54,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// -----------------------------------------------------------------------------
-// LECTEUR WEB RADIO
-// -----------------------------------------------------------------------------
-
-class WebPlayerScreen extends StatefulWidget {
-  final String title;
-  final String url;
-
-  const WebPlayerScreen({
-    super.key,
-    required this.title,
-    required this.url,
-  });
-
-  @override
-  State<WebPlayerScreen> createState() =>
-      _WebPlayerScreenState();
-}
-
-class _WebPlayerScreenState
-    extends State<WebPlayerScreen> {
-  late final WebViewController controller;
-
-  bool loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-
-    controller = WebViewController()
-      ..setJavaScriptMode(
-        JavaScriptMode.unrestricted,
-      )
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageStarted: (_) {
-            if (mounted) {
-              setState(() {
-                loading = true;
-              });
-            }
-          },
-          onPageFinished: (_) {
-            if (mounted) {
-              setState(() {
-                loading = false;
-              });
-            }
-          },
-        ),
-      )
-      ..loadRequest(
-        Uri.parse(widget.url),
-      );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
-      body: Stack(
-        children: [
-          WebViewWidget(
-            controller: controller,
-          ),
-          if (loading)
-            const Center(
-              child: CircularProgressIndicator(),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-// -----------------------------------------------------------------------------
-// RECHERCHE NGOMBI
-// -----------------------------------------------------------------------------
-
-class NgombiSearchResult {
-  final TvChannel? tvChannel;
-  final MediaItem? radioChannel;
-
-  const NgombiSearchResult.tv(
-    TvChannel channel,
-  )   : tvChannel = channel,
-        radioChannel = null;
-
-  const NgombiSearchResult.radio(
-    MediaItem channel,
-  )   : tvChannel = null,
-        radioChannel = channel;
-}
-
-class NgombiSearchDelegate
-    extends SearchDelegate<NgombiSearchResult> {
-  final List<TvChannel> tvChannels;
-  final List<MediaItem> radioChannels;
-
-  NgombiSearchDelegate({
-    required this.tvChannels,
-    required this.radioChannels,
-  }) : super(
-          searchFieldLabel:
-              'Rechercher une chaîne ou une radio',
-          textInputAction: TextInputAction.search,
-          keyboardType: TextInputType.text,
-        );
-
-  @override
-  List<Widget> buildActions(BuildContext context) {
-    if (query.isEmpty) {
-      return [];
-    }
-
-    return [
-      IconButton(
-        tooltip: 'Effacer',
-        onPressed: () {
-          query = '';
-        },
-        icon: const Icon(
-          Icons.clear_rounded,
-        ),
-      ),
-    ];
-  }
-
-  @override
-  Widget buildLeading(BuildContext context) {
-    return IconButton(
-      tooltip: 'Retour',
-      onPressed: () {
-        close(
-          context,
-          const NgombiSearchResult.radio(
-            MediaItem(
-              name: '',
-              url: '',
-              category: '',
-            ),
-          ),
-        );
-      },
-      icon: const Icon(
-        Icons.arrow_back_rounded,
-      ),
-    );
-  }
-
-  @override
-  Widget buildSuggestions(BuildContext context) {
-    return _buildResults(context);
-  }
-
-  @override
-  Widget buildResults(BuildContext context) {
-    return _buildResults(context);
-  }
-
-  Widget _buildResults(BuildContext context) {
-    final search = query.trim().toLowerCase();
-
-    if (search.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.search_rounded,
-              size: 56,
-              color: Colors.white24,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Rechercher une chaîne ou une radio',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 16,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
-    }
-
-    final matchingTv = tvChannels.where((channel) {
-      final name = channel.name.toLowerCase();
-      final category = channel.category.toLowerCase();
-
-      return name.contains(search) ||
-          category.contains(search);
-    }).toList();
-
-    final matchingRadio = radioChannels.where((radio) {
-      final name = radio.name.toLowerCase();
-      final category = radio.category.toLowerCase();
-
-      return name.contains(search) ||
-          category.contains(search);
-    }).toList();
-
-    final totalResults =
-        matchingTv.length + matchingRadio.length;
-
-    if (totalResults == 0) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.search_off_rounded,
-              size: 56,
-              color: Colors.white24,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Aucun résultat pour',
-              style: TextStyle(
-                color: Colors.grey.shade400,
-                fontSize: 15,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '"$query"',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView(
-      padding: const EdgeInsets.symmetric(
-        vertical: 12,
-      ),
-      children: [
-        if (matchingTv.isNotEmpty) ...[
-          const Padding(
-            padding: EdgeInsets.fromLTRB(
-              20,
-              8,
-              20,
-              8,
-            ),
-            child: Text(
-              'TV',
-              style: TextStyle(
-                color: Colors.orange,
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1,
-              ),
-            ),
-          ),
-          ...matchingTv.map(
-            (channel) {
-              return ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Color(0x22FF8A00),
-                  child: Icon(
-                    Icons.tv_rounded,
-                    color: Colors.orange,
-                  ),
-                ),
-                title: Text(
-                  channel.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                subtitle: Text(
-                  '${channel.category} • '
-                  '${_searchStreamTypeLabel(channel.type)}',
-                ),
-                trailing: const Icon(
-                  Icons.chevron_right_rounded,
-                ),
-                onTap: () {
-                  close(
-                    context,
-                    NgombiSearchResult.tv(channel),
-                  );
-                },
-              );
-            },
-          ),
-        ],
-
-        if (matchingRadio.isNotEmpty) ...[
-          const Padding(
-            padding: EdgeInsets.fromLTRB(
-              20,
-              20,
-              20,
-              8,
-            ),
-            child: Text(
-              'RADIO',
-              style: TextStyle(
-                color: Colors.orange,
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1,
-              ),
-            ),
-          ),
-          ...matchingRadio.map(
-            (radio) {
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor:
-                      Colors.orange.withOpacity(0.12),
-                  child: Icon(
-                    radio.icon,
-                    color: Colors.orange,
-                  ),
-                ),
-                title: Text(
-                  radio.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                subtitle: Text(
-                  radio.category,
-                ),
-                trailing: const Icon(
-                  Icons.chevron_right_rounded,
-                ),
-                onTap: () {
-                  close(
-                    context,
-                    NgombiSearchResult.radio(radio),
-                  );
-                },
-              );
-            },
-          ),
-        ],
-      ],
-    );
-  }
-
-  static String _searchStreamTypeLabel(
-    StreamType type,
-  ) {
-    switch (type) {
-      case StreamType.hls:
-        return 'HLS';
-      case StreamType.dash:
-        return 'DASH';
-      case StreamType.unknown:
-        return 'Flux';
-    }
-  }
+class _WebPageState extends State<WebPage>{
+  WebViewController? controller;bool external=false;
+  @override void initState(){super.initState();final mobile=!kIsWeb&&(defaultTargetPlatform==TargetPlatform.android||defaultTargetPlatform==TargetPlatform.iOS);
+    if(mobile){controller=WebViewController()..setJavaScriptMode(JavaScriptMode.unrestricted)..setNavigationDelegate(NavigationDelegate(onWebResourceError:(_){if(mounted)setState(()=>external=true);} ))..loadRequest(Uri.parse(widget.url));}else external=true;}
+  Future<void>open()async{final ok=await launchUrl(Uri.parse(widget.url),mode:LaunchMode.externalApplication);if(!ok&&mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Impossible d’ouvrir le lecteur officiel.')));}
+  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:Text(widget.title),actions:[
+    if(widget.favoriteState!=null&&widget.channel!=null)IconButton(onPressed:()=>widget.favoriteState!.toggle(widget.channel!),icon:Icon(widget.favoriteState!.isFav(widget.channel!)?Icons.favorite:Icons.favorite_border))]),
+    body:external?Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+      const Icon(Icons.open_in_browser,size:64,color:NgombiColors.orange),const SizedBox(height:16),Text(widget.title,style:const TextStyle(fontSize:22,fontWeight:FontWeight.w900)),
+      const SizedBox(height:8),const Text('Le lecteur officiel sera ouvert dans votre navigateur sur cette plateforme.',textAlign:TextAlign.center,style:TextStyle(color:NgombiColors.textSecondary)),
+      const SizedBox(height:20),FilledButton.icon(onPressed:open,icon:const Icon(Icons.open_in_new),label:const Text('Ouvrir le lecteur'))])):WebViewWidget(controller:controller!));
 }

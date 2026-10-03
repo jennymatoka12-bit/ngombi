@@ -1,3 +1,5 @@
+String _mediaId(String name, String url) => '$name|$url';
+
 import 'dart:async';
 import 'dart:io';
 
@@ -11,6 +13,7 @@ import 'package:video_player/video_player.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../models/tv_channel.dart';
+import '../app/ngombi_store.dart';
 
 class StreamPlayerScreen extends StatefulWidget {
   final TvChannel channel;
@@ -41,9 +44,11 @@ class _StreamPlayerScreenState
   bool _webLoading = true;
   String? _errorMessage;
 
-  bool get _isWindows =>
+  bool get _isDesktop =>
       !kIsWeb &&
-      defaultTargetPlatform == TargetPlatform.windows;
+      (defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.linux ||
+          defaultTargetPlatform == TargetPlatform.macOS);
 
   bool get _isGabon24 {
     final name = widget.channel.name.toLowerCase();
@@ -138,8 +143,19 @@ class _StreamPlayerScreenState
   void initState() {
     super.initState();
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final store = NgombiStoreScope.read(context);
+      store.addHistory(
+        id: _mediaId(widget.channel.name, widget.channel.url),
+        name: widget.channel.name,
+        url: widget.channel.url,
+        isRadio: false,
+      );
+    });
+
     if (_isOfficialWebPlayer) {
-      if (_isWindows) {
+      if (_isDesktop) {
         _webLoading = false;
       } else {
         _initializeOfficialWebPlayer();
@@ -147,13 +163,17 @@ class _StreamPlayerScreenState
       return;
     }
 
-    if (_isWindows) {
+    if (_isDesktop) {
       _initializeWindowsPlayer();
       return;
     }
 
     if (widget.channel.type == StreamType.dash) {
-      _openNativeDashPlayer();
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        _openNativeDashPlayer();
+      } else {
+        _showDashUnavailable();
+      }
     } else {
       _initializeFlutterPlayer();
     }
@@ -268,6 +288,16 @@ class _StreamPlayerScreenState
     }
   }
 
+  void _showDashUnavailable() {
+    if (!mounted) return;
+
+    setState(() {
+      _errorMessage =
+          'Ce flux DASH/DRM nécessite le lecteur Android officiel de NGOMBI. '
+          'Cette plateforme ne fournit pas de lecteur DRM compatible pour ce flux.';
+    });
+  }
+
   Future<void> _openNativeDashPlayer() async {
     try {
       await _nativePlayer.invokeMethod(
@@ -299,7 +329,7 @@ class _StreamPlayerScreenState
     }
   }
 
-  Future<String> _resolveWindowsStreamUrl() async {
+  Future<String> _resolveDesktopStreamUrl() async {
     final client = HttpClient()
       ..connectionTimeout = const Duration(seconds: 15)
       ..autoUncompress = false;
@@ -362,7 +392,7 @@ class _StreamPlayerScreenState
 
   Future<void> _initializeWindowsPlayer() async {
     try {
-      final resolvedUrl = await _resolveWindowsStreamUrl();
+      final resolvedUrl = await _resolveDesktopStreamUrl();
 
       if (!mounted) return;
 
@@ -495,7 +525,7 @@ class _StreamPlayerScreenState
   }
 
   Widget _buildOfficialWebPlayer() {
-    if (_isWindows) {
+    if (_isDesktop) {
       return _buildWindowsOfficialLink();
     }
 
@@ -615,7 +645,7 @@ class _StreamPlayerScreenState
       );
     }
 
-    if (_isWindows) {
+    if (_isDesktop) {
       final windowsController =
           _windowsVideoController;
 

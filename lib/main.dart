@@ -703,7 +703,7 @@ class HomeScreen extends StatelessWidget {
               color: const Color(0xFF151515),
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: Colors.white.withOpacity(0.06),
+                color: Colors.white.withValues(alpha: 0.06),
               ),
             ),
             child: Column(
@@ -790,7 +790,7 @@ class _TvHomeCard extends StatelessWidget {
           color: const Color(0xFF151515),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: Colors.white.withOpacity(0.06),
+            color: Colors.white.withValues(alpha: 0.06),
           ),
         ),
         child: Padding(
@@ -877,7 +877,7 @@ class _RadioHomeCard extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: const Color(0xFFFF8A00)
-                    .withOpacity(0.14),
+                    .withValues(alpha: 0.14),
               ),
               child: const Icon(
                 Icons.radio_rounded,
@@ -1114,7 +1114,7 @@ class _TvGridCard extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.65),
+                          color: Colors.black.withValues(alpha: 0.65),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Row(
@@ -1603,7 +1603,7 @@ class _FavoriteButton extends StatelessWidget {
     final selected = store.isFavorite(id);
 
     return Material(
-      color: Colors.black.withOpacity(0.55),
+      color: Colors.black.withValues(alpha: 0.55),
       shape: const CircleBorder(),
       child: IconButton(
         tooltip: selected ? 'Retirer des favoris' : 'Ajouter aux favoris',
@@ -1621,7 +1621,7 @@ class _FavoriteButton extends StatelessWidget {
   }
 }
 
-String _mediaId(String name, String url) => name + '|' + url;
+String _mediaId(String name, String url) => '$name|$url';
 
 // -----------------------------------------------------------------------------
 // CARTE RADIO
@@ -1652,7 +1652,7 @@ class _RadioListCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: const Color(0xFFFF8A00)
-                      .withOpacity(0.14),
+                      .withValues(alpha: 0.14),
                 ),
                 child: Icon(
                   radio.icon,
@@ -1731,7 +1731,7 @@ class _PageHeader extends StatelessWidget {
             height: 46,
             decoration: BoxDecoration(
               color: const Color(0xFFFF8A00)
-                  .withOpacity(0.13),
+                  .withValues(alpha: 0.13),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(
@@ -2199,7 +2199,7 @@ class NgombiSearchDelegate
               return ListTile(
                 leading: CircleAvatar(
                   backgroundColor:
-                      Colors.orange.withOpacity(0.12),
+                      Colors.orange.withValues(alpha: 0.12),
                   child: Icon(
                     radio.icon,
                     color: Colors.orange,

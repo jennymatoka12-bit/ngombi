@@ -36,7 +36,7 @@ class ChannelLogo extends StatelessWidget {
           ? Image.asset(
               logoPath,
               fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) {
+              errorBuilder: (_, _, _) {
                 return _fallback();
               },
             )

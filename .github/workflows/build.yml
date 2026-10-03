@@ -355,124 +355,48 @@ jobs:
           PY
 
           # ==================================================
-          # app/build.gradle
+          # Android Gradle project (Flutter 3.44 Kotlin DSL)
           # ==================================================
 
           python3 - <<'PY'
           from pathlib import Path
           import re
 
-          gradle = Path("android/app/build.gradle")
+          gradle_kts = Path("android/app/build.gradle.kts")
+          gradle_groovy = Path("android/app/build.gradle")
+          gradle = gradle_kts if gradle_kts.exists() else gradle_groovy
+
           text = gradle.read_text()
 
-          # Compile SDK
-          text = text.replace(
-              "compileSdk = flutter.compileSdkVersion",
-              "compileSdk = 36"
-          )
+          if gradle.suffix == ".kts":
+              text = re.sub(r'compileSdk\\s*=\\s*[^\\n]+', 'compileSdk = 36', text, count=1)
+              text = re.sub(r'ndkVersion\\s*=\\s*[^\\n]+', 'ndkVersion = "27.0.12077973"', text, count=1)
+              text = re.sub(r'minSdk\\s*=\\s*[^\\n]+', 'minSdk = 23', text, count=1)
 
-          # Min SDK
-          text = text.replace(
-              "minSdk = flutter.minSdkVersion",
-              "minSdk = 23"
-          )
+              if 'androidx.media3:media3-exoplayer:1.11.1' not in text:
+                  text += '''
+          dependencies {
+              implementation("androidx.media3:media3-exoplayer:1.11.1")
+              implementation("androidx.media3:media3-exoplayer-dash:1.11.1")
+              implementation("androidx.media3:media3-ui:1.11.1")
+          }
+          '''
+          else:
+              text = re.sub(r'compileSdk\\s*=\\s*[^\\n]+', 'compileSdk = 36', text, count=1)
+              text = re.sub(r'minSdk\\s*=\\s*[^\\n]+', 'minSdk = 23', text, count=1)
+              text = re.sub(r'ndkVersion\\s*=\\s*[^\\n]+', 'ndkVersion = "27.0.12077973"', text, count=1)
 
-          text = re.sub(
-              r"minSdk\s*=\s*\d+",
-              "minSdk = 23",
-              text
-          )
-
-          # NDK
-          text = re.sub(
-              r"^\s*ndkVersion\s*=.*$",
-              "",
-              text,
-              flags=re.MULTILINE
-          )
-
-          text = text.replace(
-              "compileSdk = 36",
-              'compileSdk = 36\n    ndkVersion = "27.0.12077973"',
-              1
-          )
-
-          # Media3 dependencies
-          if "androidx.media3:media3-exoplayer:1.11.1" not in text:
-              dependencies = (
-                  "\n"
-                  "dependencies {\n"
-                  '    implementation "androidx.media3:media3-exoplayer:1.11.1"\n'
-                  '    implementation "androidx.media3:media3-exoplayer-dash:1.11.1"\n'
-                  '    implementation "androidx.media3:media3-ui:1.11.1"\n'
-                  "}\n"
-              )
-
-              text += dependencies
+              if 'androidx.media3:media3-exoplayer:1.11.1' not in text:
+                  text += '''
+          dependencies {
+              implementation "androidx.media3:media3-exoplayer:1.11.1"
+              implementation "androidx.media3:media3-exoplayer-dash:1.11.1"
+              implementation "androidx.media3:media3-ui:1.11.1"
+          }
+          '''
 
           gradle.write_text(text)
-
-          print("Android app configuration completed.")
-          PY
-
-      # --------------------------------------------------
-      # Android Gradle Plugin / Gradle
-      # --------------------------------------------------
-
-      - name: Upgrade Android build tools
-        shell: bash
-        run: |
-          set -e
-
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          # ==================================================
-          # settings.gradle
-          # ==================================================
-
-          settings = Path("android/settings.gradle")
-          text = settings.read_text()
-
-          text = re.sub(
-              r'id "com\.android\.application" version "[^"]+" apply false',
-              'id "com.android.application" version "8.10.0" apply false',
-              text
-          )
-
-          text = re.sub(
-              r'id "org\.jetbrains\.kotlin\.android" version "[^"]+" apply false',
-              'id "org.jetbrains.kotlin.android" version "2.2.0" apply false',
-              text
-          )
-
-          settings.write_text(text)
-
-          # ==================================================
-          # Gradle wrapper
-          # ==================================================
-
-          wrapper = Path(
-              "android/gradle/wrapper/gradle-wrapper.properties"
-          )
-
-          text = wrapper.read_text()
-
-          text = re.sub(
-              r"distributionUrl=.*",
-              r"distributionUrl=https\://services.gradle.org/distributions/gradle-8.11.1-bin.zip",
-              text
-          )
-
-          wrapper.write_text(text)
-
-          print("Android Gradle Plugin: 8.10.0")
-          print("Gradle: 8.11.1")
-          print("Compile SDK: 36")
-          print("Min SDK: 23")
-          print("NDK: 27.0.12077973")
-          print("Kotlin: 2.2.0")
+          print("Configured:", gradle)
           PY
 
       # --------------------------------------------------

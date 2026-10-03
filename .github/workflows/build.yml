@@ -50,7 +50,11 @@ jobs:
       # --------------------------------------------------
 
       - name: Recreate Android project
-        run: flutter create . --platforms android
+        shell: bash
+        run: |
+          set -e
+          rm -rf android Android
+          flutter create . --platforms android
 
       # --------------------------------------------------
       # Configure NGOMBI Android

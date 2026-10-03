@@ -243,6 +243,9 @@ class _MainTabScreenState extends State<MainTabScreen> {
         tvChannels: widget.tvChannels,
       ),
       const RadioScreen(),
+      LibraryScreen(
+        tvChannels: widget.tvChannels,
+      ),
     ];
 
     return LayoutBuilder(
@@ -815,7 +818,10 @@ class HomeScreen extends StatelessWidget {
           return _RadioHomeCard(
             radio: radio,
             onTap: () {
-              NgombiStore.instance.recordRadio(radio);
+              NgombiStore.instance.recordRadio(
+                name: radio.name,
+                url: radio.url,
+              );
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => WebPlayerScreen(

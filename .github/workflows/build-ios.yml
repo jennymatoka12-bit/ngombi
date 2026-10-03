@@ -1,0 +1,34 @@
+name: Build NGOMBI iOS
+
+on:
+  push:
+    branches: [ngombi-final]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.0"
+          channel: stable
+          cache: true
+      - run: flutter config --enable-ios
+      - run: flutter create --platforms=ios .
+      - run: flutter pub get
+      - run: dart run flutter_launcher_icons
+      - run: flutter analyze
+      - run: flutter build ios --release --no-codesign
+      - name: Package unsigned iOS app
+        run: |
+          mkdir -p ios-artifact
+          cp -R build/ios/iphoneos/Runner.app ios-artifact/Runner.app
+          cd ios-artifact
+          zip -r ../NGOMBI-iOS-unsigned.zip Runner.app
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NGOMBI-iOS-unsigned
+          path: NGOMBI-iOS-unsigned.zip
+          if-no-files-found: error

@@ -16,7 +16,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   if (!kIsWeb &&
-      defaultTargetPlatform == TargetPlatform.windows) {
+      (defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.linux ||
+          defaultTargetPlatform == TargetPlatform.macOS)) {
     MediaKit.ensureInitialized();
   }
 
@@ -154,10 +156,6 @@ class NgombiApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const orange = Color(0xFFFF8A00);
-    const gold = Color(0xFFFFB52E);
-    const background = Color(0xFF080808);
-
     return NgombiStoreScope(
       store: store,
       child: MaterialApp(
@@ -193,27 +191,6 @@ class _MainTabScreenState extends State<MainTabScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final pages = [
-      HomeScreen(
-        tvChannels: widget.tvChannels,
-        radioChannels: radioChannels,
-        onOpenTv: () {
-          setState(() {
-            currentIndex = 1;
-          });
-        },
-        onOpenRadio: () {
-          setState(() {
-            currentIndex = 2;
-          });
-        },
-      ),
-      TvScreen(
-        tvChannels: widget.tvChannels,
-      ),
-      const RadioScreen(),
-    ];
-
     final pages = <Widget>[
       HomeScreen(
         tvChannels: widget.tvChannels,

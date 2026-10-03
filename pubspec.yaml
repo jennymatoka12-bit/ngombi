@@ -1,25 +1,27 @@
 name: ngombi
 description: "NGOMBI - TV & Radio Direct"
 publish_to: "none"
-
-version: 1.0.0+1
+version: 2.0.0+20
 
 environment:
-  sdk: ">=3.0.0 <4.0.0"
+  sdk: ">=3.9.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-
   cupertino_icons: ^1.0.8
-  url_launcher: ^6.2.5
-  webview_flutter: ^4.7.0
-  video_player: ^2.9.1
+  url_launcher: ^6.3.2
+  webview_flutter: ^4.13.0
+  video_player: ^2.9.5
+  media_kit: ^1.2.6
+  media_kit_video: ^2.0.1
+  media_kit_libs_video: ^1.0.7
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
+  flutter_lints: ^5.0.0
   flutter_launcher_icons: ^0.14.4
 
 flutter:
@@ -33,4 +35,8 @@ flutter_launcher_icons:
   android: "launcher_icon"
   image_path: "assets/ngombi_icon.png"
   adaptive_icon_background: "#080808"
+  windows:
+    generate: true
+    image_path: "assets/ngombi_icon.png"
+    icon_size: 256
   min_sdk_android: 23

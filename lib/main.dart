@@ -125,36 +125,80 @@ class SideBar extends StatelessWidget {
 }
 
 class Home extends StatelessWidget {
-  final NgombiState state; final ValueChanged<int> nav;
-  const Home({super.key,required this.state,required this.nav});
+  final NgombiState state;
+  final ValueChanged<int> nav;
+  const Home({super.key, required this.state, required this.nav});
+
   Future<void> search(BuildContext context) async {
-    final r=await showSearch<Pick?>(context:context,delegate:Search(state));
-    if(!context.mounted||r==null)return;
-    if(r.tv!=null)openTv(context,r.tv!); else if(r.radio!=null)openRadio(context,r.radio!);
+    final result = await showSearch<Pick?>(
+      context: context,
+      delegate: Search(state),
+    );
+    if (!context.mounted || result == null) return;
+    if (result.tv != null) {
+      state.seen(result.tv!);
+      Navigator.push(context, MaterialPageRoute(
+        builder: (_) => PlayerPage(state: state, channel: result.tv!),
+      ));
+    } else if (result.radio != null) {
+      Navigator.push(context, MaterialPageRoute(
+        builder: (_) => WebPage(title: result.radio!.name, url: result.radio!.url),
+      ));
+    }
   }
-  void openTv(BuildContext c,TvChannel ch){state.seen(ch);Navigator.push(c,MaterialPageRoute(builder:(_)=>PlayerPage(state:state,channel:ch)));}
-  void openRadio(BuildContext c,RadioChannel r)=>Navigator.push(c,MaterialPageRoute(builder:(_)=>WebPage(title:r.name,url:r.url)));
-  @override Widget build(BuildContext context){
-    final recent=state.recent.take(8).toList(),live=state.channels.take(12).toList();
-    final cats=state.channels.map((c)=>c.category).where((x)=>x.isNotEmpty).toSet().take(8).toList();
-    return SafeArea(child:CustomScrollView(slivers:[
-      SliverToBoxAdapter(child:Padding(padding:const EdgeInsets.fromLTRB(20,18,20,8),child:Row(children:[
-        const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          Text('Bonjour 👋',style:TextStyle(color:NgombiColors.textSecondary)),SizedBox(height:4),
-          Text('Que voulez-vous regarder ?',style:TextStyle(fontSize:21,fontWeight:FontWeight.w800))])),
-        IconButton(onPressed:()=>search(context),icon:const Icon(Icons.search_rounded,size:28))])),
-      const SliverToBoxAdapter(child:HeroCard()),
-      if(recent.isNotEmpty)...[
-        SliverToBoxAdapter(child:TitleRow(title:'Reprendre',action:'Historique',tap:()=>nav(3))),
-        SliverToBoxAdapter(child:CardsRow(state:state,channels:recent))],
-      SliverToBoxAdapter(child:TitleRow(title:'En direct',action:'Tout voir',tap:()=>nav(1))),
-      SliverToBoxAdapter(child:CardsRow(state:state,channels:live)),
-      SliverToBoxAdapter(child:TitleRow(title:'Explorer',action:null,tap:null)),
-      SliverToBoxAdapter(child:Categories(cats)),
-      SliverToBoxAdapter(child:TitleRow(title:'Radios',action:'Toutes',tap:()=>nav(2))),
-      SliverToBoxAdapter(child:RadioRow(items:radios)),
-      const SliverToBoxAdapter(child:SizedBox(height:30))
-    ])));
+
+  @override
+  Widget build(BuildContext context) {
+    final recent = state.recent.take(8).toList();
+    final live = state.channels.take(12).toList();
+    final categories = state.channels
+        .map((c) => c.category)
+        .where((x) => x.isNotEmpty)
+        .toSet()
+        .take(8)
+        .toList();
+
+    return SafeArea(
+      child: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Bonjour 👋', style: TextStyle(color: NgombiColors.textSecondary)),
+                        SizedBox(height: 4),
+                        Text('Que voulez-vous regarder ?', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => search(context),
+                    icon: const Icon(Icons.search_rounded, size: 28),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SliverToBoxAdapter(child: HeroCard()),
+          if (recent.isNotEmpty) ...[
+            SliverToBoxAdapter(child: TitleRow(title: 'Reprendre', action: 'Historique', tap: () => nav(3))),
+            SliverToBoxAdapter(child: CardsRow(state: state, channels: recent)),
+          ],
+          SliverToBoxAdapter(child: TitleRow(title: 'En direct', action: 'Tout voir', tap: () => nav(1))),
+          SliverToBoxAdapter(child: CardsRow(state: state, channels: live)),
+          const SliverToBoxAdapter(child: TitleRow(title: 'Explorer', action: null, tap: null)),
+          SliverToBoxAdapter(child: Categories(categories)),
+          SliverToBoxAdapter(child: TitleRow(title: 'Radios', action: 'Toutes', tap: () => nav(2))),
+          SliverToBoxAdapter(child: RadioRow(items: radios)),
+          const SliverToBoxAdapter(child: SizedBox(height: 30)),
+        ],
+      ),
+    );
   }
 }
 
@@ -255,20 +299,59 @@ class _TvPageState extends State<TvPage>{
   }
 }
 
-class RadioPage extends StatefulWidget { const RadioPage({super.key}); @override State<RadioPage> createState()=>_RadioPageState(); }
-class _RadioPageState extends State<RadioPage>{
-  String q='';
-  @override Widget build(BuildContext context){
-    final list=radios.where((r)=>r.name.toLowerCase().contains(q.toLowerCase())).toList();
-    return SafeArea(child:Column(children:[
-      const Padding(padding:EdgeInsets.fromLTRB(20,18,20,10),child:Align(alignment:Alignment.centerLeft,child:Text('Radio',style:TextStyle(fontSize:27,fontWeight:FontWeight.w900)))),
-      Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:TextField(onChanged:(v)=>setState(()=>q=v),decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Rechercher une radio'))),
-      Expanded(child:ListView.separated(padding:const EdgeInsets.all(20),itemCount:list.length,separatorBuilder:(_,__)=>const SizedBox(height:10),
-        itemBuilder:(_,i)=>ListTile(tileColor:NgombiColors.card,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)),
-          leading:const CircleAvatar(backgroundColor:NgombiColors.orange,child:Icon(Icons.radio,color:Colors.black)),
-          title:Text(list[i].name,style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text(list[i].category),trailing:const Icon(Icons.open_in_new),
-          onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>WebPage(title:list[i].name,url:list[i].url)))))
-    ])));
+class RadioPage extends StatefulWidget {
+  const RadioPage({super.key});
+  @override State<RadioPage> createState() => _RadioPageState();
+}
+
+class _RadioPageState extends State<RadioPage> {
+  String q = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final list = radios.where((r) => r.name.toLowerCase().contains(q.toLowerCase())).toList();
+    return SafeArea(
+      child: Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 18, 20, 10),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Radio', style: TextStyle(fontSize: 27, fontWeight: FontWeight.w900)),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: TextField(
+              onChanged: (v) => setState(() => q = v),
+              decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Rechercher une radio'),
+            ),
+          ),
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.all(20),
+              itemCount: list.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (_, i) => ListTile(
+                tileColor: NgombiColors.card,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                leading: const CircleAvatar(
+                  backgroundColor: NgombiColors.orange,
+                  child: Icon(Icons.radio, color: Colors.black),
+                ),
+                title: Text(list[i].name, style: const TextStyle(fontWeight: FontWeight.w800)),
+                subtitle: Text(list[i].category),
+                trailing: const Icon(Icons.open_in_new),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => WebPage(title: list[i].name, url: list[i].url)),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

@@ -48,7 +48,7 @@ class NgombiTheme {
 
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: NgombiColors.surface,
-        indicatorColor: NgombiColors.orange.withOpacity(0.20),
+        indicatorColor: NgombiColors.orange.withValues(alpha: 0.20),
         labelTextStyle:
             const WidgetStatePropertyAll<TextStyle>(
           NgombiTypography.label,

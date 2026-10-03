@@ -1,10 +1,6 @@
 import 'dart:convert';
 
-enum StreamType {
-  hls,
-  dash,
-  unknown,
-}
+enum StreamType { hls, dash, unknown }
 
 class TvChannel {
   final String name;
@@ -22,222 +18,68 @@ class TvChannel {
     this.logo,
     this.headers = const {},
   });
+
+  String get id => name.trim().toLowerCase() + '|' + url;
 }
 
 List<TvChannel> parseEnigma2Bouquet(String content) {
   final channels = <TvChannel>[];
-
   String? pendingUserAgent;
-
   for (final line in content.split(RegExp(r'\r?\n'))) {
     final trimmed = line.trim();
-
     if (trimmed.startsWith('#EXTVLCOPT:http-user-agent=')) {
-      pendingUserAgent = trimmed
-          .substring('#EXTVLCOPT:http-user-agent='.length)
-          .trim();
-
+      pendingUserAgent = trimmed.substring('#EXTVLCOPT:http-user-agent='.length).trim();
       continue;
     }
-
-    if (!trimmed.startsWith('#SERVICE ')) {
-      continue;
-    }
-
-    final service = trimmed.substring('#SERVICE '.length);
-    final parts = service.split(':');
-
-    if (parts.length < 11) {
-      pendingUserAgent = null;
-      continue;
-    }
-
-    /*
-     * Les 10 premiers champs correspondent à la référence
-     * technique Enigma2.
-     *
-     * Le reste contient :
-     *
-     * URL:Nom de chaîne
-     *
-     * On reconstruit cette partie afin de conserver les ':'
-     * présents dans les URL HTTP/HTTPS.
-     */
-    final rawUrlAndName = parts.sublist(10).join(':');
-
-    /*
-     * Le dernier ':' sépare l'URL du nom de la chaîne.
-     */
-    final separatorIndex = rawUrlAndName.lastIndexOf(':');
-
-    if (separatorIndex <= 0 ||
-        separatorIndex >= rawUrlAndName.length - 1) {
-      pendingUserAgent = null;
-      continue;
-    }
-
-    final rawUrl = rawUrlAndName
-        .substring(0, separatorIndex)
-        .trim();
-
-    final name = repairMojibake(
-      rawUrlAndName
-          .substring(separatorIndex + 1)
-          .trim(),
-    );
-
-    if (rawUrl.isEmpty || name.isEmpty) {
-      pendingUserAgent = null;
-      continue;
-    }
-
-    final url = cleanStreamUrl(rawUrl);
-
-    if (url.isEmpty) {
-      pendingUserAgent = null;
-      continue;
-    }
-
-    /*
-     * On ne conserve que les vrais flux HTTP/HTTPS.
-     */
-    final lowerUrl = url.toLowerCase();
-
-    if (!lowerUrl.startsWith('http://') &&
-        !lowerUrl.startsWith('https://')) {
-      pendingUserAgent = null;
-      continue;
-    }
-
-    final headers = <String, String>{};
-
-    if (pendingUserAgent != null &&
-        pendingUserAgent.isNotEmpty) {
-      headers['User-Agent'] = pendingUserAgent;
-    } else if (lowerUrl.contains('tvradiozap.eu')) {
+    if (!trimmed.startsWith('#SERVICE ')) continue;
+    final parts = trimmed.substring('#SERVICE '.length).split(':');
+    if (parts.length < 11) { pendingUserAgent = null; continue; }
+    final raw = parts.sublist(10).join(':');
+    final separator = raw.lastIndexOf(':');
+    if (separator <= 0 || separator >= raw.length - 1) { pendingUserAgent = null; continue; }
+    final url = cleanStreamUrl(raw.substring(0, separator));
+    final name = repairMojibake(raw.substring(separator + 1).trim());
+    if (url.isEmpty || name.isEmpty) { pendingUserAgent = null; continue; }
+    final lower = url.toLowerCase();
+    if (!lower.startsWith('http://') && !lower.startsWith('https://')) { pendingUserAgent = null; continue; }
+    final headers = <String,String>{};
+    if (pendingUserAgent?.isNotEmpty == true) {
+      headers['User-Agent'] = pendingUserAgent!;
+    } else if (lower.contains('tvradiozap.eu')) {
       headers['User-Agent'] = 'Mozilla/5.0';
     }
-
-    channels.add(
-      TvChannel(
-        name: name,
-        url: url,
-        type: detectStreamType(url),
-        category: detectCategory(name),
-        headers: headers,
-      ),
-    );
-
+    channels.add(TvChannel(name:name,url:url,type:detectStreamType(url),category:detectCategory(name),headers:headers));
     pendingUserAgent = null;
   }
-
   return channels;
 }
 
-String cleanStreamUrl(String rawUrl) {
-  var url = rawUrl.trim();
-
-  /*
-   * Certaines URL peuvent être partiellement encodées.
-   */
-  try {
-    url = Uri.decodeFull(url);
-  } catch (_) {
-    // On conserve l'URL originale si le décodage échoue.
-  }
-
-  /*
-   * Supprime un éventuel fragment situé après l'URL.
-   */
-  final hashIndex = url.indexOf('#');
-
-  if (hashIndex >= 0) {
-    url = url.substring(0, hashIndex);
-  }
-
+String cleanStreamUrl(String raw) {
+  var url = raw.trim();
+  try { url = Uri.decodeFull(url); } catch (_) {}
+  final hash = url.indexOf('#');
+  if (hash >= 0) url = url.substring(0, hash);
   return url.trim();
 }
-
 StreamType detectStreamType(String url) {
   final lower = url.toLowerCase();
-
-  if (lower.contains('.m3u8')) {
-    return StreamType.hls;
-  }
-
-  if (lower.contains('.mpd')) {
-    return StreamType.dash;
-  }
-
+  if (lower.contains('.m3u8')) return StreamType.hls;
+  if (lower.contains('.mpd')) return StreamType.dash;
   return StreamType.unknown;
 }
-
 String detectCategory(String name) {
   final n = name.toLowerCase();
-
-  if (RegExp(
-    r'\bsport\b|red bull|mgg|100% sport',
-  ).hasMatch(n)) {
-    return 'Sport';
-  }
-
-  if (RegExp(
-    r'ciné|cinema|film|movie|movies|action|drama|thriller|sci fi|science fiction|ciné nanar|cinegay',
-  ).hasMatch(n)) {
-    return 'Cinéma';
-  }
-
-  if (RegExp(
-    r'kidz|kid |kids|cartoon|cartoonito|caillou|schtroump|toons|jeunesse|famille|wasabi',
-  ).hasMatch(n)) {
-    return 'Jeunesse';
-  }
-
-  if (RegExp(
-    r'bfm|cnews|lci|france 24|franceinfo|france info|information|info |tech&co|le monde|francophonie24|brut',
-  ).hasMatch(n)) {
-    return 'Information';
-  }
-
-  if (RegExp(
-    r'découverte|decouverte|earth|voyage|documentaire|histoire|science',
-  ).hasMatch(n)) {
-    return 'Documentaire';
-  }
-
-  if (RegExp(
-    r'music|musique|trace|nrj hits|clubbing',
-  ).hasMatch(n)) {
-    return 'Musique';
-  }
-
-  if (RegExp(
-    r'\(ch\)|\(ca\)|\(gb\)|\(be\)|\(mc\)|suisse|canada|belgique|monaco|royaume uni',
-  ).hasMatch(n)) {
-    return 'International';
-  }
-
-  if (RegExp(
-    r'\(\d{2,3}\)|région|regional|alsace|aquitaine|bretagne|corse|normandie|occitanie|provence|lyon|marseille|toulouse|nantes|bordeaux|lille',
-  ).hasMatch(n)) {
-    return 'Régional';
-  }
-
-  if (RegExp(
-    r'afrique|africa|gabon|sénégal|senegal|cameroun|cameroon|congo|ivoire|maroc|algerie|algérie|tunisie',
-  ).hasMatch(n)) {
-    return 'Afrique';
-  }
-
+  if (RegExp(r'\bsport\b|red bull|mgg').hasMatch(n)) return 'Sport';
+  if (RegExp(r'ciné|cinema|film|movie|action|drama|thriller|rakuten').hasMatch(n)) return 'Cinéma';
+  if (RegExp(r'kidz|kid |kids|cartoon|cartoonito|schtroump|toons|jeunesse|famille|wasabi|gulli').hasMatch(n)) return 'Jeunesse';
+  if (RegExp(r'bfm|cnews|lci|france 24|franceinfo|information|info |tech&co|le monde|brut').hasMatch(n)) return 'Information';
+  if (RegExp(r'découverte|decouverte|earth|voyage|documentaire|histoire|science').hasMatch(n)) return 'Documentaire';
+  if (RegExp(r'music|musique|trace|nrj|clubbing').hasMatch(n)) return 'Musique';
+  if (RegExp(r'\(ch\)|\(ca\)|\(gb\)|\(be\)|\(mc\)|suisse|canada|belgique|monaco').hasMatch(n)) return 'International';
+  if (RegExp(r'\(\d{2,3}\)|région|regional|alsace|aquitaine|bretagne|corse|normandie|occitanie|provence|lyon|marseille|toulouse|nantes|bordeaux|lille').hasMatch(n)) return 'Régional';
+  if (RegExp(r'afrique|africa|gabon|sénégal|senegal|cameroun|cameroon|congo|ivoire|maroc|algerie|algérie|tunisie|2stv|canal 2|nci|crtv').hasMatch(n)) return 'Afrique';
   return 'France';
 }
-
 String repairMojibake(String value) {
-  try {
-    return utf8.decode(
-      latin1.encode(value),
-    );
-  } catch (_) {
-    return value;
-  }
+  try { return utf8.decode(latin1.encode(value)); } catch (_) { return value; }
 }

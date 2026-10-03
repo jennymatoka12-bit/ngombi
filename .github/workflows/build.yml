@@ -3,8 +3,7 @@ name: Build NGOMBI Android APK
 on:
   push:
     branches:
-      - main
-      - master
+      - ngombi-final
   workflow_dispatch:
 
 jobs:

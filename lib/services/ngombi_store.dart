@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/tv_channel.dart';
-import '../main.dart';
 
 class NgombiHistoryEntry {
   final String name;
@@ -113,10 +112,14 @@ class NgombiStore extends ChangeNotifier {
         ),
       );
 
-  Future<void> recordRadio(MediaItem radio) => _record(
+  Future<void> recordRadio({
+    required String name,
+    required String url,
+  }) =>
+      _record(
         NgombiHistoryEntry(
-          name: radio.name,
-          url: radio.url,
+          name: name,
+          url: url,
           isRadio: true,
           openedAt: DateTime.now(),
         ),

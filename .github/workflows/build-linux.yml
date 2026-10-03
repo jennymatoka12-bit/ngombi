@@ -1,0 +1,44 @@
+name: Build NGOMBI Linux
+
+on:
+  push:
+    branches: [ngombi-final]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install media_kit Linux runtime/build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libmpv-dev mpv
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.0"
+          channel: stable
+          cache: true
+      - run: flutter config --enable-linux-desktop
+      - run: flutter create --platforms=linux .
+      - run: flutter pub get
+      - run: dart run flutter_launcher_icons
+      - run: flutter analyze
+      - run: flutter build linux --release
+      - name: Add Linux runtime note
+        run: |
+          cat > build/linux/x64/release/bundle/README-NGOMBI-LINUX.txt <<'EOF'
+          NGOMBI - TV & RADIO Direct
+          
+          Prérequis Ubuntu/Debian:
+            sudo apt install mpv
+          
+          NGOMBI utilise media_kit pour la lecture vidéo/audio Linux.
+          EOF
+      - name: Package
+        run: tar -czf NGOMBI-Linux.tar.gz -C build/linux/x64/release/bundle .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NGOMBI-Linux
+          path: NGOMBI-Linux.tar.gz
+          if-no-files-found: error

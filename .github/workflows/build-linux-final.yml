@@ -41,9 +41,6 @@ jobs:
       - name: Dependencies
         run: flutter pub get
 
-      - name: Generate icons
-        run: dart run flutter_launcher_icons
-
       - name: Apply NGOMBI Linux icon
         run: |
           mkdir -p linux/runner/resources

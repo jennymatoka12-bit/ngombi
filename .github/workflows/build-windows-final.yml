@@ -1,0 +1,57 @@
+name: NGOMBI Final - Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - release-candidate
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.3'
+          channel: stable
+          cache: true
+
+      - name: Enable Windows
+        run: flutter config --enable-windows-desktop
+
+      - name: Doctor
+        run: flutter doctor -v
+
+      - name: Generate platform project
+        run: flutter create --platforms=windows .
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Generate icons
+        run: dart run flutter_launcher_icons
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Tests
+        run: flutter test
+
+      - name: Build
+        run: flutter build windows --release
+
+      - name: Package
+        shell: pwsh
+        run: |
+          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath NGOMBI-Windows-Final.zip
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: NGOMBI-Windows-Final
+          path: NGOMBI-Windows-Final.zip
+          if-no-files-found: error

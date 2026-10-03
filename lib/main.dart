@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'app/ngombi_store.dart';
+import 'theme/ngombi_theme.dart';
 import 'widgets/ngombi_logo.dart';
 
 import 'models/tv_channel.dart';
@@ -29,10 +31,13 @@ Future<void> main() async {
   }
 
   final tvChannels = parseEnigma2Bouquet(bouquetContent);
+  final store = NgombiStore();
+  await store.load();
 
   runApp(
     NgombiApp(
       tvChannels: tvChannels,
+      store: store,
     ),
   );
 }
@@ -139,10 +144,12 @@ const List<MediaItem> radioChannels = [
 
 class NgombiApp extends StatelessWidget {
   final List<TvChannel> tvChannels;
+  final NgombiStore store;
 
   const NgombiApp({
     super.key,
     required this.tvChannels,
+    required this.store,
   });
 
   @override
@@ -151,46 +158,15 @@ class NgombiApp extends StatelessWidget {
     const gold = Color(0xFFFFB52E);
     const background = Color(0xFF080808);
 
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'NGOMBI - TV & RADIO Direct',
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: background,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: orange,
-          brightness: Brightness.dark,
-        ).copyWith(
-          primary: orange,
-          secondary: gold,
-          surface: const Color(0xFF121212),
+    return NgombiStoreScope(
+      store: store,
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'NGOMBI - TV & RADIO Direct',
+        theme: NgombiTheme.dark(),
+        home: MainTabScreen(
+          tvChannels: tvChannels,
         ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: background,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          centerTitle: false,
-        ),
-        navigationBarTheme: NavigationBarThemeData(
-          backgroundColor: const Color(0xFF111111),
-          indicatorColor: orange.withOpacity(0.22),
-          labelTextStyle: const WidgetStatePropertyAll<TextStyle>(
-            TextStyle(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        cardTheme: CardThemeData(
-          color: const Color(0xFF151515),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-        ),
-      ),
-      home: MainTabScreen(
-        tvChannels: tvChannels,
       ),
     );
   }
@@ -238,36 +214,91 @@ class _MainTabScreenState extends State<MainTabScreen> {
       const RadioScreen(),
     ];
 
-    return Scaffold(
-      body: IndexedStack(
-        index: currentIndex,
-        children: pages,
+    final pages = <Widget>[
+      HomeScreen(
+        tvChannels: widget.tvChannels,
+        radioChannels: radioChannels,
+        onOpenTv: () => setState(() => currentIndex = 1),
+        onOpenRadio: () => setState(() => currentIndex = 2),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: currentIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            currentIndex = index;
-          });
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Accueil',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.tv_outlined),
-            selectedIcon: Icon(Icons.tv_rounded),
-            label: 'TV',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.radio_outlined),
-            selectedIcon: Icon(Icons.radio_rounded),
-            label: 'Radio',
-          ),
-        ],
+      TvScreen(tvChannels: widget.tvChannels),
+      const RadioScreen(),
+      FavoritesScreen(tvChannels: widget.tvChannels),
+    ];
+
+    final destinations = const [
+      NavigationDestination(
+        icon: Icon(Icons.home_outlined),
+        selectedIcon: Icon(Icons.home_rounded),
+        label: 'Accueil',
       ),
+      NavigationDestination(
+        icon: Icon(Icons.tv_outlined),
+        selectedIcon: Icon(Icons.tv_rounded),
+        label: 'TV',
+      ),
+      NavigationDestination(
+        icon: Icon(Icons.radio_outlined),
+        selectedIcon: Icon(Icons.radio_rounded),
+        label: 'Radio',
+      ),
+      NavigationDestination(
+        icon: Icon(Icons.favorite_border_rounded),
+        selectedIcon: Icon(Icons.favorite_rounded),
+        label: 'Favoris',
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final desktop = constraints.maxWidth >= 800;
+
+        if (desktop) {
+          return Scaffold(
+            body: Row(
+              children: [
+                NavigationRail(
+                  selectedIndex: currentIndex,
+                  onDestinationSelected: (index) {
+                    setState(() => currentIndex = index);
+                  },
+                  labelType: NavigationRailLabelType.all,
+                  destinations: destinations
+                      .map(
+                        (item) => NavigationRailDestination(
+                          icon: item.icon,
+                          selectedIcon: item.selectedIcon,
+                          label: Text(item.label),
+                        ),
+                      )
+                      .toList(),
+                ),
+                const VerticalDivider(width: 1),
+                Expanded(
+                  child: IndexedStack(
+                    index: currentIndex,
+                    children: pages,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return Scaffold(
+          body: IndexedStack(
+            index: currentIndex,
+            children: pages,
+          ),
+          bottomNavigationBar: NavigationBar(
+            selectedIndex: currentIndex,
+            onDestinationSelected: (index) {
+              setState(() => currentIndex = index);
+            },
+            destinations: destinations,
+          ),
+        );
+      },
     );
   }
 }
@@ -544,10 +575,20 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           IconButton(
+            tooltip: 'Réglages',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const SettingsScreen(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.settings_outlined),
+          ),
+          IconButton(
+            tooltip: 'Rechercher',
             onPressed: () => _openSearch(context),
-            icon: const Icon(
-              Icons.search_rounded,
-            ),
+            icon: const Icon(Icons.search_rounded),
           ),
         ],
       ),
@@ -1081,6 +1122,13 @@ class _TvGridCard extends StatelessWidget {
                       ),
                     ),
                     Positioned(
+                      top: 8,
+                      right: 8,
+                      child: _FavoriteButton(
+                        id: _mediaId(channel.name, channel.url),
+                      ),
+                    ),
+                    Positioned(
                       left: 10,
                       top: 10,
                       child: Container(
@@ -1231,6 +1279,374 @@ class RadioScreen extends StatelessWidget {
 }
 
 // -----------------------------------------------------------------------------
+// FAVORIS & HISTORIQUE
+// -----------------------------------------------------------------------------
+
+class FavoritesScreen extends StatelessWidget {
+  final List<TvChannel> tvChannels;
+
+  const FavoritesScreen({
+    super.key,
+    required this.tvChannels,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final store = NgombiStoreScope.of(context);
+    final favorites = tvChannels
+        .where(
+          (channel) => store.isFavorite(
+            _mediaId(channel.name, channel.url),
+          ),
+        )
+        .toList();
+
+    final radioFavorites = radioChannels
+        .where(
+          (radio) => store.isFavorite(
+            _mediaId(radio.name, radio.url),
+          ),
+        )
+        .toList();
+
+    return SafeArea(
+      child: CustomScrollView(
+        slivers: [
+          const SliverToBoxAdapter(
+            child: _PageHeader(
+              title: 'Favoris',
+              subtitle: 'Vos chaînes et radios préférées',
+              icon: Icons.favorite_rounded,
+            ),
+          ),
+          if (favorites.isEmpty && radioFavorites.isEmpty)
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: _EmptyState(
+                icon: Icons.favorite_border_rounded,
+                title: 'Aucun favori',
+                message: 'Ajoutez vos chaînes et radios préférées avec le cœur.',
+              ),
+            )
+          else ...[
+            if (favorites.isNotEmpty) ...[
+              const SliverToBoxAdapter(
+                child: _SectionLabel(title: 'TV'),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                sliver: SliverGrid(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final channel = favorites[index];
+                      return _TvGridCard(
+                        channel: channel,
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => StreamPlayerScreen(
+                                channel: channel,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                    childCount: favorites.length,
+                  ),
+                  gridDelegate:
+                      const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 320,
+                    mainAxisExtent: 205,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                ),
+              ),
+            ],
+            if (radioFavorites.isNotEmpty) ...[
+              const SliverToBoxAdapter(
+                child: _SectionLabel(title: 'RADIO'),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final radio = radioFavorites[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _RadioListCard(
+                          radio: radio,
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => WebPlayerScreen(
+                                  title: radio.name,
+                                  url: radio.url,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
+                    childCount: radioFavorites.length,
+                  ),
+                ),
+              ),
+            ],
+          ],
+          const SliverToBoxAdapter(
+            child: _SectionLabel(title: 'HISTORIQUE'),
+          ),
+          if (store.history.isEmpty)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
+                child: Text(
+                  'Votre historique apparaîtra ici après vos premières lectures.',
+                  style: TextStyle(color: Colors.white54),
+                ),
+              ),
+            )
+          else
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final item = store.history[index];
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: const Color(0x22FF8A00),
+                      child: Icon(
+                        item.isRadio ? Icons.radio_rounded : Icons.tv_rounded,
+                        color: const Color(0xFFFFA21A),
+                      ),
+                    ),
+                    title: Text(item.name),
+                    subtitle: Text(item.isRadio ? 'Radio' : 'Télévision'),
+                    trailing: const Icon(Icons.history_rounded),
+                    onTap: () {
+                      if (item.isRadio) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => WebPlayerScreen(
+                              title: item.name,
+                              url: item.url,
+                            ),
+                          ),
+                        );
+                      } else {
+                        final match = tvChannels.where(
+                          (channel) => channel.url == item.url,
+                        );
+                        if (match.isNotEmpty) {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => StreamPlayerScreen(
+                                channel: match.first,
+                              ),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  );
+                },
+                childCount: store.history.length,
+              ),
+            ),
+          const SliverToBoxAdapter(child: SizedBox(height: 16)),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String title;
+
+  const _SectionLabel({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
+      child: Text(
+        title,
+        style: const TextStyle(
+          color: Colors.orange,
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1,
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String message;
+
+  const _EmptyState({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 58, color: Colors.white24),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white54),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class SettingsScreen extends StatelessWidget {
+  const SettingsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final store = NgombiStoreScope.of(context);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Réglages')),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(4, 12, 4, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                NgombiLogo.full(height: 44),
+                SizedBox(height: 12),
+                Text(
+                  'Une expérience simple, rapide et cohérente sur vos écrans.',
+                  style: TextStyle(color: Colors.white54),
+                ),
+              ],
+            ),
+          ),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.history_rounded),
+                  title: const Text('Effacer l’historique'),
+                  subtitle: const Text('Supprime les dernières chaînes et radios consultées.'),
+                  onTap: store.history.isEmpty
+                      ? null
+                      : () async {
+                          await store.clearHistory();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Historique effacé.')),
+                            );
+                          }
+                        },
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.delete_outline_rounded),
+                  title: const Text('Effacer les favoris'),
+                  subtitle: const Text('Réinitialise uniquement vos favoris.'),
+                  onTap: store.favoriteIds.isEmpty
+                      ? null
+                      : () async {
+                          await store.clearFavorites();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Favoris effacés.')),
+                            );
+                          }
+                        },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.public_rounded),
+              title: const Text('Source TVRadioZap'),
+              subtitle: const Text('La liste de chaînes intégrée à NGOMBI.'),
+              onTap: () => launchUrl(
+                Uri.parse('https://tvradiozap.eu/'),
+                mode: LaunchMode.externalApplication,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Card(
+            child: ListTile(
+              leading: Icon(Icons.info_outline_rounded),
+              title: Text('NGOMBI'),
+              subtitle: Text('TV & Radio Direct • Version 1.0.0'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FavoriteButton extends StatelessWidget {
+  final String id;
+
+  const _FavoriteButton({required this.id});
+
+  @override
+  Widget build(BuildContext context) {
+    final store = NgombiStoreScope.of(context);
+    final selected = store.isFavorite(id);
+
+    return Material(
+      color: Colors.black.withOpacity(0.55),
+      shape: const CircleBorder(),
+      child: IconButton(
+        tooltip: selected ? 'Retirer des favoris' : 'Ajouter aux favoris',
+        visualDensity: VisualDensity.compact,
+        onPressed: () => store.toggleFavorite(id),
+        icon: Icon(
+          selected
+              ? Icons.favorite_rounded
+              : Icons.favorite_border_rounded,
+          color: selected ? const Color(0xFFFF8A00) : Colors.white,
+          size: 20,
+        ),
+      ),
+    );
+  }
+}
+
+String _mediaId(String name, String url) => name + '|' + url;
+
+// -----------------------------------------------------------------------------
 // CARTE RADIO
 // -----------------------------------------------------------------------------
 
@@ -1291,6 +1707,10 @@ class _RadioListCard extends StatelessWidget {
                   ],
                 ),
               ),
+              _FavoriteButton(
+                id: _mediaId(radio.name, radio.url),
+              ),
+              const SizedBox(width: 6),
               const Icon(
                 Icons.play_circle_fill_rounded,
                 color: Color(0xFFFFA21A),

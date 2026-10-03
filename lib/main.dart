@@ -93,7 +93,7 @@ class _ShellState extends State<Shell>{
         return Scaffold(
           body:Row(children:[if(wide)SideBar(index:index,nav:nav),Expanded(child:IndexedStack(index:index,children:pages))]),
           bottomNavigationBar:wide?null:NavigationBar(
-            selectedIndex:index.clamp(0,4) as int,onDestinationSelected:nav,
+            selectedIndex:index.clamp(0,4),onDestinationSelected:nav,
             destinations:const[
               NavigationDestination(icon:Icon(Icons.home_outlined),selectedIcon:Icon(Icons.home),label:'Accueil'),
               NavigationDestination(icon:Icon(Icons.tv_outlined),selectedIcon:Icon(Icons.tv),label:'TV'),
@@ -118,7 +118,7 @@ class SideBar extends StatelessWidget {
     ]))));
   Widget _item(int i,IconData icon,String label)=>Padding(
     padding:const EdgeInsets.only(bottom:5),child:ListTile(
-      onTap:()=>nav(i),selected:index==i,selectedTileColor:NgombiColors.orange.withOpacity(.14),
+      onTap:()=>nav(i),selected:index==i,selectedTileColor:NgombiColors.orange.withValues(alpha:.14),
       shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(14)),
       leading:Icon(icon,color:index==i?NgombiColors.orange:NgombiColors.textSecondary),
       title:Text(label,style:TextStyle(fontWeight:index==i?FontWeight.w800:FontWeight.w600,color:index==i?Colors.white:NgombiColors.textSecondary))));
@@ -367,7 +367,7 @@ class SettingsPage extends StatelessWidget {
   @override Widget build(BuildContext context)=>SafeArea(child:ListView(padding:const EdgeInsets.all(20),children:[
     const Text('Réglages',style:TextStyle(fontSize:27,fontWeight:FontWeight.w900)),const SizedBox(height:18),
     Card(child:Column(children:[
-      ListTile(leading:const Icon(Icons.history),title:const Text('Historique'),subtitle:Text(state.recent.length.toString()+' chaîne(s)'),trailing:const Icon(Icons.delete_outline),
+      ListTile(leading:const Icon(Icons.history),title:const Text('Historique'),subtitle:Text('${state.recent.length} chaîne(s)'),trailing:const Icon(Icons.delete_outline),
         onTap:()=>showDialog(context:context,builder:(_)=>AlertDialog(title:const Text('Effacer l’historique ?'),content:const Text('Les chaînes récentes seront supprimées.'),
           actions:[TextButton(onPressed:()=>Navigator.pop(context),child:const Text('Annuler')),FilledButton(onPressed:(){state.clearHistory();Navigator.pop(context);},child:const Text('Effacer'))]))),
       const Divider(height:1),const ListTile(leading:Icon(Icons.palette_outlined),title:Text('Apparence'),subtitle:Text('Thème sombre NGOMBI')),
@@ -458,8 +458,27 @@ class WebPage extends StatefulWidget{
 }
 class _WebPageState extends State<WebPage>{
   WebViewController? controller;bool external=false;
-  @override void initState(){super.initState();final mobile=!kIsWeb&&(defaultTargetPlatform==TargetPlatform.android||defaultTargetPlatform==TargetPlatform.iOS);
-    if(mobile){controller=WebViewController()..setJavaScriptMode(JavaScriptMode.unrestricted)..setNavigationDelegate(NavigationDelegate(onWebResourceError:(_){if(mounted)setState(()=>external=true);} ))..loadRequest(Uri.parse(widget.url));}else external=true;}
+  @override
+  void initState() {
+    super.initState();
+    final mobile = !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS);
+    if (mobile) {
+      controller = WebViewController()
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..setNavigationDelegate(
+          NavigationDelegate(
+            onWebResourceError: (_) {
+              if (mounted) setState(() => external = true);
+            },
+          ),
+        )
+        ..loadRequest(Uri.parse(widget.url));
+    } else {
+      external = true;
+    }
+  }
   Future<void>open()async{final ok=await launchUrl(Uri.parse(widget.url),mode:LaunchMode.externalApplication);if(!ok&&mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Impossible d’ouvrir le lecteur officiel.')));}
   @override
   Widget build(BuildContext context) {

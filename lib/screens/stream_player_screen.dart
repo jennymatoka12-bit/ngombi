@@ -498,7 +498,7 @@ class _StreamPlayerScreenState
         ),
         actions: [
           if (_isOfficialWebPlayer &&
-              !_isWindows &&
+              !_isDesktop &&
               _webController != null)
             IconButton(
               tooltip: 'Actualiser',

@@ -1,5 +1,9 @@
 name: NGOMBI Final - iOS
 
+concurrency:
+  group: ngombi-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
   push:

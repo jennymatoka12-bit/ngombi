@@ -115,7 +115,7 @@ class SideBar extends StatelessWidget {
       _item(0,Icons.home,'Accueil'),_item(1,Icons.tv,'Télévision'),_item(2,Icons.radio,'Radio'),_item(3,Icons.favorite,'Favoris'),
       const Spacer(),_item(4,Icons.settings,'Réglages'),const SizedBox(height:10),
       const Text('NGOMBI • TV & RADIO',style:TextStyle(color:NgombiColors.textMuted,fontSize:11))
-    ])));
+    ]))));
   Widget _item(int i,IconData icon,String label)=>Padding(
     padding:const EdgeInsets.only(bottom:5),child:ListTile(
       onTap:()=>nav(i),selected:index==i,selectedTileColor:NgombiColors.orange.withOpacity(.14),
@@ -154,7 +154,7 @@ class Home extends StatelessWidget {
       SliverToBoxAdapter(child:TitleRow(title:'Radios',action:'Toutes',tap:()=>nav(2))),
       SliverToBoxAdapter(child:RadioRow(items:radios)),
       const SliverToBoxAdapter(child:SizedBox(height:30))
-    ]));
+    ])));
   }
 }
 
@@ -206,7 +206,7 @@ class ChannelCard extends StatelessWidget {
         Positioned(right:0,top:0,child:Icon(state.isFav(channel)?Icons.favorite:Icons.favorite_border,size:18,color:state.isFav(channel)?NgombiColors.orange:NgombiColors.textMuted))])),
       const SizedBox(height:10),Text(channel.name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800)),
       const SizedBox(height:4),Text(channel.category,style:const TextStyle(color:NgombiColors.textSecondary,fontSize:11))
-    ]))));
+    ])))));
 }
 
 class Categories extends StatelessWidget {
@@ -268,7 +268,7 @@ class _RadioPageState extends State<RadioPage>{
           leading:const CircleAvatar(backgroundColor:NgombiColors.orange,child:Icon(Icons.radio,color:Colors.black)),
           title:Text(list[i].name,style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text(list[i].category),trailing:const Icon(Icons.open_in_new),
           onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>WebPage(title:list[i].name,url:list[i].url)))))
-    ]));
+    ])));
   }
 }
 
@@ -327,16 +327,10 @@ class PlayerPage extends StatefulWidget {
 }
 class _PlayerPageState extends State<PlayerPage>{
   Player? player;VideoController? video;StreamSubscription<String>? errorSub;String? error;bool loading=true;bool opened=false;
-  static const dash=MethodChannel('ngombi/player');
   @override void initState(){super.initState();start();}
   Future<void> start()async{
     final official=officialUrl(widget.channel.name);
     if(official!=null){if(mounted)setState(()=>loading=false);return;}
-    if(widget.channel.type==StreamType.dash&&!kIsWeb&&defaultTargetPlatform==TargetPlatform.android){
-      try{await dash.invokeMethod('playDash',{'url':widget.channel.url,'userAgent':widget.channel.headers['User-Agent']??'Mozilla/5.0'});if(mounted)setState((){loading=false;opened=true;});}
-      catch(e){if(mounted)setState((){loading=false;error=e.toString();});}return;
-    }
-    if(widget.channel.type==StreamType.dash){if(mounted)setState((){loading=false;error='Ce flux DASH est actuellement pris en charge par le lecteur Android.';});return;}
     try{
       final p=Player();player=p;video=VideoController(p);
       errorSub=p.stream.error.listen((m){if(mounted&&m.isNotEmpty)setState((){loading=false;error=m;});});
@@ -384,10 +378,47 @@ class _WebPageState extends State<WebPage>{
   @override void initState(){super.initState();final mobile=!kIsWeb&&(defaultTargetPlatform==TargetPlatform.android||defaultTargetPlatform==TargetPlatform.iOS);
     if(mobile){controller=WebViewController()..setJavaScriptMode(JavaScriptMode.unrestricted)..setNavigationDelegate(NavigationDelegate(onWebResourceError:(_){if(mounted)setState(()=>external=true);} ))..loadRequest(Uri.parse(widget.url));}else external=true;}
   Future<void>open()async{final ok=await launchUrl(Uri.parse(widget.url),mode:LaunchMode.externalApplication);if(!ok&&mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Impossible d’ouvrir le lecteur officiel.')));}
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:Text(widget.title),actions:[
-    if(widget.favoriteState!=null&&widget.channel!=null)IconButton(onPressed:()=>widget.favoriteState!.toggle(widget.channel!),icon:Icon(widget.favoriteState!.isFav(widget.channel!)?Icons.favorite:Icons.favorite_border))]),
-    body:external?Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
-      const Icon(Icons.open_in_browser,size:64,color:NgombiColors.orange),const SizedBox(height:16),Text(widget.title,style:const TextStyle(fontSize:22,fontWeight:FontWeight.w900)),
-      const SizedBox(height:8),const Text('Le lecteur officiel sera ouvert dans votre navigateur sur cette plateforme.',textAlign:TextAlign.center,style:TextStyle(color:NgombiColors.textSecondary)),
-      const SizedBox(height:20),FilledButton.icon(onPressed:open,icon:const Icon(Icons.open_in_new),label:const Text('Ouvrir le lecteur'))])):WebViewWidget(controller:controller!));
+  @override
+  Widget build(BuildContext context) {
+    final body = external
+        ? Center(
+            child: Padding(
+              padding: const EdgeInsets.all(28),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.open_in_browser, size: 64, color: NgombiColors.orange),
+                  const SizedBox(height: 16),
+                  Text(widget.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Le lecteur officiel sera ouvert dans votre navigateur sur cette plateforme.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: NgombiColors.textSecondary),
+                  ),
+                  const SizedBox(height: 20),
+                  FilledButton.icon(
+                    onPressed: open,
+                    icon: const Icon(Icons.open_in_new),
+                    label: const Text('Ouvrir le lecteur'),
+                  ),
+                ],
+              ),
+            ),
+          )
+        : WebViewWidget(controller: controller!);
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.title),
+        actions: [
+          if (widget.favoriteState != null && widget.channel != null)
+            IconButton(
+              onPressed: () => widget.favoriteState!.toggle(widget.channel!),
+              icon: Icon(widget.favoriteState!.isFav(widget.channel!) ? Icons.favorite : Icons.favorite_border),
+            ),
+        ],
+      ),
+      body: body,
+    );
+  }
 }

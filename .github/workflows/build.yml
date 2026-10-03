@@ -522,7 +522,7 @@ jobs:
       # --------------------------------------------------
 
       - name: Generate NGOMBI launcher icon
-        run: dart run flutter_launcher_icons
+        run: dart run flutter_launcher_icons -f flutter_launcher_icons_android.yaml
 
       # --------------------------------------------------
       # Force NGOMBI launcher icon in Android manifest

@@ -33,6 +33,22 @@ jobs:
       - name: Dependencies
         run: flutter pub get
 
+      - name: Configure NGOMBI iOS identity
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("ios/Runner.xcodeproj/project.pbxproj")
+          t = p.read_text()
+          t = t.replace("com.example.ngombi", "com.ngombi.tv")
+          p.write_text(t)
+          info = Path("ios/Runner/Info.plist")
+          if info.exists():
+              t = info.read_text()
+              t = t.replace("<string>Ngombi</string>", "<string>NGOMBI</string>")
+              info.write_text(t)
+          PY
+
       - name: Generate icons
         run: dart run flutter_launcher_icons -f flutter_launcher_icons_ios.yaml
 
@@ -52,16 +68,15 @@ jobs:
       - name: Build unsigned IPA
         run: flutter build ipa --release --no-codesign
 
-      - name: Upload unsigned IPA
-        uses: actions/upload-artifact@v4
-        with:
-          name: NGOMBI-iOS-Unsigned
-          path: build/ios/ipa/*.ipa
-          if-no-files-found: error
+      - name: Package unsigned Xcode archive
+        shell: bash
+        run: |
+          cd build/ios/archive
+          zip -r ../../../NGOMBI-iOS-XcodeArchive.zip Runner.xcarchive
 
-      - name: Upload Xcode archive
+      - name: Upload unsigned Xcode archive
         uses: actions/upload-artifact@v4
         with:
-          name: NGOMBI-iOS-Archive
-          path: build/ios/archive/*.xcarchive
-          if-no-files-found: warn
+          name: NGOMBI-iOS-XcodeArchive
+          path: NGOMBI-iOS-XcodeArchive.zip
+          if-no-files-found: error

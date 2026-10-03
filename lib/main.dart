@@ -1491,6 +1491,11 @@ class _WebPlayerScreenState
   void initState() {
     super.initState();
 
+    NgombiStore.instance.recordRadio(
+      name: widget.title,
+      url: widget.url,
+    );
+
     if (_isDesktop) {
       loading = false;
       return;

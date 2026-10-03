@@ -857,9 +857,6 @@ class _StreamPlayerScreenState
     );
   }
 
-
-  }
-
   String _streamTypeLabel(
     StreamType type,
   ) {

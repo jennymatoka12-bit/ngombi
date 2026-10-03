@@ -449,6 +449,60 @@ class _StreamPlayerScreenState
     }
   }
 
+  Future<void> _retryPlayback() async {
+    await _controller?.dispose();
+    await _windowsErrorSubscription?.cancel();
+    await _windowsPlayer?.dispose();
+
+    _controller = null;
+    _windowsPlayer = null;
+    _windowsVideoController = null;
+    _windowsErrorSubscription = null;
+
+    if (!mounted) return;
+
+    setState(() {
+      _initialized = false;
+      _errorMessage = null;
+    });
+
+    if (_isOfficialWebPlayer) {
+      _webController?.reload();
+      return;
+    }
+
+    if (widget.channel.type == StreamType.dash) {
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        _openNativeDashPlayer();
+      } else {
+        _showDashUnavailable();
+      }
+      return;
+    }
+
+    if (_isDesktop) {
+      _initializeWindowsPlayer();
+    } else {
+      _initializeFlutterPlayer();
+    }
+  }
+
+  Future<void> _openFullscreenMobile() async {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) {
+      return;
+    }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _FullscreenVideoScreen(
+          controller: controller,
+          title: widget.channel.name,
+        ),
+      ),
+    );
+  }
+
   Future<void> _initializeFlutterPlayer() async {
     try {
       final playerController =
@@ -498,6 +552,15 @@ class _StreamPlayerScreenState
           widget.channel.name,
         ),
         actions: [
+          if (!_isDesktop &&
+              !_isOfficialWebPlayer &&
+              _initialized &&
+              _controller != null)
+            IconButton(
+              tooltip: 'Plein écran',
+              icon: const Icon(Icons.fullscreen_rounded),
+              onPressed: _openFullscreenMobile,
+            ),
           if (_isOfficialWebPlayer &&
               !_isDesktop &&
               _webController != null)
@@ -771,22 +834,58 @@ class _StreamPlayerScreenState
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              icon: const Icon(
-                Icons.arrow_back,
-              ),
-              label: const Text(
-                'Retour',
-              ),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              alignment: WrapAlignment.center,
+              children: [
+                FilledButton.icon(
+                  onPressed: _retryPlayback,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Réessayer'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  label: const Text('Retour'),
+                ),
+              ],
             ),
           ],
         ),
       ),
     );
   }
+
+class _FullscreenVideoScreen extends StatelessWidget {
+  final VideoPlayerController controller;
+  final String title;
+
+  const _FullscreenVideoScreen({
+    required this.controller,
+    required this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        title: Text(title),
+      ),
+      body: Center(
+        child: AspectRatio(
+          aspectRatio: controller.value.aspectRatio > 0
+              ? controller.value.aspectRatio
+              : 16 / 9,
+          child: VideoPlayer(controller),
+        ),
+      ),
+    );
+  }
+}
+
 
   String _streamTypeLabel(
     StreamType type,

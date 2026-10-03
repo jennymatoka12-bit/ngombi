@@ -11,6 +11,7 @@ import 'package:video_player/video_player.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../models/tv_channel.dart';
+import '../services/ngombi_store.dart';
 
 class StreamPlayerScreen extends StatefulWidget {
   final TvChannel channel;
@@ -33,17 +34,19 @@ class _StreamPlayerScreenState
   VideoPlayerController? _controller;
   WebViewController? _webController;
 
-  Player? _windowsPlayer;
-  VideoController? _windowsVideoController;
-  StreamSubscription<String>? _windowsErrorSubscription;
+  Player? _desktopPlayer;
+  VideoController? _desktopVideoController;
+  StreamSubscription<String>? _desktopErrorSubscription;
 
   bool _initialized = false;
   bool _webLoading = true;
   String? _errorMessage;
 
-  bool get _isWindows =>
+  bool get _isDesktop =>
       !kIsWeb &&
-      defaultTargetPlatform == TargetPlatform.windows;
+      (defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.linux ||
+          defaultTargetPlatform == TargetPlatform.macOS);
 
   bool get _isGabon24 {
     final name = widget.channel.name.toLowerCase();
@@ -138,8 +141,10 @@ class _StreamPlayerScreenState
   void initState() {
     super.initState();
 
+    NgombiStore.instance.recordTv(widget.channel);
+
     if (_isOfficialWebPlayer) {
-      if (_isWindows) {
+      if (_isDesktop) {
         _webLoading = false;
       } else {
         _initializeOfficialWebPlayer();
@@ -147,8 +152,8 @@ class _StreamPlayerScreenState
       return;
     }
 
-    if (_isWindows) {
-      _initializeWindowsPlayer();
+    if (_isDesktop) {
+      _initializeDesktopPlayer();
       return;
     }
 
@@ -252,7 +257,7 @@ class _StreamPlayerScreenState
     }
   }
 
-  Future<void> _openOfficialWebsiteOnWindows() async {
+  Future<void> _openOfficialWebsite() async {
     final uri = Uri.parse(_officialWebUrl);
 
     final opened = await launchUrl(
@@ -299,7 +304,7 @@ class _StreamPlayerScreenState
     }
   }
 
-  Future<String> _resolveWindowsStreamUrl() async {
+  Future<String> _resolveDesktopStreamUrl() async {
     final client = HttpClient()
       ..connectionTimeout = const Duration(seconds: 15)
       ..autoUncompress = false;
@@ -360,19 +365,19 @@ class _StreamPlayerScreenState
     }
   }
 
-  Future<void> _initializeWindowsPlayer() async {
+  Future<void> _initializeDesktopPlayer() async {
     try {
-      final resolvedUrl = await _resolveWindowsStreamUrl();
+      final resolvedUrl = await _resolveDesktopStreamUrl();
 
       if (!mounted) return;
 
       final player = Player();
       final videoController = VideoController(player);
 
-      _windowsPlayer = player;
-      _windowsVideoController = videoController;
+      _desktopPlayer = player;
+      _desktopVideoController = videoController;
 
-      _windowsErrorSubscription =
+      _desktopErrorSubscription =
           player.stream.error.listen((message) {
         if (!mounted || message.trim().isEmpty) {
           return;
@@ -453,8 +458,8 @@ class _StreamPlayerScreenState
   @override
   void dispose() {
     _controller?.dispose();
-    _windowsErrorSubscription?.cancel();
-    _windowsPlayer?.dispose();
+    _desktopErrorSubscription?.cancel();
+    _desktopPlayer?.dispose();
     super.dispose();
   }
 
@@ -467,8 +472,23 @@ class _StreamPlayerScreenState
           widget.channel.name,
         ),
         actions: [
+          if (!_isOfficialWebPlayer)
+            AnimatedBuilder(
+              animation: NgombiStore.instance,
+              builder: (context, _) => IconButton(
+                tooltip: 'Favori',
+                icon: Icon(
+                  NgombiStore.instance.isFavoriteTv(widget.channel)
+                      ? Icons.star_rounded
+                      : Icons.star_border_rounded,
+                ),
+                onPressed: () => NgombiStore.instance.toggleFavoriteTv(
+                  widget.channel,
+                ),
+              ),
+            ),
           if (_isOfficialWebPlayer &&
-              !_isWindows &&
+              !_isDesktop &&
               _webController != null)
             IconButton(
               tooltip: 'Actualiser',
@@ -495,8 +515,8 @@ class _StreamPlayerScreenState
   }
 
   Widget _buildOfficialWebPlayer() {
-    if (_isWindows) {
-      return _buildWindowsOfficialLink();
+    if (_isDesktop) {
+      return _buildDesktopOfficialLink();
     }
 
     if (_errorMessage != null) {
@@ -538,7 +558,7 @@ class _StreamPlayerScreenState
     );
   }
 
-  Widget _buildWindowsOfficialLink() {
+  Widget _buildDesktopOfficialLink() {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -570,7 +590,7 @@ class _StreamPlayerScreenState
             ),
             const SizedBox(height: 22),
             FilledButton.icon(
-              onPressed: _openOfficialWebsiteOnWindows,
+              onPressed: _openOfficialWebsite,
               icon: const Icon(
                 Icons.open_in_new_rounded,
               ),
@@ -615,9 +635,9 @@ class _StreamPlayerScreenState
       );
     }
 
-    if (_isWindows) {
+    if (_isDesktop) {
       final windowsController =
-          _windowsVideoController;
+          _desktopVideoController;
 
       if (windowsController == null) {
         return _buildErrorWithMessage(

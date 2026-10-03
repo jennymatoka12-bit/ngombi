@@ -34,7 +34,7 @@ class NgombiTheme {
         centerTitle: false,
       ),
 
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: NgombiColors.card,
         elevation: 0,
         margin: EdgeInsets.zero,

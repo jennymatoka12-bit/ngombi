@@ -857,6 +857,23 @@ class _StreamPlayerScreenState
     );
   }
 
+
+  String _streamTypeLabel(
+    StreamType type,
+  ) {
+    switch (type) {
+      case StreamType.hls:
+        return 'HLS';
+
+      case StreamType.dash:
+        return 'DASH';
+
+      case StreamType.unknown:
+        return 'Flux';
+    }
+  }
+}
+
 class _FullscreenVideoScreen extends StatelessWidget {
   final VideoPlayerController controller;
   final String title;
@@ -887,18 +904,3 @@ class _FullscreenVideoScreen extends StatelessWidget {
 }
 
 
-  String _streamTypeLabel(
-    StreamType type,
-  ) {
-    switch (type) {
-      case StreamType.hls:
-        return 'HLS';
-
-      case StreamType.dash:
-        return 'DASH';
-
-      case StreamType.unknown:
-        return 'Flux';
-    }
-  }
-}

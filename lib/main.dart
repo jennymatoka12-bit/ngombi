@@ -9,14 +9,21 @@ import 'widgets/ngombi_logo.dart';
 import 'models/tv_channel.dart';
 import 'screens/stream_player_screen.dart';
 import 'widgets/channel_logo.dart';
+import 'screens/library_screen.dart';
+import 'screens/settings_screen.dart';
+import 'services/ngombi_store.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   if (!kIsWeb &&
-      defaultTargetPlatform == TargetPlatform.windows) {
+      (defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.linux ||
+          defaultTargetPlatform == TargetPlatform.macOS)) {
     MediaKit.ensureInitialized();
   }
+
+  await NgombiStore.instance.init();
 
   String bouquetContent = '';
 
@@ -266,6 +273,11 @@ class _MainTabScreenState extends State<MainTabScreen> {
             selectedIcon: Icon(Icons.radio_rounded),
             label: 'Radio',
           ),
+          NavigationDestination(
+            icon: Icon(Icons.star_border_rounded),
+            selectedIcon: Icon(Icons.star_rounded),
+            label: 'Ma bibliothèque',
+          ),
         ],
       ),
     );
@@ -496,11 +508,13 @@ class HomeScreen extends StatelessWidget {
     }
 
     if (result.radioChannel != null) {
+      final radio = result.radioChannel!;
+      NgombiStore.instance.recordRadio(radio);
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => WebPlayerScreen(
-            title: result.radioChannel!.name,
-            url: result.radioChannel!.url,
+            title: radio.name,
+            url: radio.url,
           ),
         ),
       );
@@ -544,10 +558,18 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           IconButton(
+            tooltip: 'Rechercher',
             onPressed: () => _openSearch(context),
-            icon: const Icon(
-              Icons.search_rounded,
+            icon: const Icon(Icons.search_rounded),
+          ),
+          IconButton(
+            tooltip: 'Paramètres',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const SettingsScreen(),
+              ),
             ),
+            icon: const Icon(Icons.settings_outlined),
           ),
         ],
       ),

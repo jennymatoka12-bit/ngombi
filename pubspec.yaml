@@ -2,7 +2,7 @@ name: ngombi
 description: "NGOMBI - TV & Radio Direct"
 publish_to: "none"
 
-version: 1.0.0+1
+version: 1.1.0+1
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -17,7 +17,8 @@ dependencies:
   video_player: ^2.9.1
   media_kit: ^1.2.6
   media_kit_video: ^2.0.1
-  media_kit_libs_windows_video: ^1.0.11
+  media_kit_libs_video: ^1.0.7
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:

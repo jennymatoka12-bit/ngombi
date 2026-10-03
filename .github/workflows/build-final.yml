@@ -149,3 +149,5 @@ jobs:
           name: NGOMBI-macOS
           path: NGOMBI-macOS.zip
           if-no-files-found: error
+
+# Final validation pipeline: generated platform projects are built on native runners.

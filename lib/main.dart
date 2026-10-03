@@ -631,7 +631,7 @@ class HomeScreen extends StatelessWidget {
         ),
         scrollDirection: Axis.horizontal,
         itemCount: visibleChannels.length,
-        separatorBuilder: (_, __) {
+        separatorBuilder: (_, _) {
           return const SizedBox(width: 12);
         },
         itemBuilder: (context, index) {
@@ -690,7 +690,7 @@ class HomeScreen extends StatelessWidget {
         ),
         scrollDirection: Axis.horizontal,
         itemCount: categories.length,
-        separatorBuilder: (_, __) {
+        separatorBuilder: (_, _) {
           return const SizedBox(width: 10);
         },
         itemBuilder: (context, index) {
@@ -741,7 +741,7 @@ class HomeScreen extends StatelessWidget {
         ),
         scrollDirection: Axis.horizontal,
         itemCount: radioChannels.take(8).length,
-        separatorBuilder: (_, __) {
+        separatorBuilder: (_, _) {
           return const SizedBox(width: 12);
         },
         itemBuilder: (context, index) {
@@ -977,7 +977,7 @@ class _TvScreenState extends State<TvScreen> {
                 ),
                 scrollDirection: Axis.horizontal,
                 itemCount: categories.length,
-                separatorBuilder: (_, __) {
+                separatorBuilder: (_, _) {
                   return const SizedBox(width: 8);
                 },
                 itemBuilder: (context, index) {

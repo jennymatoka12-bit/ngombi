@@ -75,7 +75,6 @@ class ChannelLogo extends StatelessWidget {
       'nci': 'assets/logos/nci.png',
       '2stv': 'assets/logos/2stv.png',
       'cannes lerins tv': 'assets/logos/cannes l�rins tv.png',
-      'cannes lêrins tv': 'assets/logos/cannes lêrins tv.png',
     };
 
     final direct = exact[n];
@@ -114,7 +113,6 @@ class ChannelLogo extends StatelessWidget {
       'Ã¹': 'ù',
       'Ã»': 'û',
       'Ã§': 'ç',
-      'Ã¯': 'ï',
     };
 
     mojibake.forEach((from, to) {

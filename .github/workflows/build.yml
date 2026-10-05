@@ -75,6 +75,7 @@ jobs:
           import android.content.Intent;
 
           import androidx.annotation.NonNull;
+          import androidx.core.content.ContextCompat;
 
           import io.flutter.embedding.android.FlutterActivity;
           import io.flutter.embedding.engine.FlutterEngine;
@@ -82,7 +83,8 @@ jobs:
 
           public class MainActivity extends FlutterActivity {
 
-              private static final String CHANNEL = "ngombi/player";
+              private static final String PLAYER_CHANNEL = "ngombi/player";
+              private static final String RADIO_CHANNEL = "ngombi/radio";
 
               @Override
               public void configureFlutterEngine(
@@ -92,13 +94,16 @@ jobs:
 
                   new MethodChannel(
                           flutterEngine.getDartExecutor().getBinaryMessenger(),
-                          CHANNEL
+                          PLAYER_CHANNEL
                   ).setMethodCallHandler((call, result) -> {
 
                       if ("playDash".equals(call.method)) {
-
                           String url = call.argument("url");
                           String userAgent = call.argument("userAgent");
+                          String channelName = call.argument("channelName");
+                          String programTitle = call.argument("programTitle");
+                          Long programStartMs = call.argument("programStartMs");
+                          Long programEndMs = call.argument("programEndMs");
 
                           if (url == null || url.isEmpty()) {
                               result.error(
@@ -116,14 +121,91 @@ jobs:
 
                           intent.putExtra("url", url);
                           intent.putExtra("userAgent", userAgent);
+                          intent.putExtra("channelName", channelName);
+                          intent.putExtra("programTitle", programTitle);
+
+                          if (programStartMs != null) {
+                              intent.putExtra(
+                                      "programStartMs",
+                                      programStartMs.longValue()
+                              );
+                          }
+
+                          if (programEndMs != null) {
+                              intent.putExtra(
+                                      "programEndMs",
+                                      programEndMs.longValue()
+                              );
+                          }
 
                           startActivity(intent);
+                          result.success(true);
+                          return;
+                      }
+
+                      result.notImplemented();
+                  });
+
+                  new MethodChannel(
+                          flutterEngine.getDartExecutor().getBinaryMessenger(),
+                          RADIO_CHANNEL
+                  ).setMethodCallHandler((call, result) -> {
+
+                      if ("startBackgroundRadio".equals(call.method)) {
+                          String url = call.argument("url");
+                          String title = call.argument("title");
+
+                          if (url == null || url.isEmpty()) {
+                              result.error(
+                                      "INVALID_URL",
+                                      "URL audio manquante",
+                                      null
+                              );
+                              return;
+                          }
+
+                          Intent intent = new Intent(
+                                  MainActivity.this,
+                                  RadioPlaybackService.class
+                          );
+
+                          intent.setAction(
+                                  RadioPlaybackService.ACTION_PLAY_RADIO
+                          );
+                          intent.putExtra(
+                                  RadioPlaybackService.EXTRA_URL,
+                                  url
+                          );
+                          intent.putExtra(
+                                  RadioPlaybackService.EXTRA_TITLE,
+                                  title == null ? "NGOMBI Radio" : title
+                          );
+
+                          ContextCompat.startForegroundService(
+                                  MainActivity.this,
+                                  intent
+                          );
 
                           result.success(true);
-
-                      } else {
-                          result.notImplemented();
+                          return;
                       }
+
+                      if ("stopBackgroundRadio".equals(call.method)) {
+                          Intent intent = new Intent(
+                                  MainActivity.this,
+                                  RadioPlaybackService.class
+                          );
+
+                          intent.setAction(
+                                  RadioPlaybackService.ACTION_STOP_RADIO
+                          );
+
+                          startService(intent);
+                          result.success(true);
+                          return;
+                      }
+
+                      result.notImplemented();
                   });
               }
           }
@@ -140,8 +222,11 @@ jobs:
           package com.example.ngombi;
 
           import android.app.Activity;
+          import android.content.pm.ActivityInfo;
+          import android.content.res.Configuration;
           import android.os.Bundle;
           import android.view.ViewGroup;
+          import android.widget.Button;
           import android.widget.FrameLayout;
           import android.widget.TextView;
 
@@ -162,12 +247,17 @@ jobs:
               private ExoPlayer player;
               private PlayerView playerView;
               private TextView errorText;
+              private boolean initialLandscape;
 
               @Override
               protected void onCreate(
                       @Nullable Bundle savedInstanceState
               ) {
                   super.onCreate(savedInstanceState);
+
+                  initialLandscape =
+                          getResources().getConfiguration().orientation
+                                  == Configuration.ORIENTATION_LANDSCAPE;
 
                   FrameLayout root = new FrameLayout(this);
 
@@ -180,6 +270,88 @@ jobs:
                                   ViewGroup.LayoutParams.MATCH_PARENT
                           )
                   );
+
+                  LinearLayoutOverlay:
+                  {
+                      Button orientationButton = new Button(this);
+                      orientationButton.setText(
+                              initialLandscape ? "PORTRAIT" : "PAYSAGE"
+                      );
+
+                      orientationButton.setOnClickListener(
+                              view -> {
+                                  boolean landscape =
+                                          getResources()
+                                                  .getConfiguration()
+                                                  .orientation
+                                                  == Configuration.ORIENTATION_LANDSCAPE;
+
+                                  setRequestedOrientation(
+                                          landscape
+                                                  ? ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                                                  : ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                                  );
+
+                                  orientationButton.setText(
+                                          landscape ? "PAYSAGE" : "PORTRAIT"
+                                  );
+                              }
+                      );
+
+                      FrameLayout.LayoutParams buttonParams =
+                              new FrameLayout.LayoutParams(
+                                      ViewGroup.LayoutParams.WRAP_CONTENT,
+                                      ViewGroup.LayoutParams.WRAP_CONTENT
+                              );
+                      buttonParams.gravity =
+                              android.view.Gravity.TOP |
+                              android.view.Gravity.END;
+                      buttonParams.topMargin = 18;
+                      buttonParams.rightMargin = 18;
+
+                      root.addView(
+                              orientationButton,
+                              buttonParams
+                      );
+
+                      TextView programText = new TextView(this);
+                      String channelName =
+                              getIntent().getStringExtra("channelName");
+                      String programTitle =
+                              getIntent().getStringExtra("programTitle");
+
+                      String displayTitle =
+                              channelName == null || channelName.isEmpty()
+                                      ? "NGOMBI TV"
+                                      : channelName;
+
+                      if (programTitle != null &&
+                              !programTitle.isEmpty()) {
+                          displayTitle += "\n" + programTitle;
+                      }
+
+                      programText.setText(displayTitle);
+                      programText.setTextColor(0xFFFFFFFF);
+                      programText.setTextSize(15);
+                      programText.setPadding(20, 12, 20, 12);
+                      programText.setBackgroundColor(0x88000000);
+
+                      FrameLayout.LayoutParams titleParams =
+                              new FrameLayout.LayoutParams(
+                                      ViewGroup.LayoutParams.WRAP_CONTENT,
+                                      ViewGroup.LayoutParams.WRAP_CONTENT
+                              );
+                      titleParams.gravity =
+                              android.view.Gravity.TOP |
+                              android.view.Gravity.START;
+                      titleParams.topMargin = 18;
+                      titleParams.leftMargin = 18;
+
+                      root.addView(
+                              programText,
+                              titleParams
+                      );
+                  }
 
                   errorText = new TextView(this);
 
@@ -293,6 +465,151 @@ jobs:
 
               @Override
               protected void onDestroy() {
+                  setRequestedOrientation(
+                          initialLandscape
+                                  ? ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                                  : ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                  );
+
+                  if (player != null) {
+                      player.release();
+                      player = null;
+                  }
+
+                  super.onDestroy();
+              }
+          }
+          EOF
+
+          # ==================================================
+          # RadioPlaybackService.java
+          # ==================================================
+
+          cat > "$JAVA_DIR/RadioPlaybackService.java" <<'EOF'
+          package com.example.ngombi;
+
+          import android.content.Intent;
+
+          import androidx.annotation.Nullable;
+          import androidx.media3.common.C;
+          import androidx.media3.common.MediaItem;
+          import androidx.media3.common.MediaMetadata;
+          import androidx.media3.common.util.UnstableApi;
+          import androidx.media3.exoplayer.ExoPlayer;
+          import androidx.media3.exoplayer.audio.AudioAttributes;
+          import androidx.media3.session.MediaSession;
+          import androidx.media3.session.MediaSessionService;
+
+          @UnstableApi
+          public class RadioPlaybackService extends MediaSessionService {
+
+              public static final String ACTION_PLAY_RADIO =
+                      "com.example.ngombi.action.PLAY_RADIO";
+
+              public static final String ACTION_STOP_RADIO =
+                      "com.example.ngombi.action.STOP_RADIO";
+
+              public static final String EXTRA_URL =
+                      "com.example.ngombi.extra.URL";
+
+              public static final String EXTRA_TITLE =
+                      "com.example.ngombi.extra.TITLE";
+
+              private ExoPlayer player;
+              private MediaSession mediaSession;
+
+              @Override
+              public void onCreate() {
+                  super.onCreate();
+
+                  AudioAttributes audioAttributes =
+                          new AudioAttributes.Builder()
+                                  .setUsage(C.USAGE_MEDIA)
+                                  .setContentType(
+                                          C.AUDIO_CONTENT_TYPE_MUSIC
+                                  )
+                                  .build();
+
+                  player = new ExoPlayer.Builder(this).build();
+                  player.setAudioAttributes(
+                          audioAttributes,
+                          true
+                  );
+
+                  mediaSession =
+                          new MediaSession.Builder(
+                                  this,
+                                  player
+                          ).build();
+              }
+
+              @Override
+              public int onStartCommand(
+                      @Nullable Intent intent,
+                      int flags,
+                      int startId
+              ) {
+                  if (intent != null) {
+                      String action = intent.getAction();
+
+                      if (ACTION_STOP_RADIO.equals(action)) {
+                          player.stop();
+                          player.clearMediaItems();
+                          stopSelf();
+                          return START_NOT_STICKY;
+                      }
+
+                      if (ACTION_PLAY_RADIO.equals(action)) {
+                          String url =
+                                  intent.getStringExtra(EXTRA_URL);
+
+                          String title =
+                                  intent.getStringExtra(EXTRA_TITLE);
+
+                          if (url != null && !url.isEmpty()) {
+                              MediaMetadata metadata =
+                                      new MediaMetadata.Builder()
+                                              .setTitle(
+                                                      title == null ||
+                                                              title.isEmpty()
+                                                              ? "NGOMBI Radio"
+                                                              : title
+                                              )
+                                              .setArtist("NGOMBI")
+                                              .build();
+
+                              MediaItem mediaItem =
+                                      new MediaItem.Builder()
+                                              .setUri(url)
+                                              .setMediaMetadata(
+                                                      metadata
+                                              )
+                                              .build();
+
+                              player.setMediaItem(mediaItem);
+                              player.prepare();
+                              player.play();
+                          }
+                      }
+                  }
+
+                  return START_STICKY;
+              }
+
+              @Override
+              public MediaSession onGetSession(
+                      MediaSession.ControllerInfo controllerInfo
+              ) {
+                  return mediaSession;
+              }
+
+              @Override
+              public void onDestroy() {
+                  if (mediaSession != null) {
+                      mediaSession.release();
+                      mediaSession = null;
+                  }
+
                   if (player != null) {
                       player.release();
                       player = null;
@@ -323,6 +640,20 @@ jobs:
                   1
               )
 
+          if "android.permission.FOREGROUND_SERVICE" not in text:
+              text = text.replace(
+                  "<application",
+                  '    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\n\n    <application',
+                  1
+              )
+
+          if "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" not in text:
+              text = text.replace(
+                  "<application",
+                  '    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />\n\n    <application',
+                  1
+              )
+
           if "android.permission.ACCESS_NETWORK_STATE" not in text:
               text = text.replace(
                   "<application",
@@ -341,12 +672,32 @@ jobs:
               activity = (
                   '        <activity\n'
                   '            android:name=".DashPlayerActivity"\n'
+                  '            android:configChanges="orientation|screenSize|keyboardHidden"\n'
                   '            android:exported="false" />\n\n'
               )
 
               text = text.replace(
                   "</application>",
                   activity + "</application>",
+                  1
+              )
+
+          if "RadioPlaybackService" not in text:
+              service = (
+                  '        <service\n'
+                  '            android:name=".RadioPlaybackService"\n'
+                  '            android:foregroundServiceType="mediaPlayback"\n'
+                  '            android:exported="true">\n'
+                  '            <intent-filter>\n'
+                  '                <action android:name="androidx.media3.session.MediaSessionService" />\n'
+                  '                <action android:name="android.media.browse.MediaBrowserService" />\n'
+                  '            </intent-filter>\n'
+                  '        </service>\n\n'
+              )
+
+              text = text.replace(
+                  "</application>",
+                  service + "</application>",
                   1
               )
 
@@ -403,7 +754,8 @@ jobs:
                   "dependencies {\n"
                   '    implementation "androidx.media3:media3-exoplayer:1.11.1"\n'
                   '    implementation "androidx.media3:media3-exoplayer-dash:1.11.1"\n'
-                  '    implementation "androidx.media3:media3-ui:1.11.1"\n'
+                  '    implementation "androidx.media3:media3-ui:1.11.1"
+    implementation "androidx.media3:media3-session:1.11.1"\n'
                   "}\n"
               )
 

@@ -40,13 +40,12 @@ class _NgombiAdminLoginScreenState extends State<NgombiAdminLoginScreen> {
       final user = response.user;
       if (user == null) throw AuthException('Connexion refusée.');
 
-      final admin = await Supabase.instance.client
-          .from('ngombi_admin_users')
-          .select('user_id')
-          .eq('user_id', user.id)
-          .maybeSingle();
+      final admin = await Supabase.instance.client.rpc(
+        'is_ngombi_admin',
+        params: {'p_user_id': user.id},
+      );
 
-      if (admin == null) {
+      if (admin != true) {
         await Supabase.instance.client.auth.signOut();
         throw AuthException('Ce compte n’est pas autorisé à administrer NGOMBI.');
       }

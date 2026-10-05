@@ -342,7 +342,7 @@ class HomeScreen extends StatelessWidget {
           ),
 
           SliverToBoxAdapter(
-            child: NgombiHero(ads: widget.ads),
+            child: NgombiHero(ads: ads),
           ),
 
           SliverToBoxAdapter(
@@ -881,7 +881,7 @@ class _TvScreenState extends State<TvScreen> {
           ),
 
           SliverToBoxAdapter(
-            child: NgombiHero(ads: ads),
+            child: NgombiHero(ads: widget.ads),
           ),
 
           SliverToBoxAdapter(

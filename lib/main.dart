@@ -1639,6 +1639,10 @@ class NgombiSearchResult {
   final TvChannel? tvChannel;
   final MediaItem? radioChannel;
 
+  const NgombiSearchResult.empty()
+      : tvChannel = null,
+        radioChannel = null;
+
   const NgombiSearchResult.tv(
     TvChannel channel,
   )   : tvChannel = channel,
@@ -1689,7 +1693,7 @@ class NgombiSearchDelegate
     return IconButton(
       tooltip: 'Retour',
       onPressed: () {
-        close(context, const NgombiSearchResult());
+        close(context, const NgombiSearchResult.empty());
       },
       icon: const Icon(
         Icons.arrow_back_rounded,

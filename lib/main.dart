@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -1384,18 +1387,29 @@ class WebPlayerScreen extends StatefulWidget {
 }
 
 class _WebPlayerScreenState
-    extends State<WebPlayerScreen> {
+    extends State<WebPlayerScreen>
+    with WidgetsBindingObserver {
+  static const MethodChannel _nativeRadio =
+      MethodChannel('ngombi/radio');
+
   late final WebViewController controller;
 
   bool loading = true;
+  String? _directStreamUrl;
+  bool _backgroundRadioStarted = false;
+  Timer? _streamProbeTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     controller = WebViewController()
       ..setJavaScriptMode(
         JavaScriptMode.unrestricted,
+      )
+      ..setBackgroundColor(
+        Colors.black,
       )
       ..setNavigationDelegate(
         NavigationDelegate(
@@ -1412,12 +1426,159 @@ class _WebPlayerScreenState
                 loading = false;
               });
             }
+
+            // Give the site's player time to create its <audio> element.
+            Future<void>.delayed(
+              const Duration(milliseconds: 800),
+              _probeDirectStream,
+            );
+
+            _streamProbeTimer?.cancel();
+            _streamProbeTimer = Timer.periodic(
+              const Duration(seconds: 4),
+              (_) => _probeDirectStream(),
+            );
           },
         ),
       )
       ..loadRequest(
         Uri.parse(widget.url),
       );
+  }
+
+  @override
+  void didChangeAppLifecycleState(
+    AppLifecycleState state,
+  ) {
+    if (state == AppLifecycleState.paused) {
+      _handoffToBackgroundAudio();
+    } else if (state == AppLifecycleState.resumed) {
+      _returnToWebPlayer();
+    }
+  }
+
+  Future<void> _probeDirectStream() async {
+    if (!mounted || _backgroundRadioStarted) return;
+
+    try {
+      final result =
+          await controller.runJavaScriptReturningResult(
+        '''
+        (function() {
+          const media = Array.from(
+            document.querySelectorAll('audio')
+          );
+
+          const candidates = media
+            .map(function(element) {
+              const source = element.querySelector('source');
+              return element.currentSrc ||
+                  element.src ||
+                  (source ? source.src : '') ||
+                  '';
+            })
+            .filter(function(url) {
+              return url &&
+                  !url.startsWith('blob:') &&
+                  (url.startsWith('http://') ||
+                   url.startsWith('https://'));
+            });
+
+          return JSON.stringify(candidates);
+        })();
+        ''',
+      );
+
+      dynamic decoded = result;
+
+      if (decoded is String) {
+        try {
+          decoded = jsonDecode(decoded);
+        } catch (_) {}
+      }
+
+      if (decoded is String) {
+        try {
+          decoded = jsonDecode(decoded);
+        } catch (_) {}
+      }
+
+      if (decoded is List) {
+        for (final item in decoded) {
+          final value = item.toString().trim();
+
+          if (value.isEmpty) continue;
+
+          _directStreamUrl = value;
+          break;
+        }
+      }
+    } catch (_) {
+      // Direct-stream extraction is opportunistic. The web player remains
+      // the source of truth and keeps working when extraction is impossible.
+    }
+  }
+
+  Future<void> _handoffToBackgroundAudio() async {
+    if (_backgroundRadioStarted) return;
+
+    // One last synchronous probe before the app goes into the background.
+    await _probeDirectStream();
+
+    final streamUrl = _directStreamUrl;
+    if (streamUrl == null || streamUrl.isEmpty) {
+      return;
+    }
+
+    try {
+      await _nativeRadio.invokeMethod(
+        'startBackgroundRadio',
+        {
+          'url': streamUrl,
+          'title': widget.title,
+        },
+      );
+
+      _backgroundRadioStarted = true;
+    } catch (_) {
+      // Never break the web radio if native handoff is unavailable.
+    }
+  }
+
+  Future<void> _returnToWebPlayer() async {
+    if (!_backgroundRadioStarted) return;
+
+    try {
+      await _nativeRadio.invokeMethod(
+        'stopBackgroundRadio',
+      );
+    } catch (_) {}
+
+    _backgroundRadioStarted = false;
+
+    try {
+      await controller.runJavaScript(
+        '''
+        (function() {
+          document
+            .querySelectorAll('audio, video')
+            .forEach(function(media) {
+              var promise = media.play();
+              if (promise !== undefined) {
+                promise.catch(function() {});
+              }
+            });
+        })();
+        ''',
+      );
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _streamProbeTimer?.cancel();
+    super.dispose();
   }
 
   @override

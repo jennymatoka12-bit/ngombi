@@ -3,7 +3,7 @@ class NgombiSupabaseConfig {
   // La clé utilisée ici est une publishable key, jamais une secret/service_role key.
   static const url = String.fromEnvironment(
     'SUPABASE_URL',
-    defaultValue: 'https://llmpcwgfithyrdeuxoe.supabase.co',
+    defaultValue: 'https://llmpcwgfithyrdeeuxoe.supabase.co',
   );
 
   static const publishableKey = String.fromEnvironment(

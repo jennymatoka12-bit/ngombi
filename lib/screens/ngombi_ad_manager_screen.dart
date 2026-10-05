@@ -70,11 +70,19 @@ class _NgombiAdManagerScreenState extends State<NgombiAdManagerScreen> {
     if (mounted) setState(() => _ads = fresh);
   }
 
+  Future<bool> _closeManager() async {
+    if (!mounted) return true;
+    Navigator.of(context).pop(_ads);
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final active = _ads.where((ad) => ad.active).length;
     final videos = _ads.where((ad) => ad.type == NgombiAdType.video).length;
-    return Scaffold(
+    return WillPopScope(
+      onWillPop: _closeManager,
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('Gestionnaire publicitaire'),
         actions: [IconButton(tooltip: 'Réinitialiser', onPressed: _saving ? null : _reset, icon: const Icon(Icons.restore_rounded))],
@@ -123,6 +131,7 @@ class _NgombiAdManagerScreenState extends State<NgombiAdManagerScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 }

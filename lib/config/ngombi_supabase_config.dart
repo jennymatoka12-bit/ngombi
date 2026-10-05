@@ -8,7 +8,7 @@ class NgombiSupabaseConfig {
 
   static const publishableKey = String.fromEnvironment(
     'SUPABASE_PUBLISHABLE_KEY',
-    defaultValue: 'sb_publishable_PIH3XDqPfIrLlzJR66hLcQ_gLNQs',
+    defaultValue: 'sb_publishable_PIH3XDqPfIrLlzJR66hLcQ_gLNQsPbv',
   );
 
   static bool get isConfigured =>

@@ -8,6 +8,10 @@ import 'widgets/ngombi_logo.dart';
 import 'widgets/ngombi_advertising_panel.dart';
 import 'services/ngombi_ad_repository.dart';
 import 'screens/ngombi_ad_manager_screen.dart';
+import 'screens/ngombi_admin_login_screen.dart';
+import 'services/ngombi_ad_server_repository.dart';
+import 'config/ngombi_supabase_config.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'models/ngombi_ad.dart';
 
 import 'models/tv_channel.dart';
@@ -28,8 +32,19 @@ Future<void> main() async {
   }
 
   final tvChannels = parseEnigma2Bouquet(bouquetContent);
-  final adRepository = NgombiAdRepository();
-  final ads = await adRepository.loadAds();
+  if (NgombiSupabaseConfig.isConfigured) {
+    await Supabase.initialize(
+      url: NgombiSupabaseConfig.url,
+      publishableKey: NgombiSupabaseConfig.publishableKey,
+    );
+  }
+
+  final localAdRepository = NgombiAdRepository();
+  final ads = NgombiSupabaseConfig.isConfigured
+      ? await NgombiAdServerRepository().loadPublicAds(
+          fallback: await localAdRepository.loadAds(),
+        )
+      : await localAdRepository.loadAds();
 
   runApp(
     NgombiApp(
@@ -437,8 +452,15 @@ class HomeScreen extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const NgombiLogo.icon(
-            height: 42,
+          GestureDetector(
+            onLongPress: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const NgombiAdminLoginScreen(),
+                ),
+              );
+            },
+            child: const NgombiLogo.icon(height: 42),
           ),
           const SizedBox(width: 12),
           const Expanded(
@@ -463,21 +485,18 @@ class HomeScreen extends StatelessWidget {
               ],
             ),
           ),
-          IconButton(
-            tooltip: 'Gestion publicitaire',
-            onPressed: () async {
-              final updated = await Navigator.of(context).push<List<NgombiAd>>(
+          GestureDetector(
+            onLongPress: () {
+              Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => NgombiAdManagerScreen(ads: ads),
+                  builder: (_) => const NgombiAdminLoginScreen(),
                 ),
               );
-              if (updated != null) {
-                onAdsChanged(updated);
-              }
             },
-            icon: const Icon(Icons.campaign_outlined),
+            child: const NgombiLogo.icon(height: 0),
           ),
           IconButton(
+            tooltip: 'Recherche',
             onPressed: () => _openSearch(context),
             icon: const Icon(Icons.search_rounded),
           ),
@@ -610,8 +629,21 @@ class HomeScreen extends StatelessWidget {
         itemBuilder: (context, index) {
           final item = categories[index];
 
-          return Container(
-            width: 105,
+          return InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => NgombiCategoryScreen(
+                    category: item.$1,
+                    tvChannels: tvChannels,
+                    radioChannels: radioChannels,
+                  ),
+                ),
+              );
+            },
+            child: Container(
+              width: 105,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: const Color(0xFF151515),
@@ -639,6 +671,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
             ),
           );
         },
@@ -963,6 +996,65 @@ class _TvScreenState extends State<TvScreen> {
                   mainAxisSpacing: 12,
                 ),
               ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+
+// -----------------------------------------------------------------------------
+// CATÉGORIE
+// -----------------------------------------------------------------------------
+
+class NgombiCategoryScreen extends StatelessWidget {
+  final String category;
+  final List<TvChannel> tvChannels;
+  final List<MediaItem> radioChannels;
+
+  const NgombiCategoryScreen({
+    super.key,
+    required this.category,
+    required this.tvChannels,
+    required this.radioChannels,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tv = tvChannels.where((c) => c.category.toLowerCase() == category.toLowerCase()).toList();
+    final radio = radioChannels.where((r) => r.category.toLowerCase() == category.toLowerCase()).toList();
+
+    return Scaffold(
+      appBar: AppBar(title: Text(category)),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        children: [
+          if (tv.isNotEmpty) ...[
+            const Text('TV', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w800, letterSpacing: 1)),
+            const SizedBox(height: 8),
+            ...tv.map((channel) => _TvGridCard(
+              channel: channel,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => StreamPlayerScreen(channel: channel)),
+              ),
+            )),
+          ],
+          if (radio.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            const Text('RADIO', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w800, letterSpacing: 1)),
+            const SizedBox(height: 8),
+            ...radio.map((item) => _RadioListCard(
+              radio: item,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => WebPlayerScreen(title: item.name, url: item.url)),
+              ),
+            )),
+          ],
+          if (tv.isEmpty && radio.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(40),
+              child: Center(child: Text('Aucun contenu disponible dans cette catégorie.')),
             ),
         ],
       ),
@@ -1599,16 +1691,7 @@ class NgombiSearchDelegate
     return IconButton(
       tooltip: 'Retour',
       onPressed: () {
-        close(
-          context,
-          const NgombiSearchResult.radio(
-            MediaItem(
-              name: '',
-              url: '',
-              category: '',
-            ),
-          ),
-        );
+        close(context, null);
       },
       icon: const Icon(
         Icons.arrow_back_rounded,

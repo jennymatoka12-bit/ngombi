@@ -13,7 +13,7 @@ const List<NgombiAd> ngombiAds = [
     media: 'https://placehold.co/1200x500/181818/FF8A00.png?text=NGOMBI+PUBLICITE+5s',
     duration: Duration(seconds: 5),
     clickUrl: 'https://www.rfi.fr/fr/',
-    priority: 10,
+    priority: 40,
   ),
   NgombiAd(
     id: 'demo-image-15',
@@ -22,7 +22,7 @@ const List<NgombiAd> ngombiAds = [
     media: 'https://placehold.co/1200x500/241010/FFB52E.png?text=NGOMBI+PUBLICITE+15s',
     duration: Duration(seconds: 15),
     clickUrl: 'https://www.africaradio.com/',
-    priority: 20,
+    priority: 30,
   ),
   NgombiAd(
     id: 'demo-video-20',
@@ -32,7 +32,7 @@ const List<NgombiAd> ngombiAds = [
         'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
     duration: Duration(seconds: 20),
     clickUrl: 'https://www.bbc.com/afrique',
-    priority: 30,
+    priority: 20,
   ),
   NgombiAd(
     id: 'demo-image-30',
@@ -41,6 +41,6 @@ const List<NgombiAd> ngombiAds = [
     media: 'https://placehold.co/1200x500/111111/FFFFFF.png?text=ESPACE+ANNONCEUR+NGOMBI+30s',
     duration: Duration(seconds: 30),
     clickUrl: 'https://tvradiozap.eu/',
-    priority: 40,
+    priority: 10,
   ),
 ];

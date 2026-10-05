@@ -7,7 +7,6 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'widgets/ngombi_logo.dart';
 import 'widgets/ngombi_advertising_panel.dart';
 import 'services/ngombi_ad_repository.dart';
-import 'screens/ngombi_ad_manager_screen.dart';
 import 'screens/ngombi_admin_login_screen.dart';
 import 'services/ngombi_ad_server_repository.dart';
 import 'config/ngombi_supabase_config.dart';

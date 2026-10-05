@@ -1689,7 +1689,7 @@ class NgombiSearchDelegate
     return IconButton(
       tooltip: 'Retour',
       onPressed: () {
-        close(context, null);
+        close(context, const NgombiSearchResult());
       },
       icon: const Icon(
         Icons.arrow_back_rounded,

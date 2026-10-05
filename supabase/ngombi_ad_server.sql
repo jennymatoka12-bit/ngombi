@@ -23,7 +23,7 @@ create table if not exists public.ngombi_ad_campaigns (
   updated_at timestamptz not null default now()
 );
 
-alter table public.ngombi_admin_users enable row level security;
+-- Vérification sécurisée du rôle administrateur.\ncreate or replace function public.is_ngombi_admin(p_user_id uuid)\nreturns boolean\nlanguage sql\nsecurity definer\nset search_path = public, auth\nas $\n  select exists (select 1 from public.ngombi_admin_users where user_id = p_user_id);\n$;\n\ngrant execute on function public.is_ngombi_admin(uuid) to authenticated;\n\nalter table public.ngombi_admin_users enable row level security;
 alter table public.ngombi_ad_campaigns enable row level security;
 
 revoke all on public.ngombi_admin_users from anon, authenticated;

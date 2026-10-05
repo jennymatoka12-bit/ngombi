@@ -7,6 +7,8 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'widgets/ngombi_logo.dart';
 import 'data/ngombi_ads.dart';
 import 'widgets/ngombi_advertising_panel.dart';
+import 'services/ngombi_ad_repository.dart';
+import 'screens/ngombi_ad_manager_screen.dart';
 
 import 'models/tv_channel.dart';
 import 'screens/stream_player_screen.dart';
@@ -26,10 +28,13 @@ Future<void> main() async {
   }
 
   final tvChannels = parseEnigma2Bouquet(bouquetContent);
+  final adRepository = NgombiAdRepository();
+  final ads = await adRepository.loadAds();
 
   runApp(
     NgombiApp(
       tvChannels: tvChannels,
+      ads: ads,
     ),
   );
 }
@@ -136,10 +141,12 @@ const List<MediaItem> radioChannels = [
 
 class NgombiApp extends StatelessWidget {
   final List<TvChannel> tvChannels;
+  final List<NgombiAd> ads;
 
   const NgombiApp({
     super.key,
     required this.tvChannels,
+    required this.ads,
   });
 
   @override
@@ -188,6 +195,7 @@ class NgombiApp extends StatelessWidget {
       ),
       home: MainTabScreen(
         tvChannels: tvChannels,
+        ads: ads,
       ),
     );
   }
@@ -199,10 +207,12 @@ class NgombiApp extends StatelessWidget {
 
 class MainTabScreen extends StatefulWidget {
   final List<TvChannel> tvChannels;
+  final List<NgombiAd> ads;
 
   const MainTabScreen({
     super.key,
     required this.tvChannels,
+    required this.ads,
   });
 
   @override
@@ -218,6 +228,7 @@ class _MainTabScreenState extends State<MainTabScreen> {
       HomeScreen(
         tvChannels: widget.tvChannels,
         radioChannels: radioChannels,
+        ads: ads,
         onOpenTv: () {
           setState(() {
             currentIndex = 1;
@@ -274,14 +285,17 @@ class _MainTabScreenState extends State<MainTabScreen> {
 // -----------------------------------------------------------------------------
 
 class NgombiHero extends StatelessWidget {
+  final List<NgombiAd> ads;
+
   const NgombiHero({
     super.key,
+    required this.ads,
   });
 
   @override
   Widget build(BuildContext context) {
     return const NgombiAdvertisingPanel(
-      ads: ngombiAds,
+      ads: ads,
       height: 190,
     );
   }
@@ -294,6 +308,7 @@ class NgombiHero extends StatelessWidget {
 class HomeScreen extends StatelessWidget {
   final List<TvChannel> tvChannels;
   final List<MediaItem> radioChannels;
+  final List<NgombiAd> ads;
   final VoidCallback onOpenTv;
   final VoidCallback onOpenRadio;
 
@@ -301,6 +316,7 @@ class HomeScreen extends StatelessWidget {
     super.key,
     required this.tvChannels,
     required this.radioChannels,
+    required this.ads,
     required this.onOpenTv,
     required this.onOpenRadio,
   });
@@ -437,10 +453,23 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           IconButton(
+            tooltip: 'Gestion publicitaire',
+            onPressed: () async {
+              final updated = await Navigator.of(context).push<List<NgombiAd>>(
+                MaterialPageRoute(
+                  builder: (_) => NgombiAdManagerScreen(ads: ads),
+                ),
+              );
+              if (updated != null) {
+                // La persistance est déjà assurée par le gestionnaire.
+                // Le catalogue affiché dans cette version reste celui chargé au démarrage.
+              }
+            },
+            icon: const Icon(Icons.campaign_outlined),
+          ),
+          IconButton(
             onPressed: () => _openSearch(context),
-            icon: const Icon(
-              Icons.search_rounded,
-            ),
+            icon: const Icon(Icons.search_rounded),
           ),
         ],
       ),

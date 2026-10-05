@@ -73,7 +73,6 @@ class ChannelLogo extends StatelessWidget {
       'gabon 24': 'assets/logos/gabon24.png',
       'crtv': 'assets/logos/crtv.png',
       'nci': 'assets/logos/nci.png',
-      '2stv': 'assets/logos/2stv.png',
       'cannes lerins tv': 'assets/logos/cannes l�rins tv.png',
     };
 

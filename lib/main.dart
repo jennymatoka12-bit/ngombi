@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'widgets/ngombi_logo.dart';
+import 'data/ngombi_ads.dart';
+import 'widgets/ngombi_advertising_panel.dart';
 
 import 'models/tv_channel.dart';
 import 'screens/stream_player_screen.dart';
@@ -278,114 +280,10 @@ class NgombiHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+    return const NgombiAdvertisingPanel(
+      ads: ngombiAds,
       height: 190,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF241010),
-            Color(0xFF111111),
-          ],
-        ),
-        border: Border.all(
-          color: const Color(0x33FF7043),
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -25,
-            top: -15,
-            child: CustomPaint(
-              size: const Size(210, 210),
-              painter: NgombiWavePainter(),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const NgombiLogo.full(
-                  height: 42,
-                ),
-                const SizedBox(height: 18),
-                const Text(
-                  'Le monde en direct',
-                  style: TextStyle(
-                    fontSize: 25,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 7),
-                Text(
-                  'TV & Radio, où que vous soyez.',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade400,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
-  }
-}
-
-class NgombiWavePainter extends CustomPainter {
-  @override
-  void paint(
-    Canvas canvas,
-    Size size,
-  ) {
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..color = const Color(0x66FF7043);
-
-    for (int i = 0; i < 7; i++) {
-      final path = Path();
-      final y = 35.0 + (i * 22);
-
-      path.moveTo(10, y);
-
-      path.cubicTo(
-        size.width * 0.25,
-        y - 25,
-        size.width * 0.35,
-        y + 25,
-        size.width * 0.55,
-        y,
-      );
-
-      path.cubicTo(
-        size.width * 0.72,
-        y - 22,
-        size.width * 0.82,
-        y + 22,
-        size.width,
-        y,
-      );
-
-      canvas.drawPath(
-        path,
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(
-    covariant CustomPainter oldDelegate,
-  ) {
-    return false;
   }
 }
 

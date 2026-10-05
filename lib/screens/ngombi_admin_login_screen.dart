@@ -32,26 +32,34 @@ class _NgombiAdminLoginScreenState extends State<NgombiAdminLoginScreen> {
     }
 
     setState(() => _loading = true);
+
     try {
-      final response = await Supabase.instance.client.auth.signInWithPassword(
+      final client = Supabase.instance.client;
+
+      final response = await client.auth.signInWithPassword(
         email: _email.text.trim(),
         password: _password.text,
       );
-      final user = response.user;
-      if (user == null) throw const AuthException('Connexion refusée.');
 
-      final admin = await Supabase.instance.client.rpc(
+      final user = response.user;
+      if (user == null) {
+        throw const AuthException('Connexion refusée.');
+      }
+
+      final adminResult = await client.rpc(
         'is_ngombi_admin',
         params: {'p_user_id': user.id},
       );
 
-      if (admin != true) {
-        await Supabase.instance.client.auth.signOut();
-        throw const AuthException('Ce compte n’est pas autorisé à administrer NGOMBI.');
+      if (adminResult != true) {
+        await client.auth.signOut();
+        throw const AuthException(
+          'Ce compte n’est pas autorisé à administrer NGOMBI.',
+        );
       }
 
-      if (!mounted) return;
       final ads = await NgombiAdServerRepository().loadAdminAds();
+
       if (!mounted) return;
 
       await Navigator.of(context).push(
@@ -64,16 +72,25 @@ class _NgombiAdminLoginScreenState extends State<NgombiAdminLoginScreen> {
       );
     } on AuthException catch (e) {
       _message(e.message);
-    } catch (_) {
-      _message('Impossible de contacter le serveur publicitaire.');
+    } on PostgrestException catch (e) {
+      _message('Erreur serveur NGOMBI : ${e.message}');
+    } catch (e) {
+      _message('Erreur de connexion NGOMBI : $e');
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
   void _message(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 6),
+      ),
+    );
   }
 
   @override
@@ -90,9 +107,19 @@ class _NgombiAdminLoginScreenState extends State<NgombiAdminLoginScreen> {
                 padding: const EdgeInsets.all(22),
                 child: Column(
                   children: [
-                    const Icon(Icons.admin_panel_settings_rounded, size: 64, color: Color(0xFFFFA21A)),
+                    const Icon(
+                      Icons.admin_panel_settings_rounded,
+                      size: 64,
+                      color: Color(0xFFFFA21A),
+                    ),
                     const SizedBox(height: 14),
-                    const Text('Gestion publicitaire', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+                    const Text(
+                      'Gestion publicitaire',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     const Text(
                       'Accès réservé à l’administrateur NGOMBI.',
@@ -103,7 +130,10 @@ class _NgombiAdminLoginScreenState extends State<NgombiAdminLoginScreen> {
                     TextField(
                       controller: _email,
                       keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(labelText: 'Email administrateur', prefixIcon: Icon(Icons.email_outlined)),
+                      decoration: const InputDecoration(
+                        labelText: 'Email administrateur',
+                        prefixIcon: Icon(Icons.email_outlined),
+                      ),
                     ),
                     const SizedBox(height: 12),
                     TextField(
@@ -113,8 +143,13 @@ class _NgombiAdminLoginScreenState extends State<NgombiAdminLoginScreen> {
                         labelText: 'Mot de passe',
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
-                          onPressed: () => setState(() => _obscure = !_obscure),
-                          icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
+                          onPressed: () =>
+                              setState(() => _obscure = !_obscure),
+                          icon: Icon(
+                            _obscure
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                          ),
                         ),
                       ),
                     ),
@@ -124,9 +159,17 @@ class _NgombiAdminLoginScreenState extends State<NgombiAdminLoginScreen> {
                       child: FilledButton.icon(
                         onPressed: _loading ? null : _login,
                         icon: _loading
-                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
                             : const Icon(Icons.login_rounded),
-                        label: Text(_loading ? 'Connexion…' : 'Se connecter'),
+                        label: Text(
+                          _loading ? 'Connexion…' : 'Se connecter',
+                        ),
                       ),
                     ),
                   ],

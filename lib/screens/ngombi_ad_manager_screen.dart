@@ -5,7 +5,13 @@ import '../services/ngombi_ad_repository.dart';
 
 class NgombiAdManagerScreen extends StatefulWidget {
   final List<NgombiAd> ads;
-  const NgombiAdManagerScreen({super.key, required this.ads});
+  final Future<void> Function(List<NgombiAd>)? remoteSave;
+
+  const NgombiAdManagerScreen({
+    super.key,
+    required this.ads,
+    this.remoteSave,
+  });
   @override
   State<NgombiAdManagerScreen> createState() => _NgombiAdManagerScreenState();
 }
@@ -21,6 +27,9 @@ class _NgombiAdManagerScreenState extends State<NgombiAdManagerScreen> {
   Future<void> _persist() async {
     setState(() => _saving = true);
     await _repository.saveAds(_ads);
+    if (widget.remoteSave != null) {
+      await widget.remoteSave!(_ads);
+    }
     if (mounted) setState(() => _saving = false);
   }
 
@@ -67,6 +76,9 @@ class _NgombiAdManagerScreenState extends State<NgombiAdManagerScreen> {
     if (confirmed != true || !mounted) return;
     await _repository.resetToDemo();
     final fresh = await _repository.loadAds();
+    if (widget.remoteSave != null) {
+      await widget.remoteSave!(fresh);
+    }
     if (mounted) setState(() => _ads = fresh);
   }
 
@@ -119,7 +131,7 @@ class _NgombiAdManagerScreenState extends State<NgombiAdManagerScreen> {
                   const Icon(Icons.info_outline_rounded, color: Colors.orange),
                   const SizedBox(width: 12),
                   Expanded(child: Text(
-                    'V1 : les campagnes sont persistées sur cet appareil. La prochaine étape sera de connecter ce catalogue à un serveur NGOMBI pour administrer les campagnes à distance et centraliser les statistiques.',
+                    'V2 : les campagnes sont synchronisées avec le serveur NGOMBI lorsque l’administration distante est configurée. La copie locale reste disponible comme secours.',
                     style: TextStyle(color: Colors.grey.shade400, height: 1.4),
                   )),
                 ],

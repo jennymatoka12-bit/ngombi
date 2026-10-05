@@ -272,7 +272,59 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
     );
   }
 
-  Widget _fallback() {\n    return Stack(\n      fit: StackFit.expand,\n      children: [\n        Container(\n          decoration: const BoxDecoration(\n            gradient: LinearGradient(\n              begin: Alignment.topLeft,\n              end: Alignment.bottomRight,\n              colors: [Color(0xFF241010), Color(0xFF111111)],\n            ),\n          ),\n        ),\n        Positioned(\n          left: 6,\n          bottom: 20,\n          child: Transform.flip(\n            flipX: true,\n            child: CustomPaint(\n              size: const Size(105, 78),\n              painter: _NgombiWavePainter(),\n            ),\n          ),\n        ),\n        Positioned(\n          right: 6,\n          bottom: 20,\n          child: CustomPaint(\n            size: const Size(105, 78),\n            painter: _NgombiWavePainter(),\n          ),\n        ),\n        const Center(child: NgombiLogo.full(height: 42)),\n        const Positioned(\n          bottom: 10,\n          left: 0,\n          right: 0,\n          child: Text(\n            'Le monde en direct • TV & Radio',\n            textAlign: TextAlign.center,\n            style: TextStyle(\n              color: Colors.white70,\n              fontSize: 13,\n              fontWeight: FontWeight.w600,\n            ),\n          ),\n        ),\n      ],\n    );\n  }\n}\n\nclass _AdBadge extends StatelessWidget {
+  Widget _fallback() {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF241010), Color(0xFF111111)],
+            ),
+          ),
+        ),
+        Positioned(
+          left: 6,
+          bottom: 20,
+          child: Transform.flip(
+            flipX: true,
+            child: CustomPaint(
+              size: const Size(105, 78),
+              painter: _NgombiWavePainter(),
+            ),
+          ),
+        ),
+        Positioned(
+          right: 6,
+          bottom: 20,
+          child: CustomPaint(
+            size: const Size(105, 78),
+            painter: _NgombiWavePainter(),
+          ),
+        ),
+        const Center(child: NgombiLogo.full(height: 42)),
+        const Positioned(
+          bottom: 10,
+          left: 0,
+          right: 0,
+          child: Text(
+            'Le monde en direct • TV & Radio',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AdBadge extends StatelessWidget {
   const _AdBadge();
 
   @override

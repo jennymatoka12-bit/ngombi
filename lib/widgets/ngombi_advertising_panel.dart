@@ -30,7 +30,7 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
   int _mediaGeneration = 0;
 
   List<NgombiAd> get _activeAds {
-    final items = widget.ads.where((ad) => ad.active).toList();
+    final items = widget.ads.where((ad) => ad.isScheduledActive).toList();
     items.sort((a, b) => b.priority.compareTo(a.priority));
     return items;
   }

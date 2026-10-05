@@ -886,8 +886,8 @@ class _TvScreenState extends State<TvScreen> {
             ),
           ),
 
-          const SliverToBoxAdapter(
-            child: NgombiHero(),
+          SliverToBoxAdapter(
+            child: NgombiHero(ads: ads),
           ),
 
           SliverToBoxAdapter(

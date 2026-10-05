@@ -101,3 +101,5 @@ using (
 -- remplace USER_UUID_HERE par son UUID puis exécute:
 -- insert into public.ngombi_admin_users(user_id) values ('USER_UUID_HERE')
 -- on conflict do nothing;
+
+-- V2 validation build trigger

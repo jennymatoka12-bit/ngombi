@@ -228,6 +228,13 @@ class _MainTabScreenState extends State<MainTabScreen> {
     super.initState();
     _ads = List<NgombiAd>.from(widget.ads);
   }
+  late List<NgombiAd> _ads;
+
+  @override
+  void initState() {
+    super.initState();
+    _ads = List<NgombiAd>.from(widget.ads);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -249,6 +256,7 @@ class _MainTabScreenState extends State<MainTabScreen> {
       ),
       TvScreen(
         tvChannels: widget.tvChannels,
+        ads: _ads,
       ),
       const RadioScreen(),
     ];
@@ -316,6 +324,7 @@ class HomeScreen extends StatelessWidget {
   final List<TvChannel> tvChannels;
   final List<MediaItem> radioChannels;
   final List<NgombiAd> ads;
+  final ValueChanged<List<NgombiAd>> onAdsChanged;
   final VoidCallback onOpenTv;
   final VoidCallback onOpenRadio;
 
@@ -324,6 +333,7 @@ class HomeScreen extends StatelessWidget {
     required this.tvChannels,
     required this.radioChannels,
     required this.ads,
+    required this.onAdsChanged,
     required this.onOpenTv,
     required this.onOpenRadio,
   });

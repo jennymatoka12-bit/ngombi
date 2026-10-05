@@ -70,18 +70,15 @@ class _NgombiAdManagerScreenState extends State<NgombiAdManagerScreen> {
     if (mounted) setState(() => _ads = fresh);
   }
 
-  Future<bool> _closeManager() async {
-    if (!mounted) return true;
-    Navigator.of(context).pop(_ads);
-    return false;
-  }
-
   @override
   Widget build(BuildContext context) {
     final active = _ads.where((ad) => ad.active).length;
     final videos = _ads.where((ad) => ad.type == NgombiAdType.video).length;
-    return WillPopScope(
-      onWillPop: _closeManager,
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop && mounted) Navigator.of(context).pop(_ads);
+      },
       child: Scaffold(
       appBar: AppBar(
         title: const Text('Gestionnaire publicitaire'),

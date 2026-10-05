@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'widgets/ngombi_logo.dart';
-import 'data/ngombi_ads.dart';
 import 'widgets/ngombi_advertising_panel.dart';
 import 'services/ngombi_ad_repository.dart';
 import 'screens/ngombi_ad_manager_screen.dart';
@@ -221,6 +220,13 @@ class MainTabScreen extends StatefulWidget {
 
 class _MainTabScreenState extends State<MainTabScreen> {
   int currentIndex = 0;
+  late List<NgombiAd> _ads;
+
+  @override
+  void initState() {
+    super.initState();
+    _ads = List<NgombiAd>.from(widget.ads);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -228,7 +234,7 @@ class _MainTabScreenState extends State<MainTabScreen> {
       HomeScreen(
         tvChannels: widget.tvChannels,
         radioChannels: radioChannels,
-        ads: ads,
+        ads: _ads,
         onOpenTv: () {
           setState(() {
             currentIndex = 1;
@@ -461,8 +467,7 @@ class HomeScreen extends StatelessWidget {
                 ),
               );
               if (updated != null) {
-                // La persistance est déjà assurée par le gestionnaire.
-                // Le catalogue affiché dans cette version reste celui chargé au démarrage.
+                setState(() => _ads = updated);
               }
             },
             icon: const Icon(Icons.campaign_outlined),

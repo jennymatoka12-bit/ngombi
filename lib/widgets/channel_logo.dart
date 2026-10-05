@@ -49,7 +49,7 @@ class ChannelLogo extends StatelessWidget {
   String? _logoPath(String name) {
     final n = _normalize(name);
 
-    // Logos nommés explicitement dans assets/logos/.
+    // Logos historiques déjà nommés dans assets/logos/.
     const exact = <String, String>{
       'tf1': 'assets/logos/tf1.png',
       'm6': 'assets/logos/m6.png',
@@ -80,11 +80,66 @@ class ChannelLogo extends StatelessWidget {
     final direct = exact[n];
     if (direct != null) return direct;
 
+    // Nouveaux logos fournis dans le dépôt. Les noms de fichiers numériques
+    // sont volontairement associés ici aux noms réels du bouquet : cela
+    // évite toute dépendance à une convention de nommage des fichiers.
+    const uploaded = <String, String>{
+      '6ter': 'assets/logos/1000400966.jpg',
+      '2stv': 'assets/logos/1000400964.png',
+      '7a limoges': 'assets/logos/1000400968.png',
+      'africanews english': 'assets/logos/1000400973.png',
+      'africanews francais': 'assets/logos/1000400973.png',
+      'africanews français': 'assets/logos/1000400973.png',
+      'alpe d huez': 'assets/logos/1000400974.png',
+      'angers tele': 'assets/logos/1000400975.png',
+      'angers télé': 'assets/logos/1000400975.png',
+      'astv': 'assets/logos/1000400978.jpg',
+      'bfm business': 'assets/logos/1000400979.jpg',
+      'bfm grands reportages': 'assets/logos/1000400981.jpg',
+      'brefcinema': 'assets/logos/1000400985.jpg',
+      'bref cinéma': 'assets/logos/1000400985.jpg',
+      'brionnais tv': 'assets/logos/1000400986.jpg',
+      'canal 2 international': 'assets/logos/1000400988.jpg',
+      'le monde en 24 h': 'assets/logos/1000401001.jpg',
+      'mgg esport': 'assets/logos/1000401005.png',
+      'noovo cinema': 'assets/logos/1000401008.jpg',
+      'noovo cinéma': 'assets/logos/1000401008.jpg',
+      'rakuten tv comedies': 'assets/logos/1000401009.jpg',
+      'rakuten tv comédies': 'assets/logos/1000401009.jpg',
+      'rakuten tv thrillers': 'assets/logos/1000401010.jpg',
+      'rakuten tv top films': 'assets/logos/1000401013.jpg',
+      'rakuten tv action': 'assets/logos/1000401015.jpg',
+      'red bull': 'assets/logos/1000401016.jpg',
+      'rmc decouverte': 'assets/logos/1000401017.jpg',
+      'rmc découverte': 'assets/logos/1000401017.jpg',
+      'rmc life': 'assets/logos/1000401018.png',
+      'rmc mecanic': 'assets/logos/1000401019.jpg',
+      'rmc mecànic': 'assets/logos/1000401019.jpg',
+      'rmc mystere': 'assets/logos/1000401020.jpg',
+      'rmc mystère': 'assets/logos/1000401020.jpg',
+      'rmc story': 'assets/logos/1000401021.jpg',
+      'rmc talk info': 'assets/logos/1000401022.png',
+      'rmc talk info sport': 'assets/logos/1000401022.png',
+      'rmc wow': 'assets/logos/1000401023.jpg',
+      'tech co': 'assets/logos/1000401025.jpg',
+      'tech&co': 'assets/logos/1000401025.jpg',
+      'tf1 series films': 'assets/logos/1000401026.jpg',
+      'tf1 séries films': 'assets/logos/1000401026.jpg',
+      'tmc': 'assets/logos/1000401030.jpg',
+      'tv5monde europe': 'assets/logos/1000401031.png',
+      'tv5monde fbs': 'assets/logos/1000401031.png',
+      'w9': 'assets/logos/1000401032.jpg',
+    };
+
+    final uploadedLogo = uploaded[n];
+    if (uploadedLogo != null) return uploadedLogo;
+
     // Logos spécialisés : on réutilise le logo de la marque lorsque le
-    // bouquet contient une déclinaison pour laquelle aucun fichier dédié
-    // n'existe encore.
-    if (n == 'tf1 series films') return exact['tf1'];
-    if (n.startsWith('bfm ')) return exact['bfm tv'];
+    // bouquet contient une déclinaison sans fichier dédié.
+    if (n == 'tf1 series films') return 'assets/logos/1000401026.jpg';
+    if (n.startsWith('bfm ') && n != 'bfm business' && n != 'bfm grands reportages') {
+      return exact['bfm tv'];
+    }
     if (n.startsWith('france 24')) return exact['france 24'];
     if (n.startsWith('africa 24')) return exact['africa 24'];
     if (n.startsWith('gabon 1ere')) return exact['gabon 1ere'];
@@ -132,6 +187,9 @@ class ChannelLogo extends StatelessWidget {
         .replaceAll('ù', 'u')
         .replaceAll('û', 'u')
         .replaceAll('ç', 'c')
-        .replaceAll(RegExp(r'\s+'), ' ');
+        .replaceAll('&', ' ')
+        .replaceAll(RegExp(r'[^a-z0-9]+'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
   }
 }

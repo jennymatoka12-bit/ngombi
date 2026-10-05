@@ -228,13 +228,6 @@ class _MainTabScreenState extends State<MainTabScreen> {
     super.initState();
     _ads = List<NgombiAd>.from(widget.ads);
   }
-  late List<NgombiAd> _ads;
-
-  @override
-  void initState() {
-    super.initState();
-    _ads = List<NgombiAd>.from(widget.ads);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -243,6 +236,7 @@ class _MainTabScreenState extends State<MainTabScreen> {
         tvChannels: widget.tvChannels,
         radioChannels: radioChannels,
         ads: _ads,
+        onAdsChanged: (updated) => setState(() => _ads = updated),
         onOpenTv: () {
           setState(() {
             currentIndex = 1;
@@ -309,7 +303,7 @@ class NgombiHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const NgombiAdvertisingPanel(
+    return NgombiAdvertisingPanel(
       ads: ads,
       height: 190,
     );

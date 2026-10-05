@@ -8,6 +8,7 @@ import 'widgets/ngombi_logo.dart';
 import 'widgets/ngombi_advertising_panel.dart';
 import 'services/ngombi_ad_repository.dart';
 import 'screens/ngombi_ad_manager_screen.dart';
+import 'models/ngombi_ad.dart';
 
 import 'models/tv_channel.dart';
 import 'screens/stream_player_screen.dart';

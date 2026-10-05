@@ -478,7 +478,7 @@ class HomeScreen extends StatelessWidget {
                 ),
               );
               if (updated != null) {
-                setState(() => _ads = updated);
+                onAdsChanged(updated);
               }
             },
             icon: const Icon(Icons.campaign_outlined),

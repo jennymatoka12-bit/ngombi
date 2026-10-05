@@ -485,16 +485,6 @@ class HomeScreen extends StatelessWidget {
               ],
             ),
           ),
-          GestureDetector(
-            onLongPress: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const NgombiAdminLoginScreen(),
-                ),
-              );
-            },
-            child: const NgombiLogo.icon(height: 0),
-          ),
           IconButton(
             tooltip: 'Recherche',
             onPressed: () => _openSearch(context),
@@ -1033,10 +1023,18 @@ class NgombiCategoryScreen extends StatelessWidget {
           if (tv.isNotEmpty) ...[
             const Text('TV', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w800, letterSpacing: 1)),
             const SizedBox(height: 8),
-            ...tv.map((channel) => _TvGridCard(
-              channel: channel,
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => StreamPlayerScreen(channel: channel)),
+            ...tv.map((channel) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: SizedBox(
+                height: 205,
+                child: _TvGridCard(
+                  channel: channel,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => StreamPlayerScreen(channel: channel),
+                    ),
+                  ),
+                ),
               ),
             )),
           ],

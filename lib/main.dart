@@ -347,8 +347,8 @@ class HomeScreen extends StatelessWidget {
             child: _buildHeader(context),
           ),
 
-          const SliverToBoxAdapter(
-            child: NgombiHero(),
+          SliverToBoxAdapter(
+            child: NgombiHero(ads: widget.ads),
           ),
 
           SliverToBoxAdapter(
@@ -842,10 +842,12 @@ class _RadioHomeCard extends StatelessWidget {
 
 class TvScreen extends StatefulWidget {
   final List<TvChannel> tvChannels;
+  final List<NgombiAd> ads;
 
   const TvScreen({
     super.key,
     required this.tvChannels,
+    required this.ads,
   });
 
   @override

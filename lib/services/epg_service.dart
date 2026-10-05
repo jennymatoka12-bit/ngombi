@@ -81,7 +81,7 @@ class EpgService {
       text = text.replaceAll(from, to);
     });
 
-    return text.replaceAll(RegExp(r'\\s+'), ' ');
+    return text.replaceAll(RegExp(r'\s+'), ' ');
   }
 
   static String? _channelId(String name) {
@@ -118,7 +118,7 @@ class EpgService {
 
   static DateTime? _parseXmltvDate(String value) {
     final match = RegExp(
-      r'^(\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(?:\\s*([+-])(\\d{2})(\\d{2}))?',
+      r'^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:\s*([+-])(\d{2})(\d{2}))?',
     ).firstMatch(value.trim());
 
     if (match == null) return null;

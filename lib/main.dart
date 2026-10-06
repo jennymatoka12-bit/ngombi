@@ -117,15 +117,30 @@ class NgombiSplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
         backgroundColor: Colors.black,
-        body: SizedBox.expand(
-          child: Image(
-            image: AssetImage('assets/ngombi_splash.png'),
-            fit: BoxFit.cover,
-          ),
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            // The artwork is square. Keep it large and clearly visible,
+            // but deliberately leave generous black margins around it.
+            final size = (constraints.maxWidth < constraints.maxHeight
+                    ? constraints.maxWidth
+                    : constraints.maxHeight) *
+                0.70;
+
+            return Center(
+              child: SizedBox(
+                width: size,
+                height: size,
+                child: Image.asset(
+                  'assets/ngombi_splash.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
+            );
+          },
         ),
       ),
     );

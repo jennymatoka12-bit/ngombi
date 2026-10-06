@@ -796,6 +796,65 @@ jobs:
           cat android/app/src/main/res/drawable/launch_background.xml
 
       # --------------------------------------------------
+      # Native Android launch screen: black background
+      # Android 12+ enforces the system splash format; the
+      # Flutter first frame below immediately shows the full
+      # NGOMBI artwork edge-to-edge.
+      # --------------------------------------------------
+
+      - name: Configure native NGOMBI launch screen
+        shell: bash
+        run: |
+          set -e
+
+          mkdir -p android/app/src/main/res/values-v31
+          mkdir -p android/app/src/main/res/values
+
+          cat > android/app/src/main/res/values/styles.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+                  <item name="android:fontFamily">sans</item>
+                  <item name="android:windowFullscreen">true</item>
+                  <item name="android:windowNoTitle">true</item>
+                  <item name="android:windowActionModeOverlay">true</item>
+                  <item name="android:windowBackground">@android:color/black</item>
+              </style>
+
+              <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
+                  <item name="android:fontFamily">sans</item>
+                  <item name="android:windowFullscreen">true</item>
+                  <item name="android:windowNoTitle">true</item>
+                  <item name="android:windowActionModeOverlay">true</item>
+                  <item name="android:windowBackground">@android:color/black</item>
+              </style>
+          </resources>
+          EOF
+
+          cat > android/app/src/main/res/values-v31/styles.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="LaunchTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+                  <item name="android:windowSplashScreenBackground">@android:color/black</item>
+                  <item name="android:windowSplashScreenAnimatedIcon">@mipmap/launcher_icon</item>
+                  <item name="android:windowSplashScreenIconBackgroundColor">@android:color/black</item>
+                  <item name="android:windowFullscreen">true</item>
+                  <item name="android:windowNoTitle">true</item>
+                  <item name="android:windowActionModeOverlay">true</item>
+                  <item name="android:windowBackground">@android:color/black</item>
+              </style>
+
+              <style name="NormalTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+                  <item name="android:windowFullscreen">true</item>
+                  <item name="android:windowNoTitle">true</item>
+                  <item name="android:windowBackground">@android:color/black</item>
+              </style>
+          </resources>
+          EOF
+
+          echo "Native NGOMBI launch screen configured."
+
+      # --------------------------------------------------
       # Android Gradle Plugin / Gradle
       # --------------------------------------------------
 

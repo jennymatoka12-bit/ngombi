@@ -23,6 +23,23 @@ public class MainActivity extends FlutterActivity {
                 CHANNEL
         ).setMethodCallHandler((call, result) -> {
 
+            if ("setKeepScreenOn".equals(call.method)) {
+                Boolean enabled = call.argument("enabled");
+
+                if (Boolean.TRUE.equals(enabled)) {
+                    getWindow().addFlags(
+                            android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+                    );
+                } else {
+                    getWindow().clearFlags(
+                            android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+                    );
+                }
+
+                result.success(true);
+                return;
+            }
+
             if ("playDash".equals(call.method)) {
 
                 String url = call.argument("url");

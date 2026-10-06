@@ -97,6 +97,8 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen> {
   void initState() {
     super.initState();
 
+    _setKeepScreenOn(true);
+
     if (_isOfficialWebPlayer) {
       _initializeOfficialWebPlayer();
       return;
@@ -407,9 +409,19 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen> {
     return '$minutes:${seconds.toString().padLeft(2, '0')}';
   }
 
+  Future<void> _setKeepScreenOn(bool enabled) async {
+    try {
+      await _nativePlayer.invokeMethod(
+        'setKeepScreenOn',
+        {'enabled': enabled},
+      );
+    } catch (_) {}
+  }
+
   @override
   void dispose() {
     _hideControlsTimer?.cancel();
+    unawaited(_setKeepScreenOn(false));
     _controller?.removeListener(_onPlayerChanged);
     _controller?.dispose();
     unawaited(_restoreOrientation());

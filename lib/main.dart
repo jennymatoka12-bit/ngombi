@@ -31,10 +31,12 @@ class NgombiBootstrap extends StatefulWidget {
 
 class _NgombiBootstrapState extends State<NgombiBootstrap> {
   late final Future<_NgombiStartupData> _startup;
+  bool _systemUiRestored = false;
 
   @override
   void initState() {
     super.initState();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _startup = _initializeNgombi();
   }
 
@@ -52,6 +54,11 @@ class _NgombiBootstrapState extends State<NgombiBootstrap> {
         }
 
         final data = snapshot.data!;
+
+        if (!_systemUiRestored) {
+          _systemUiRestored = true;
+          SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+        }
 
         return NgombiApp(
           tvChannels: data.tvChannels,

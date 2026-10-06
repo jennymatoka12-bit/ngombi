@@ -19,7 +19,60 @@ import 'widgets/channel_logo.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  runApp(const NgombiBootstrap());
+}
 
+class NgombiBootstrap extends StatefulWidget {
+  const NgombiBootstrap({super.key});
+
+  @override
+  State<NgombiBootstrap> createState() => _NgombiBootstrapState();
+}
+
+class _NgombiBootstrapState extends State<NgombiBootstrap> {
+  late final Future<_NgombiStartupData> _startup;
+
+  @override
+  void initState() {
+    super.initState();
+    _startup = _initializeNgombi();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<_NgombiStartupData>(
+      future: _startup,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const NgombiSplashScreen();
+        }
+
+        if (snapshot.hasError || !snapshot.hasData) {
+          return const NgombiSplashScreen();
+        }
+
+        final data = snapshot.data!;
+
+        return NgombiApp(
+          tvChannels: data.tvChannels,
+          ads: data.ads,
+        );
+      },
+    );
+  }
+}
+
+class _NgombiStartupData {
+  final List<TvChannel> tvChannels;
+  final List<NgombiAd> ads;
+
+  const _NgombiStartupData({
+    required this.tvChannels,
+    required this.ads,
+  });
+}
+
+Future<_NgombiStartupData> _initializeNgombi() async {
   String bouquetContent = '';
 
   try {
@@ -31,6 +84,7 @@ Future<void> main() async {
   }
 
   final tvChannels = parseEnigma2Bouquet(bouquetContent);
+
   if (NgombiSupabaseConfig.isConfigured) {
     await Supabase.initialize(
       url: NgombiSupabaseConfig.url,
@@ -45,12 +99,30 @@ Future<void> main() async {
         )
       : await localAdRepository.loadAds();
 
-  runApp(
-    NgombiApp(
-      tvChannels: tvChannels,
-      ads: ads,
-    ),
+  return _NgombiStartupData(
+    tvChannels: tvChannels,
+    ads: ads,
   );
+}
+
+class NgombiSplashScreen extends StatelessWidget {
+  const NgombiSplashScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: Colors.black,
+        body: SizedBox.expand(
+          child: Image(
+            image: AssetImage('assets/ngombi_splash.png'),
+            fit: BoxFit.cover,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // -----------------------------------------------------------------------------

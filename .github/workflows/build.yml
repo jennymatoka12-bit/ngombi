@@ -766,6 +766,38 @@ jobs:
           PY
 
       # --------------------------------------------------
+      # NGOMBI full-screen splash image
+      # --------------------------------------------------
+
+      - name: Install NGOMBI splash image
+        shell: bash
+        run: |
+          set -e
+
+          mkdir -p android/app/src/main/res/drawable
+
+          curl -fL --retry 3 --retry-delay 2 \\
+            "https://llmpcwgfithyrdeeuxoe.supabase.co/storage/v1/object/public/advertisements/logo%20ngombi%202.png" \\
+            -o android/app/src/main/res/drawable/ngombi_splash.png
+
+          test -s android/app/src/main/res/drawable/ngombi_splash.png
+
+          cat > android/app/src/main/res/drawable/launch_background.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+              <item>
+                  <bitmap
+                      android:src="@drawable/ngombi_splash"
+                      android:gravity="fill" />
+              </item>
+          </layer-list>
+          EOF
+
+          echo "===== NGOMBI splash ====="
+          ls -lh android/app/src/main/res/drawable/ngombi_splash.png
+          cat android/app/src/main/res/drawable/launch_background.xml
+
+      # --------------------------------------------------
       # Android Gradle Plugin / Gradle
       # --------------------------------------------------
 

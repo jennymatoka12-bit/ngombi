@@ -245,14 +245,20 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
       );
     }
 
-    return Image.network(
-      ad.media,
-      fit: BoxFit.cover,
-      loadingBuilder: (context, child, progress) {
+    return Container(
+      color: const Color(0xFF111111),
+      alignment: Alignment.center,
+      child: Image.network(
+        ad.media,
+        fit: BoxFit.contain,
+        width: double.infinity,
+        height: double.infinity,
+        loadingBuilder: (context, child, progress) {
         if (progress == null) return child;
         return _loadingBackground();
       },
-      errorBuilder: (_, __, ___) => _fallback(),
+        errorBuilder: (_, __, ___) => _fallback(),
+      ),
     );
   }
 

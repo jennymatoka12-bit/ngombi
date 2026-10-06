@@ -775,10 +775,13 @@ jobs:
           set -e
 
           mkdir -p android/app/src/main/res/drawable
+          mkdir -p assets
 
           curl -fL --retry 3 --retry-delay 2 "https://llmpcwgfithyrdeeuxoe.supabase.co/storage/v1/object/public/advertisements/logo%20ngombi%202.png" -o android/app/src/main/res/drawable/ngombi_splash.png
+          cp android/app/src/main/res/drawable/ngombi_splash.png assets/ngombi_splash.png
 
           test -s android/app/src/main/res/drawable/ngombi_splash.png
+          test -s assets/ngombi_splash.png
 
           cat > android/app/src/main/res/drawable/launch_background.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>

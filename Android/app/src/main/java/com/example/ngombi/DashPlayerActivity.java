@@ -30,6 +30,10 @@ public class DashPlayerActivity extends AppCompatActivity {
     ) {
         super.onCreate(savedInstanceState);
 
+        getWindow().addFlags(
+                android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+        );
+
         FrameLayout root = new FrameLayout(this);
 
         playerView = new PlayerView(this);

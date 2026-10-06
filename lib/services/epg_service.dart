@@ -58,45 +58,76 @@ class EpgService {
     var text = value.toLowerCase().trim();
 
     const replacements = {
-      'à': 'a',
-      'â': 'a',
-      'ä': 'a',
-      'é': 'e',
-      'è': 'e',
-      'ê': 'e',
-      'ë': 'e',
-      'î': 'i',
-      'ï': 'i',
-      'ô': 'o',
-      'ö': 'o',
-      'ù': 'u',
-      'û': 'u',
-      'ü': 'u',
-      'ÿ': 'y',
-      'ç': 'c',
-      'œ': 'oe',
+      'à': 'a', 'â': 'a', 'ä': 'a',
+      'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
+      'î': 'i', 'ï': 'i',
+      'ô': 'o', 'ö': 'o',
+      'ù': 'u', 'û': 'u', 'ü': 'u',
+      'ÿ': 'y', 'ç': 'c', 'œ': 'oe',
     };
 
     replacements.forEach((from, to) {
       text = text.replaceAll(from, to);
     });
 
-    return text.replaceAll(RegExp(r'\s+'), ' ');
+    text = text.replaceAll(RegExp(r'[^a-z0-9]+'), ' ');
+    return text.replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 
-  static String? _channelId(String name) {
-    final normalized = _normalize(name);
-    final exact = _aliases[normalized];
-    if (exact != null) return exact;
+  static String _compact(String value) {
+    return _normalize(value).replaceAll(' ', '');
+  }
+
+  static List<String> _candidateChannelIds(
+    String channelName,
+    XmlDocument document,
+  ) {
+    final ids = <String>[];
+    final normalized = _normalize(channelName);
+    final compact = _compact(channelName);
+
+    final alias = _aliases[normalized];
+    if (alias != null) ids.add(alias);
 
     for (final entry in _aliases.entries) {
-      if (normalized.contains(entry.key) ||
+      if (normalized == entry.key ||
+          normalized.contains(entry.key) ||
           entry.key.contains(normalized)) {
-        return entry.value;
+        ids.add(entry.value);
       }
     }
 
-    return null;
+    // Generic EPG matching: use the XMLTV <channel> display-name values.
+    // This covers channels that are not present in the hard-coded aliases.
+    for (final channel in document.findAllElements('channel')) {
+      final id = channel.getAttribute('id');
+      if (id == null || id.isEmpty) continue;
+
+      final names = channel
+          .findElements('display-name')
+          .map((element) => element.innerText.trim())
+          .where((value) => value.isNotEmpty);
+
+      for (final displayName in names) {
+        final displayNormalized = _normalize(displayName);
+        final displayCompact = _compact(displayName);
+
+        final exact = displayNormalized == normalized ||
+            displayCompact == compact;
+
+        final compatible = normalized.length >= 4 &&
+            displayNormalized.length >= 4 &&
+            (displayNormalized.contains(normalized) ||
+                normalized.contains(displayNormalized));
+
+        if (exact || compatible) {
+          ids.add(id);
+          break;
+        }
+      }
+    }
+
+    return ids.toSet().toList();
   }
 
   static Future<XmlDocument?> _loadDocument() {
@@ -150,17 +181,18 @@ class EpgService {
     String channelName, {
     required bool next,
   }) async {
-    final channelId = _channelId(channelName);
-    if (channelId == null) return null;
-
     final document = await _loadDocument();
     if (document == null) return null;
+
+    final channelIds = _candidateChannelIds(channelName, document);
+    if (channelIds.isEmpty) return null;
 
     final now = DateTime.now().toUtc();
     EpgProgram? candidate;
 
     for (final node in document.findAllElements('programme')) {
-      if (node.getAttribute('channel') != channelId) continue;
+      final channelId = node.getAttribute('channel');
+      if (channelId == null || !channelIds.contains(channelId)) continue;
 
       final startRaw = node.getAttribute('start');
       final stopRaw = node.getAttribute('stop');

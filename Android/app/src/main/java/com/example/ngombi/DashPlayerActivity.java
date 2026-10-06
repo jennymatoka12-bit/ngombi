@@ -1,8 +1,11 @@
 package com.example.ngombi;
 
-import android.app.Activity;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.Gravity;
+import android.widget.FrameLayout;
+import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -27,9 +30,55 @@ public class DashPlayerActivity extends AppCompatActivity {
     ) {
         super.onCreate(savedInstanceState);
 
-        playerView = new PlayerView(this);
+        FrameLayout root = new FrameLayout(this);
 
-        setContentView(playerView);
+        playerView = new PlayerView(this);
+        playerView.setUseController(true);
+
+        root.addView(
+                playerView,
+                new FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT
+                )
+        );
+
+        String channelName = getIntent().getStringExtra("channelName");
+        String programTitle = getIntent().getStringExtra("programTitle");
+
+        TextView programOverlay = new TextView(this);
+        programOverlay.setTextColor(Color.WHITE);
+        programOverlay.setTextSize(16);
+        programOverlay.setGravity(Gravity.CENTER_VERTICAL);
+        programOverlay.setPadding(24, 14, 24, 14);
+        programOverlay.setMaxLines(2);
+        programOverlay.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        programOverlay.setBackgroundColor(0xB3000000);
+
+        String title = programTitle == null ? "" : programTitle.trim();
+        String channel = channelName == null ? "" : channelName.trim();
+
+        if (!title.isEmpty() && !channel.isEmpty()) {
+            programOverlay.setText(channel + "  •  " + title);
+        } else if (!title.isEmpty()) {
+            programOverlay.setText(title);
+        } else if (!channel.isEmpty()) {
+            programOverlay.setText(channel + "  •  EN DIRECT");
+        } else {
+            programOverlay.setText("EN DIRECT");
+        }
+
+        FrameLayout.LayoutParams overlayParams =
+                new FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.WRAP_CONTENT
+                );
+        overlayParams.gravity = Gravity.TOP;
+        overlayParams.setMargins(0, 24, 0, 0);
+
+        root.addView(programOverlay, overlayParams);
+
+        setContentView(root);
 
         String url = getIntent().getStringExtra("url");
         String userAgent =

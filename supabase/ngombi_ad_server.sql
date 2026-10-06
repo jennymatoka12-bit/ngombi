@@ -1,5 +1,6 @@
--- NGOMBI AD SERVER V2
--- À exécuter dans le SQL Editor du projet Supabase.
+-- NGOMBI AD SERVER V3
+-- Correctif RLS: les politiques ne lisent plus directement
+-- ngombi_admin_users avec les droits de l'utilisateur connecté.
 
 create extension if not exists pgcrypto;
 
@@ -23,15 +24,18 @@ create table if not exists public.ngombi_ad_campaigns (
   updated_at timestamptz not null default now()
 );
 
--- Vérification sécurisée du rôle administrateur.
 create or replace function public.is_ngombi_admin(p_user_id uuid)
 returns boolean
 language sql
 security definer
 set search_path = public, auth
-as $
-  select exists (select 1 from public.ngombi_admin_users where user_id = p_user_id);
-$;
+as $$
+  select exists (
+    select 1
+    from public.ngombi_admin_users
+    where user_id = p_user_id
+  );
+$$;
 
 grant execute on function public.is_ngombi_admin(uuid) to authenticated;
 
@@ -40,7 +44,6 @@ alter table public.ngombi_ad_campaigns enable row level security;
 
 revoke all on public.ngombi_admin_users from anon, authenticated;
 revoke all on public.ngombi_ad_campaigns from anon;
-
 grant select on public.ngombi_ad_campaigns to anon;
 grant select, insert, update, delete on public.ngombi_ad_campaigns to authenticated;
 
@@ -60,58 +63,29 @@ create policy "only NGOMBI admin can read campaigns"
 on public.ngombi_ad_campaigns
 for select
 to authenticated
-using (
-  exists (
-    select 1 from public.ngombi_admin_users a
-    where a.user_id = auth.uid()
-  )
-);
+using (public.is_ngombi_admin(auth.uid()));
 
 drop policy if exists "only NGOMBI admin can insert campaigns" on public.ngombi_ad_campaigns;
 create policy "only NGOMBI admin can insert campaigns"
 on public.ngombi_ad_campaigns
 for insert
 to authenticated
-with check (
-  exists (
-    select 1 from public.ngombi_admin_users a
-    where a.user_id = auth.uid()
-  )
-);
+with check (public.is_ngombi_admin(auth.uid()));
 
 drop policy if exists "only NGOMBI admin can update campaigns" on public.ngombi_ad_campaigns;
 create policy "only NGOMBI admin can update campaigns"
 on public.ngombi_ad_campaigns
 for update
 to authenticated
-using (
-  exists (
-    select 1 from public.ngombi_admin_users a
-    where a.user_id = auth.uid()
-  )
-)
-with check (
-  exists (
-    select 1 from public.ngombi_admin_users a
-    where a.user_id = auth.uid()
-  )
-);
+using (public.is_ngombi_admin(auth.uid()))
+with check (public.is_ngombi_admin(auth.uid()));
 
 drop policy if exists "only NGOMBI admin can delete campaigns" on public.ngombi_ad_campaigns;
 create policy "only NGOMBI admin can delete campaigns"
 on public.ngombi_ad_campaigns
 for delete
 to authenticated
-using (
-  exists (
-    select 1 from public.ngombi_admin_users a
-    where a.user_id = auth.uid()
-  )
-);
+using (public.is_ngombi_admin(auth.uid()));
 
--- Après création de TON utilisateur dans Supabase Auth,
--- remplace USER_UUID_HERE par son UUID puis exécute:
--- insert into public.ngombi_admin_users(user_id) values ('USER_UUID_HERE')
--- on conflict do nothing;
-
--- V2 validation build trigger
+-- Vérification facultative:
+-- select public.is_ngombi_admin('4576fcdc-e6cd-4df1-8723-0b0b7d727636');

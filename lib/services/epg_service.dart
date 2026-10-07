@@ -52,6 +52,19 @@ class EpgService {
     'rmc story': 'RMCStory.fr',
     'rmc life': 'RMCLife.fr',
     'brut': 'Brut.fr',
+    'gabon 24': 'Gabon24.af',
+    'gabon24': 'Gabon24.af',
+    'gabon 1ere': 'Gabon1ere.af',
+    'gabon 1ère': 'Gabon1ere.af',
+    'gabon premiere': 'Gabon1ere.af',
+    'gabon première': 'Gabon1ere.af',
+    'crtv': 'CRTV.af',
+    'crtv cameroun': 'CRTV.af',
+    'nci': 'NCI.af',
+    'nci cote divoire': 'NCI.af',
+    'nci côte divoire': 'NCI.af',
+    '2stv': '2STV.sn',
+    '2stv senegal': '2STV.sn',
   };
 
   static String _normalize(String value) {
@@ -118,7 +131,9 @@ class EpgService {
         final compatible = normalized.length >= 4 &&
             displayNormalized.length >= 4 &&
             (displayNormalized.contains(normalized) ||
-                normalized.contains(displayNormalized));
+                normalized.contains(displayNormalized) ||
+                displayCompact.contains(compact) ||
+                compact.contains(displayCompact));
 
         if (exact || compatible) {
           ids.add(id);

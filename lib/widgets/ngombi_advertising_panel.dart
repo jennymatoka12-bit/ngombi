@@ -28,6 +28,7 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
   Timer? _timer;
   VideoPlayerController? _videoController;
   int _mediaGeneration = 0;
+  bool _isAdvancing = false;
 
   List<NgombiAd> get _activeAds {
     final items = widget.ads.where((ad) => ad.isScheduledActive).toList();
@@ -108,18 +109,20 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
         controller.addListener(() {
           if (!mounted || generation != _mediaGeneration) return;
           final value = controller.value;
+          if (value.hasError) {
+            _advance();
+            return;
+          }
           if (value.isInitialized &&
-              !value.isPlaying &&
-              value.position >= value.duration) {
+              value.position >= value.duration &&
+              !value.isPlaying) {
             _advance();
           }
         });
 
         await controller.play();
-
-        _timer = Timer(ad.duration, () {
-          if (generation == _mediaGeneration) _advance();
-        });
+        // For videos, use the actual media duration. The campaign duration
+        // must not cut a video short.
       } catch (_) {
         if (generation == _mediaGeneration) {
           await controller.dispose();
@@ -137,18 +140,26 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
   }
 
   void _advance() {
-    if (!mounted) return;
+    if (!mounted || _isAdvancing) return;
     final ads = _activeAds;
     if (ads.isEmpty) return;
 
+    _isAdvancing = true;
     _timer?.cancel();
     _timer = null;
+
+    final controller = _videoController;
+    _videoController = null;
+    controller?.pause();
+    controller?.dispose();
 
     setState(() {
       _index = (_index + 1) % ads.length;
     });
 
-    _prepareCurrentAd();
+    _prepareCurrentAd().whenComplete(() {
+      _isAdvancing = false;
+    });
   }
 
   Future<void> _openAd() async {

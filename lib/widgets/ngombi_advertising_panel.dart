@@ -92,6 +92,7 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
     _prepareCurrentAd();
   }
 
+  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive ||

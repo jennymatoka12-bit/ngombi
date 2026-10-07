@@ -966,6 +966,7 @@ class TvScreen extends StatefulWidget {
     super.key,
     required this.tvChannels,
     required this.ads,
+    required this.isActive,
   });
 
   @override

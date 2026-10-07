@@ -344,6 +344,7 @@ class _MainTabScreenState extends State<MainTabScreen> {
         tvChannels: widget.tvChannels,
         radioChannels: radioChannels,
         ads: _ads,
+        isActive: currentIndex == 0,
         onAdsChanged: (updated) => setState(() => _ads = updated),
         onOpenTv: () {
           setState(() {
@@ -359,6 +360,7 @@ class _MainTabScreenState extends State<MainTabScreen> {
       TvScreen(
         tvChannels: widget.tvChannels,
         ads: _ads,
+        isActive: currentIndex == 1,
       ),
       const RadioScreen(),
     ];
@@ -403,10 +405,12 @@ class _MainTabScreenState extends State<MainTabScreen> {
 
 class NgombiHero extends StatelessWidget {
   final List<NgombiAd> ads;
+  final bool isActive;
 
   const NgombiHero({
     super.key,
     required this.ads,
+    this.isActive = true,
   });
 
   @override
@@ -414,6 +418,7 @@ class NgombiHero extends StatelessWidget {
     return NgombiAdvertisingPanel(
       ads: ads,
       height: 190,
+      isActive: isActive,
     );
   }
 }
@@ -426,6 +431,7 @@ class HomeScreen extends StatelessWidget {
   final List<TvChannel> tvChannels;
   final List<MediaItem> radioChannels;
   final List<NgombiAd> ads;
+  final bool isActive;
   final ValueChanged<List<NgombiAd>> onAdsChanged;
   final VoidCallback onOpenTv;
   final VoidCallback onOpenRadio;
@@ -435,6 +441,7 @@ class HomeScreen extends StatelessWidget {
     required this.tvChannels,
     required this.radioChannels,
     required this.ads,
+    required this.isActive,
     required this.onAdsChanged,
     required this.onOpenTv,
     required this.onOpenRadio,
@@ -450,7 +457,7 @@ class HomeScreen extends StatelessWidget {
           ),
 
           SliverToBoxAdapter(
-            child: NgombiHero(ads: ads),
+            child: NgombiHero(ads: ads, isActive: isActive),
           ),
 
           SliverToBoxAdapter(
@@ -953,11 +960,13 @@ class _RadioHomeCard extends StatelessWidget {
 class TvScreen extends StatefulWidget {
   final List<TvChannel> tvChannels;
   final List<NgombiAd> ads;
+  final bool isActive;
 
   const TvScreen({
     super.key,
     required this.tvChannels,
     required this.ads,
+    required this.isActive,
   });
 
   @override
@@ -997,7 +1006,7 @@ class _TvScreenState extends State<TvScreen> {
           ),
 
           SliverToBoxAdapter(
-            child: NgombiHero(ads: widget.ads),
+            child: NgombiHero(ads: widget.ads, isActive: widget.isActive),
           ),
 
           SliverToBoxAdapter(

@@ -10,11 +10,13 @@ import 'ngombi_logo.dart';
 class NgombiAdvertisingPanel extends StatefulWidget {
   final List<NgombiAd> ads;
   final double height;
+  final bool isActive;
 
   const NgombiAdvertisingPanel({
     super.key,
     this.ads = const [],
     this.height = 190,
+    this.isActive = true,
   });
 
   @override
@@ -56,30 +58,57 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.ads != widget.ads) {
       _index = 0;
-      _prepareCurrentAd();
+      if (widget.isActive) {
+        _prepareCurrentAd();
+      }
+    }
+
+    if (oldWidget.isActive != widget.isActive) {
+      if (widget.isActive) {
+        _resumePlayback();
+      } else {
+        _pausePlayback();
+      }
     }
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
+  void _pausePlayback() {
+    _timer?.cancel();
+    _timer = null;
     final controller = _videoController;
+    _wasPlayingBeforeLifecycle = controller?.value.isPlaying ?? false;
+    controller?.pause();
+  }
 
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.detached) {
-      _wasPlayingBeforeLifecycle = controller?.value.isPlaying ?? false;
-      controller?.pause();
-      _timer?.cancel();
+  void _resumePlayback() {
+    if (!mounted || !widget.isActive) return;
+
+    final controller = _videoController;
+    if (controller != null && controller.value.isInitialized) {
+      controller.play();
       return;
     }
 
-    if (state == AppLifecycleState.resumed) {
-      // Do not recreate the video controller just because the app resumed.
-      // Recreating the controller can leave Android's video texture frozen
-      // while the audio track continues playing.
-      if (controller != null && controller.value.isInitialized) {
+    _prepareCurrentAd();
+  }
+
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      _wasPlayingBeforeLifecycle = _videoController?.value.isPlaying ?? false;
+      _pausePlayback();
+      return;
+    }
+
+    if (state == AppLifecycleState.resumed && widget.isActive) {
+      // Keep the same controller/texture whenever possible. Recreating a
+      // controller on every lifecycle transition can leave Android rendering
+      // the first frame while the audio track continues.
+      if (_videoController != null &&
+          _videoController!.value.isInitialized) {
         if (_wasPlayingBeforeLifecycle) {
-          controller.play();
+          _videoController!.play();
         }
       } else {
         _prepareCurrentAd();
@@ -88,15 +117,11 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
   }
 
   Future<void> _prepareCurrentAd() async {
+    if (!mounted || !widget.isActive) return;
+
     _timer?.cancel();
     _timer = null;
     final generation = ++_mediaGeneration;
-
-    final oldController = _videoController;
-    _videoController = null;
-    await oldController?.dispose();
-
-    if (!mounted) return;
 
     final ad = _currentAd;
     if (ad == null) {
@@ -109,27 +134,30 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
           ? VideoPlayerController.networkUrl(Uri.parse(ad.media))
           : VideoPlayerController.asset(ad.media);
 
-      _videoController = controller;
-
       try {
+        // Important: initialize the next controller before destroying the
+        // current one. This avoids rapid texture reuse on Android, which can
+        // produce the exact "audio advances / video is frozen" symptom.
         await controller.initialize();
         await controller.setLooping(false);
-        if (!mounted || generation != _mediaGeneration) {
+
+        if (!mounted || !widget.isActive || generation != _mediaGeneration) {
           await controller.dispose();
           return;
         }
 
-        if (!mounted) return;
-
-        setState(() {});
+        final previousController = _videoController;
+        _videoController = controller;
 
         controller.addListener(() {
           if (!mounted || generation != _mediaGeneration) return;
           final value = controller.value;
+
           if (value.hasError) {
             _advance();
             return;
           }
+
           if (value.isInitialized &&
               value.position >= value.duration &&
               !value.isPlaying) {
@@ -137,39 +165,53 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
           }
         });
 
+        setState(() {});
+
         await controller.play();
         _wasPlayingBeforeLifecycle = true;
-        // For videos, use the actual media duration. The campaign duration
-        // must not cut a video short.
+
+        // Only dispose the previous player after the new texture is mounted
+        // and playback has started.
+        if (previousController != null && previousController != controller) {
+          await previousController.pause();
+          await previousController.dispose();
+        }
       } catch (_) {
-        if (generation == _mediaGeneration) {
-          await controller.dispose();
-          _videoController = null;
+        await controller.dispose();
+        if (generation == _mediaGeneration && mounted) {
           _advance();
         }
       }
       return;
     }
 
+    final previousController = _videoController;
+    _videoController = null;
+    if (previousController != null) {
+      await previousController.pause();
+      await previousController.dispose();
+    }
+
+    if (!mounted || !widget.isActive || generation != _mediaGeneration) {
+      return;
+    }
+
     setState(() {});
     _timer = Timer(ad.duration, () {
-      if (generation == _mediaGeneration) _advance();
+      if (generation == _mediaGeneration && widget.isActive) {
+        _advance();
+      }
     });
   }
 
   void _advance() {
-    if (!mounted || _isAdvancing) return;
+    if (!mounted || !widget.isActive || _isAdvancing) return;
     final ads = _activeAds;
     if (ads.isEmpty) return;
 
     _isAdvancing = true;
     _timer?.cancel();
     _timer = null;
-
-    final controller = _videoController;
-    _videoController = null;
-    controller?.pause();
-    controller?.dispose();
 
     setState(() {
       _index = (_index + 1) % ads.length;
@@ -206,6 +248,7 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
+    _mediaGeneration++;
     _videoController?.dispose();
     super.dispose();
   }

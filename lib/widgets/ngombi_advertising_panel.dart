@@ -29,6 +29,7 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
   VideoPlayerController? _videoController;
   int _mediaGeneration = 0;
   bool _isAdvancing = false;
+  bool _wasPlayingBeforeLifecycle = false;
 
   List<NgombiAd> get _activeAds {
     final items = widget.ads.where((ad) => ad.isScheduledActive).toList();
@@ -62,13 +63,27 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final controller = _videoController;
+
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.detached) {
+      _wasPlayingBeforeLifecycle = controller?.value.isPlaying ?? false;
       controller?.pause();
       _timer?.cancel();
-    } else if (state == AppLifecycleState.resumed) {
-      _prepareCurrentAd();
+      return;
+    }
+
+    if (state == AppLifecycleState.resumed) {
+      // Do not recreate the video controller just because the app resumed.
+      // Recreating the controller can leave Android's video texture frozen
+      // while the audio track continues playing.
+      if (controller != null && controller.value.isInitialized) {
+        if (_wasPlayingBeforeLifecycle) {
+          controller.play();
+        }
+      } else {
+        _prepareCurrentAd();
+      }
     }
   }
 
@@ -104,6 +119,8 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
           return;
         }
 
+        if (!mounted) return;
+
         setState(() {});
 
         controller.addListener(() {
@@ -121,6 +138,7 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
         });
 
         await controller.play();
+        _wasPlayingBeforeLifecycle = true;
         // For videos, use the actual media duration. The campaign duration
         // must not cut a video short.
       } catch (_) {
@@ -245,14 +263,26 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
         return _loadingBackground();
       }
 
-      return FittedBox(
-        fit: BoxFit.cover,
-        clipBehavior: Clip.hardEdge,
-        child: SizedBox(
-          width: controller.value.size.width,
-          height: controller.value.size.height,
-          child: VideoPlayer(controller),
-        ),
+      // Keep the Android video texture in a normal Flutter layout.
+      // The previous FittedBox/SizedBox combination could visually freeze
+      // the texture while the decoder continued to play audio.
+      return ValueListenableBuilder<VideoPlayerValue>(
+        valueListenable: controller,
+        builder: (context, value, _) {
+          if (!value.isInitialized) {
+            return _loadingBackground();
+          }
+
+          final aspectRatio =
+              value.aspectRatio > 0 ? value.aspectRatio : 16 / 9;
+
+          return Center(
+            child: AspectRatio(
+              aspectRatio: aspectRatio,
+              child: VideoPlayer(controller),
+            ),
+          );
+        },
       );
     }
 

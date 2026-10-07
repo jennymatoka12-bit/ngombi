@@ -72,7 +72,6 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
     }
   }
 
-  @override
   void _pausePlayback() {
     _timer?.cancel();
     _timer = null;

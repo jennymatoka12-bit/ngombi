@@ -76,7 +76,6 @@ class _NgombiStartupData {
   const _NgombiStartupData({
     required this.tvChannels,
     required this.ads,
-    required this.isActive,
   });
 }
 

@@ -40,6 +40,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
   EpgProgram? _currentProgram;
   EpgProgram? _nextProgram;
   Timer? _hideControlsTimer;
+  Timer? _epgRefreshTimer;
 
   bool get _isGabon24 {
     final name = widget.channel.name.toLowerCase();
@@ -103,6 +104,14 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
     // active. The native MethodChannel is retained for compatibility, while
     // wakelock_plus provides a reliable Flutter-side Android implementation.
     unawaited(_setKeepScreenOn(true));
+
+    // Load the EPG independently from video initialization so the
+    // current/next programme is ready as soon as the controls are opened.
+    unawaited(_loadEpg());
+    _epgRefreshTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => unawaited(_loadEpg()),
+    );
 
     if (_isOfficialWebPlayer) {
       _initializeOfficialWebPlayer();
@@ -201,6 +210,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
     });
 
     if (_showControls) {
+      unawaited(_loadEpg());
       _scheduleControlsHide();
     } else {
       _hideControlsTimer?.cancel();
@@ -223,15 +233,24 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
   }
 
   Future<void> _loadEpg() async {
-    final program = await EpgService.current(widget.channel.name);
-    final next = await EpgService.upcoming(widget.channel.name);
+    try {
+      final results = await Future.wait<EpgProgram?>([
+        EpgService.current(widget.channel.name)
+            .timeout(const Duration(seconds: 8)),
+        EpgService.upcoming(widget.channel.name)
+            .timeout(const Duration(seconds: 8)),
+      ]);
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _currentProgram = program;
-      _nextProgram = next;
-    });
+      setState(() {
+        _currentProgram = results[0];
+        _nextProgram = results[1];
+      });
+    } catch (_) {
+      // Keep the last valid EPG data instead of clearing the programme
+      // just because a single refresh request timed out.
+    }
   }
 
   void _initializeOfficialWebPlayer() {
@@ -436,6 +455,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
   @override
   void dispose() {
     _hideControlsTimer?.cancel();
+    _epgRefreshTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     unawaited(_setKeepScreenOn(false));
     _controller?.removeListener(_onPlayerChanged);

@@ -218,7 +218,6 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 10),
       height: widget.height,
-      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: const Color(0xFF111111),
         borderRadius: BorderRadius.circular(28),
@@ -263,26 +262,20 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
         return _loadingBackground();
       }
 
-      // Keep the Android video texture in a normal Flutter layout.
-      // The previous FittedBox/SizedBox combination could visually freeze
-      // the texture while the decoder continued to play audio.
-      return ValueListenableBuilder<VideoPlayerValue>(
-        valueListenable: controller,
-        builder: (context, value, _) {
-          if (!value.isInitialized) {
-            return _loadingBackground();
-          }
+      // Keep the video texture mounted as a stable widget.
+      // Rebuilding VideoPlayer on every decoder notification can cause
+      // Android to keep displaying the first texture frame while audio
+      // continues to advance. The controller itself updates the texture.
+      final aspectRatio =
+          controller.value.aspectRatio > 0
+              ? controller.value.aspectRatio
+              : 16 / 9;
 
-          final aspectRatio =
-              value.aspectRatio > 0 ? value.aspectRatio : 16 / 9;
-
-          return Center(
-            child: AspectRatio(
-              aspectRatio: aspectRatio,
-              child: VideoPlayer(controller),
-            ),
-          );
-        },
+      return Center(
+        child: AspectRatio(
+          aspectRatio: aspectRatio,
+          child: VideoPlayer(controller),
+        ),
       );
     }
 

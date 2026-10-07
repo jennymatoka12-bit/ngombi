@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../models/tv_channel.dart';
 import '../services/epg_service.dart';
@@ -21,7 +22,8 @@ class StreamPlayerScreen extends StatefulWidget {
       _StreamPlayerScreenState();
 }
 
-class _StreamPlayerScreenState extends State<StreamPlayerScreen> {
+class _StreamPlayerScreenState extends State<StreamPlayerScreen>
+    with WidgetsBindingObserver {
   static const MethodChannel _nativePlayer =
       MethodChannel('ngombi/player');
 
@@ -96,8 +98,13 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
-    _setKeepScreenOn(true);
+    // A TV/video player must keep the display awake while this screen is
+    // active. The native MethodChannel is retained for compatibility, while
+    // wakelock_plus provides a reliable Flutter-side Android implementation.
+    unawaited(_setKeepScreenOn(true));
+    unawaited(WakelockPlus.enable());
 
     if (_isOfficialWebPlayer) {
       _initializeOfficialWebPlayer();
@@ -121,6 +128,18 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen> {
     _initialLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     _isLandscape = _initialLandscape;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_setKeepScreenOn(true));
+      unawaited(WakelockPlus.enable());
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      unawaited(_setKeepScreenOn(false));
+      unawaited(WakelockPlus.disable());
+    }
   }
 
   Future<void> _toggleOrientation() async {
@@ -421,7 +440,9 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen> {
   @override
   void dispose() {
     _hideControlsTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     unawaited(_setKeepScreenOn(false));
+    unawaited(WakelockPlus.disable());
     _controller?.removeListener(_onPlayerChanged);
     _controller?.dispose();
     unawaited(_restoreOrientation());

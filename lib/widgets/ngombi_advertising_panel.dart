@@ -32,6 +32,7 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
   int _mediaGeneration = 0;
   bool _isAdvancing = false;
   bool _wasPlayingBeforeLifecycle = false;
+  bool _isAdMuted = false;
 
   List<NgombiAd> get _activeAds {
     final items = widget.ads.where((ad) => ad.isScheduledActive).toList();
@@ -141,6 +142,7 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
         // produce the exact "audio advances / video is frozen" symptom.
         await controller.initialize();
         await controller.setLooping(false);
+        await controller.setVolume(_isAdMuted ? 0.0 : 1.0);
 
         if (!mounted || !widget.isActive || generation != _mediaGeneration) {
           await controller.dispose();
@@ -282,6 +284,34 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
                     top: 10,
                     left: 12,
                     child: _AdBadge(),
+                  ),
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: Material(
+                      color: Colors.black.withOpacity(0.68),
+                      shape: const CircleBorder(),
+                      child: IconButton(
+                        tooltip: _isAdMuted
+                            ? 'Réactiver le son de la publicité'
+                            : 'Couper le son de la publicité',
+                        visualDensity: VisualDensity.compact,
+                        iconSize: 20,
+                        color: Colors.white,
+                        onPressed: () {
+                          setState(() => _isAdMuted = !_isAdMuted);
+                          final controller = _videoController;
+                          if (controller != null && controller.value.isInitialized) {
+                            controller.setVolume(_isAdMuted ? 0.0 : 1.0);
+                          }
+                        },
+                        icon: Icon(
+                          _isAdMuted
+                              ? Icons.volume_off_rounded
+                              : Icons.volume_up_rounded,
+                        ),
+                      ),
+                    ),
                   ),
                   if (ads.length > 1)
                     Positioned(

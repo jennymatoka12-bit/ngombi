@@ -975,6 +975,20 @@ class TvScreen extends StatefulWidget {
 
 class _TvScreenState extends State<TvScreen> {
   String selectedCategory = 'Toutes';
+  bool _channelOpen = false;
+
+  Future<void> _openChannel(TvChannel channel) async {
+    setState(() => _channelOpen = true);
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => StreamPlayerScreen(channel: channel),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _channelOpen = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1006,7 +1020,7 @@ class _TvScreenState extends State<TvScreen> {
           ),
 
           SliverToBoxAdapter(
-            child: NgombiHero(ads: widget.ads, isActive: widget.isActive),
+            child: NgombiHero(ads: widget.ads, isActive: widget.isActive && !_channelOpen),
           ),
 
           SliverToBoxAdapter(
@@ -1066,16 +1080,7 @@ class _TvScreenState extends State<TvScreen> {
 
                     return _TvGridCard(
                       channel: channel,
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                StreamPlayerScreen(
-                              channel: channel,
-                            ),
-                          ),
-                        );
-                      },
+                      onTap: () => _openChannel(channel),
                     );
                   },
                   childCount: filteredChannels.length,
@@ -1581,7 +1586,11 @@ class _WebPlayerScreenState
   void didChangeAppLifecycleState(
     AppLifecycleState state,
   ) {
-    if (state == AppLifecycleState.paused) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      // Android may briefly mark the app inactive when the notification
+      // shade or a system overlay appears. Hand off audio before WebView
+      // loses focus so radio playback can continue through that interruption.
       _handoffToBackgroundAudio();
     } else if (state == AppLifecycleState.resumed) {
       _returnToWebPlayer();

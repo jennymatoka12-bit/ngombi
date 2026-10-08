@@ -1586,7 +1586,11 @@ class _WebPlayerScreenState
   void didChangeAppLifecycleState(
     AppLifecycleState state,
   ) {
-    if (state == AppLifecycleState.paused) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      // Android may briefly mark the app inactive when the notification
+      // shade or a system overlay appears. Hand off audio before WebView
+      // loses focus so radio playback can continue through that interruption.
       _handoffToBackgroundAudio();
     } else if (state == AppLifecycleState.resumed) {
       _returnToWebPlayer();

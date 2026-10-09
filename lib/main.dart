@@ -1538,6 +1538,7 @@ class _WebPlayerScreenState
   bool loading = true;
   String? _directStreamUrl;
   bool _backgroundRadioStarted = false;
+  bool _backgroundHandoffInProgress = false;
   Timer? _streamProbeTimer;
 
   @override
@@ -1665,28 +1666,44 @@ class _WebPlayerScreenState
   }
 
   Future<void> _handoffToBackgroundAudio() async {
-    if (_backgroundRadioStarted) return;
-
-    // One last synchronous probe before the app goes into the background.
-    await _probeDirectStream();
-
-    final streamUrl = _directStreamUrl;
-    if (streamUrl == null || streamUrl.isEmpty) {
-      return;
-    }
+    if (_backgroundRadioStarted || _backgroundHandoffInProgress) return;
+    _backgroundHandoffInProgress = true;
 
     try {
-      await _nativeRadio.invokeMethod(
-        'startBackgroundRadio',
-        {
-          'url': streamUrl,
-          'title': widget.title,
-        },
-      );
+      // One last probe while the WebView still has focus.
+      await _probeDirectStream();
 
-      _backgroundRadioStarted = true;
-    } catch (_) {
-      // Never break the web radio if native handoff is unavailable.
+      final streamUrl = _directStreamUrl;
+      if (streamUrl == null || streamUrl.isEmpty) return;
+
+      // Pause the WebView source before starting the native session to avoid
+      // duplicate audio. If native playback cannot start, restore WebView audio.
+      try {
+        await controller.runJavaScript(
+          "document.querySelectorAll('audio, video').forEach((m) => m.pause());",
+        );
+      } catch (_) {}
+
+      try {
+        await _nativeRadio.invokeMethod(
+          'startBackgroundRadio',
+          {
+            'url': streamUrl,
+            'title': widget.title,
+          },
+        );
+
+        _backgroundRadioStarted = true;
+      } catch (_) {
+        try {
+          await controller.runJavaScript(
+            "document.querySelectorAll('audio, video').forEach((m) => { var p = m.play(); if (p) p.catch(() => {}); });",
+          );
+        } catch (_) {}
+        // Keep the existing WebView radio working if native handoff fails.
+      }
+    } finally {
+      _backgroundHandoffInProgress = false;
     }
   }
 

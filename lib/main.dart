@@ -187,6 +187,11 @@ const List<MediaItem> radioChannels = [
     category: 'Musique',
   ),
   MediaItem(
+    name: 'Urban FM 104.5',
+    url: 'https://studio.webradio.solutions:7013/stream',
+    category: 'Musique',
+  ),
+  MediaItem(
     name: 'BBC Afrique',
     url: 'https://www.bbc.com/afrique',
     category: 'Information',

@@ -1538,6 +1538,7 @@ class _WebPlayerScreenState
   bool loading = true;
   String? _directStreamUrl;
   bool _backgroundRadioStarted = false;
+  bool _backgroundHandoffInProgress = false;
   Timer? _streamProbeTimer;
 
   @override
@@ -1659,34 +1660,70 @@ class _WebPlayerScreenState
         }
       }
     } catch (_) {
-      // Direct-stream extraction is opportunistic. The web player remains
-      // the source of truth and keeps working when extraction is impossible.
+      // Some stations expose the stream URL directly instead of embedding an
+      // HTML audio player, so JavaScript cannot discover an <audio> element.
+    }
+
+    // Urban FM 104.5 and other direct radio URLs may be the stream itself
+    // (for example, a URL ending in /stream). Use that URL as a safe fallback
+    // so Android can create its native media session and notification.
+    if ((_directStreamUrl == null || _directStreamUrl!.isEmpty) &&
+        _isLikelyDirectAudioUrl(widget.url)) {
+      _directStreamUrl = widget.url;
     }
   }
 
-  Future<void> _handoffToBackgroundAudio() async {
-    if (_backgroundRadioStarted) return;
-
-    // One last synchronous probe before the app goes into the background.
-    await _probeDirectStream();
-
-    final streamUrl = _directStreamUrl;
-    if (streamUrl == null || streamUrl.isEmpty) {
-      return;
+  bool _isLikelyDirectAudioUrl(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
+      return false;
     }
 
-    try {
-      await _nativeRadio.invokeMethod(
-        'startBackgroundRadio',
-        {
-          'url': streamUrl,
-          'title': widget.title,
-        },
-      );
+    final path = uri.path.toLowerCase();
+    return path.endsWith('/stream') ||
+        const ['.mp3', '.aac', '.m4a', '.ogg', '.opus', '.m3u8', '.pls', '.mp4']
+            .any((extension) => path.endsWith(extension));
+  }
 
-      _backgroundRadioStarted = true;
-    } catch (_) {
-      // Never break the web radio if native handoff is unavailable.
+  Future<void> _handoffToBackgroundAudio() async {
+    if (_backgroundRadioStarted || _backgroundHandoffInProgress) return;
+    _backgroundHandoffInProgress = true;
+
+    try {
+      // One last probe while the WebView still has focus.
+      await _probeDirectStream();
+
+      final streamUrl = _directStreamUrl;
+      if (streamUrl == null || streamUrl.isEmpty) return;
+
+      // Pause the WebView source before starting the native session to avoid
+      // duplicate audio. If native playback cannot start, restore WebView audio.
+      try {
+        await controller.runJavaScript(
+          "document.querySelectorAll('audio, video').forEach((m) => m.pause());",
+        );
+      } catch (_) {}
+
+      try {
+        await _nativeRadio.invokeMethod(
+          'startBackgroundRadio',
+          {
+            'url': streamUrl,
+            'title': widget.title,
+          },
+        );
+
+        _backgroundRadioStarted = true;
+      } catch (_) {
+        try {
+          await controller.runJavaScript(
+            "document.querySelectorAll('audio, video').forEach((m) => { var p = m.play(); if (p) p.catch(() => {}); });",
+          );
+        } catch (_) {}
+        // Keep the existing WebView radio working if native handoff fails.
+      }
+    } finally {
+      _backgroundHandoffInProgress = false;
     }
   }
 

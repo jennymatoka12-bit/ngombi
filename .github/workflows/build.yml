@@ -279,6 +279,15 @@ jobs:
                       radioReceiverRegistered = true;
                   }
               }
+
+              @Override
+              protected void onDestroy() {
+                  if (radioReceiverRegistered) {
+                      unregisterReceiver(radioControlReceiver);
+                      radioReceiverRegistered = false;
+                  }
+                  super.onDestroy();
+              }
           }
           EOF
 
@@ -717,6 +726,8 @@ jobs:
           public class RadioNotificationService extends Service {
               public static final String ACTION_START = "com.example.ngombi.action.START_RADIO_NOTIFICATION";
               public static final String ACTION_STOP = "com.example.ngombi.action.STOP_RADIO_NOTIFICATION";
+              private static final String ACTION_PAUSE = "com.example.ngombi.action.PAUSE";
+              private static final String ACTION_PLAY = "com.example.ngombi.action.PLAY";
               private static final String ACTION_CONTROL = "com.example.ngombi.RADIO_CONTROL";
               private static final String CHANNEL_ID = "ngombi_radio_playback";
               private static final int NOTIFICATION_ID = 4205;
@@ -746,7 +757,15 @@ jobs:
                       return START_NOT_STICKY;
                   }
                   if (intent != null && intent.hasExtra("title")) stationTitle = intent.getStringExtra("title");
-                  setPlaying(true);
+                  if (ACTION_PAUSE.equals(action)) {
+                      setPlaying(false);
+                      sendControl("pause");
+                  } else if (ACTION_PLAY.equals(action)) {
+                      setPlaying(true);
+                      sendControl("play");
+                  } else {
+                      setPlaying(true);
+                  }
                   Notification notification = buildNotification();
                   if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
                   else startForeground(NOTIFICATION_ID, notification);
@@ -780,7 +799,7 @@ jobs:
                   open.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                   PendingIntent content = PendingIntent.getActivity(this, 4206, open, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
                   PendingIntent toggle = PendingIntent.getService(this, 4207,
-                          new Intent(this, RadioNotificationService.class).setAction(playing ? "com.example.ngombi.action.PAUSE" : "com.example.ngombi.action.PLAY"),
+                          new Intent(this, RadioNotificationService.class).setAction(playing ? ACTION_PAUSE : ACTION_PLAY),
                           PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
                   NotificationCompat.Action playPause = new NotificationCompat.Action(
                           playing ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play,

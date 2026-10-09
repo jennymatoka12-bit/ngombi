@@ -72,7 +72,11 @@ jobs:
           cat > "$JAVA_DIR/MainActivity.java" <<'EOF'
           package com.example.ngombi;
 
+          import android.content.BroadcastReceiver;
+          import android.content.Context;
           import android.content.Intent;
+          import android.content.IntentFilter;
+          import android.os.Bundle;
 
           import androidx.annotation.NonNull;
           import androidx.core.content.ContextCompat;
@@ -85,6 +89,21 @@ jobs:
 
               private static final String PLAYER_CHANNEL = "ngombi/player";
               private static final String RADIO_CHANNEL = "ngombi/radio";
+              private static final String RADIO_CONTROL_ACTION = "com.example.ngombi.RADIO_CONTROL";
+              private MethodChannel radioChannel;
+              private boolean radioReceiverRegistered = false;
+
+              private final BroadcastReceiver radioControlReceiver = new BroadcastReceiver() {
+                  @Override
+                  public void onReceive(Context context, Intent intent) {
+                      if (radioChannel != null && intent != null) {
+                          radioChannel.invokeMethod(
+                                  "radioNotificationControl",
+                                  intent.getStringExtra("control")
+                          );
+                      }
+                  }
+              };
 
               @Override
               public void configureFlutterEngine(
@@ -163,10 +182,11 @@ jobs:
                       result.notImplemented();
                   });
 
-                  new MethodChannel(
+                  radioChannel = new MethodChannel(
                           flutterEngine.getDartExecutor().getBinaryMessenger(),
                           RADIO_CHANNEL
-                  ).setMethodCallHandler((call, result) -> {
+                  );
+                  radioChannel.setMethodCallHandler((call, result) -> {
 
                       if ("startBackgroundRadio".equals(call.method)) {
                           String url = call.argument("url");
@@ -222,8 +242,51 @@ jobs:
                           return;
                       }
 
+                      if ("startRadioNotification".equals(call.method)) {
+                          Intent intent = new Intent(
+                                  MainActivity.this,
+                                  RadioNotificationService.class
+                          );
+                          intent.setAction(RadioNotificationService.ACTION_START);
+                          String title = call.argument("title");
+                          intent.putExtra("title", title == null ? "Radio" : title);
+                          ContextCompat.startForegroundService(MainActivity.this, intent);
+                          result.success(true);
+                          return;
+                      }
+
+                      if ("stopRadioNotification".equals(call.method)) {
+                          Intent intent = new Intent(
+                                  MainActivity.this,
+                                  RadioNotificationService.class
+                          );
+                          intent.setAction(RadioNotificationService.ACTION_STOP);
+                          startService(intent);
+                          result.success(true);
+                          return;
+                      }
+
                       result.notImplemented();
                   });
+
+                  if (!radioReceiverRegistered) {
+                      ContextCompat.registerReceiver(
+                              this,
+                              radioControlReceiver,
+                              new IntentFilter(RADIO_CONTROL_ACTION),
+                              ContextCompat.RECEIVER_NOT_EXPORTED
+                      );
+                      radioReceiverRegistered = true;
+                  }
+              }
+
+              @Override
+              protected void onDestroy() {
+                  if (radioReceiverRegistered) {
+                      unregisterReceiver(radioControlReceiver);
+                      radioReceiverRegistered = false;
+                  }
+                  super.onDestroy();
               }
           }
           EOF
@@ -637,6 +700,144 @@ jobs:
           EOF
 
           # ==================================================
+          # RadioNotificationService.java
+          # ==================================================
+
+          cat > "$JAVA_DIR/RadioNotificationService.java" <<'EOF'
+          package com.example.ngombi;
+
+          import android.app.Notification;
+          import android.app.NotificationChannel;
+          import android.app.NotificationManager;
+          import android.app.PendingIntent;
+          import android.app.Service;
+          import android.content.Intent;
+          import android.content.pm.ServiceInfo;
+          import android.os.Build;
+          import android.os.IBinder;
+
+          import androidx.annotation.Nullable;
+          import androidx.core.app.NotificationCompat;
+          import androidx.media.session.MediaButtonReceiver;
+          import android.support.v4.media.MediaMetadataCompat;
+          import android.support.v4.media.session.MediaSessionCompat;
+          import android.support.v4.media.session.PlaybackStateCompat;
+
+          public class RadioNotificationService extends Service {
+              public static final String ACTION_START = "com.example.ngombi.action.START_RADIO_NOTIFICATION";
+              public static final String ACTION_STOP = "com.example.ngombi.action.STOP_RADIO_NOTIFICATION";
+              private static final String ACTION_PAUSE = "com.example.ngombi.action.PAUSE";
+              private static final String ACTION_PLAY = "com.example.ngombi.action.PLAY";
+              private static final String ACTION_CONTROL = "com.example.ngombi.RADIO_CONTROL";
+              private static final String CHANNEL_ID = "ngombi_radio_playback";
+              private static final int NOTIFICATION_ID = 4205;
+              private MediaSessionCompat session;
+              private String stationTitle = "Radio";
+              private boolean playing = true;
+
+              @Override public void onCreate() {
+                  super.onCreate();
+                  createNotificationChannel();
+                  session = new MediaSessionCompat(this, "NGOMBI Radio");
+                  session.setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS | MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS);
+                  session.setCallback(new MediaSessionCompat.Callback() {
+                      @Override public void onPlay() { setPlaying(true); sendControl("play"); }
+                      @Override public void onPause() { setPlaying(false); sendControl("pause"); }
+                      @Override public void onStop() { setPlaying(false); sendControl("pause"); }
+                  });
+                  session.setActive(true);
+              }
+
+              @Override public int onStartCommand(@Nullable Intent intent, int flags, int startId) {
+                  String action = intent == null ? ACTION_START : intent.getAction();
+                  if (ACTION_STOP.equals(action)) {
+                      if (session != null) { session.setActive(false); session.release(); session = null; }
+                      stopForeground(true);
+                      stopSelf();
+                      return START_NOT_STICKY;
+                  }
+                  if (intent != null && intent.hasExtra("title")) stationTitle = intent.getStringExtra("title");
+                  if (ACTION_PAUSE.equals(action)) {
+                      setPlaying(false);
+                      sendControl("pause");
+                  } else if (ACTION_PLAY.equals(action)) {
+                      setPlaying(true);
+                      sendControl("play");
+                  } else {
+                      setPlaying(true);
+                  }
+                  Notification notification = buildNotification();
+                  if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+                  else startForeground(NOTIFICATION_ID, notification);
+                  return START_STICKY;
+              }
+
+              private void setPlaying(boolean value) {
+                  playing = value;
+                  if (session == null) return;
+                  session.setMetadata(new MediaMetadataCompat.Builder()
+                          .putString(MediaMetadataCompat.METADATA_KEY_TITLE, stationTitle)
+                          .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "NGOMBI")
+                          .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "Radio en direct")
+                          .build());
+                  session.setPlaybackState(new PlaybackStateCompat.Builder()
+                          .setActions(PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE | PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_STOP)
+                          .setState(playing ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED, 0, playing ? 1f : 0f)
+                          .build());
+                  NotificationManager manager = getSystemService(NotificationManager.class);
+                  if (manager != null) manager.notify(NOTIFICATION_ID, buildNotification());
+              }
+
+              private void sendControl(String control) {
+                  Intent intent = new Intent(ACTION_CONTROL).setPackage(getPackageName());
+                  intent.putExtra("control", control);
+                  sendBroadcast(intent);
+              }
+
+              private Notification buildNotification() {
+                  Intent open = new Intent(this, MainActivity.class);
+                  open.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                  PendingIntent content = PendingIntent.getActivity(this, 4206, open, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                  PendingIntent toggle = PendingIntent.getService(this, 4207,
+                          new Intent(this, RadioNotificationService.class).setAction(playing ? ACTION_PAUSE : ACTION_PLAY),
+                          PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                  NotificationCompat.Action playPause = new NotificationCompat.Action(
+                          playing ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play,
+                          playing ? "Pause" : "Lecture", toggle);
+                  return new NotificationCompat.Builder(this, CHANNEL_ID)
+                          .setSmallIcon(android.R.drawable.ic_media_play)
+                          .setContentTitle("NGOMBI")
+                          .setContentText(stationTitle + " · Radio en direct")
+                          .setContentIntent(content)
+                          .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                          .setOngoing(playing)
+                          .setOnlyAlertOnce(true)
+                          .setShowWhen(false)
+                          .addAction(playPause)
+                          .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
+                                  .setMediaSession(session.getSessionToken())
+                                  .setShowActionsInCompactView(0))
+                          .build();
+              }
+
+              private void createNotificationChannel() {
+                  if (Build.VERSION.SDK_INT >= 26) {
+                      NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Lecture radio NGOMBI", NotificationManager.IMPORTANCE_LOW);
+                      channel.setDescription("Affiche la radio NGOMBI en cours de lecture");
+                      NotificationManager manager = getSystemService(NotificationManager.class);
+                      if (manager != null) manager.createNotificationChannel(channel);
+                  }
+              }
+
+              @Override public void onDestroy() {
+                  if (session != null) { session.setActive(false); session.release(); session = null; }
+                  super.onDestroy();
+              }
+              @Nullable @Override public IBinder onBind(Intent intent) { return null; }
+          }
+          EOF
+
+          # ==================================================
           # AndroidManifest.xml
           # ==================================================
 
@@ -697,6 +898,15 @@ jobs:
                   activity + "</application>",
                   1
               )
+
+          if "RadioNotificationService" not in text:
+              notification_service = (
+                  '        <service\n'
+                  '            android:name=".RadioNotificationService"\n'
+                  '            android:foregroundServiceType="mediaPlayback"\n'
+                  '            android:exported="false" />\n\n'
+              )
+              text = text.replace("</application>", notification_service + "</application>", 1)
 
           if "RadioPlaybackService" not in text:
               service = (
@@ -772,6 +982,7 @@ jobs:
                   '    implementation "androidx.media3:media3-exoplayer-dash:1.11.1"\n'
                   '    implementation "androidx.media3:media3-ui:1.11.1"\n'
                   '    implementation "androidx.media3:media3-session:1.11.1"\n'
+                  '    implementation "androidx.media:media:1.7.0"\n'
                   "}\n"
               )
 

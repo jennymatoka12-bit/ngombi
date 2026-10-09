@@ -1538,6 +1538,7 @@ class _WebPlayerScreenState
   bool loading = true;
   String? _directStreamUrl;
   bool _backgroundRadioStarted = false;
+  bool _backgroundNotificationStarted = false;
   bool _backgroundHandoffInProgress = false;
   Timer? _streamProbeTimer;
 
@@ -1586,6 +1587,22 @@ class _WebPlayerScreenState
       ..loadRequest(
         Uri.parse(widget.url),
       );
+
+    // The native notification controls are forwarded back to the WebView
+    // for stations whose audio stream is embedded in a website.
+    _nativeRadio.setMethodCallHandler((call) async {
+      if (call.method != 'radioNotificationControl') return;
+      final control = call.arguments?.toString();
+      if (control == 'pause') {
+        await controller.runJavaScript(
+          "document.querySelectorAll('audio, video').forEach((m) => m.pause());",
+        );
+      } else if (control == 'play') {
+        await controller.runJavaScript(
+          "document.querySelectorAll('audio, video').forEach((m) => { var p = m.play(); if (p) p.catch(() => {}); });",
+        );
+      }
+    });
   }
 
   @override
@@ -1694,7 +1711,21 @@ class _WebPlayerScreenState
       await _probeDirectStream();
 
       final streamUrl = _directStreamUrl;
-      if (streamUrl == null || streamUrl.isEmpty) return;
+      if (streamUrl == null || streamUrl.isEmpty) {
+        // Website-based stations may hide their stream inside a cross-origin
+        // player. Keep their existing WebView audio and publish a native media
+        // notification with working play/pause controls instead.
+        try {
+          await _nativeRadio.invokeMethod(
+            'startRadioNotification',
+            {'title': widget.title},
+          );
+          _backgroundNotificationStarted = true;
+        } catch (_) {
+          // Never interrupt a station that already plays correctly.
+        }
+        return;
+      }
 
       // Pause the WebView source before starting the native session to avoid
       // duplicate audio. If native playback cannot start, restore WebView audio.
@@ -1728,15 +1759,22 @@ class _WebPlayerScreenState
   }
 
   Future<void> _returnToWebPlayer() async {
-    if (!_backgroundRadioStarted) return;
+    if (!_backgroundRadioStarted && !_backgroundNotificationStarted) return;
 
-    try {
-      await _nativeRadio.invokeMethod(
-        'stopBackgroundRadio',
-      );
-    } catch (_) {}
+    if (_backgroundRadioStarted) {
+      try {
+        await _nativeRadio.invokeMethod('stopBackgroundRadio');
+      } catch (_) {}
+    }
+
+    if (_backgroundNotificationStarted) {
+      try {
+        await _nativeRadio.invokeMethod('stopRadioNotification');
+      } catch (_) {}
+    }
 
     _backgroundRadioStarted = false;
+    _backgroundNotificationStarted = false;
 
     try {
       await controller.runJavaScript(
@@ -1760,6 +1798,7 @@ class _WebPlayerScreenState
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _streamProbeTimer?.cancel();
+    _nativeRadio.setMethodCallHandler(null);
     super.dispose();
   }
 

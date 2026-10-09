@@ -805,7 +805,7 @@ jobs:
                           playing ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play,
                           playing ? "Pause" : "Lecture", toggle);
                   return new NotificationCompat.Builder(this, CHANNEL_ID)
-                          .setSmallIcon(getApplicationInfo().icon)
+                          .setSmallIcon(android.R.drawable.ic_media_play)
                           .setContentTitle("NGOMBI")
                           .setContentText(stationTitle + " · Radio en direct")
                           .setContentIntent(content)

@@ -11,6 +11,7 @@ import 'screens/ngombi_admin_login_screen.dart';
 import 'services/ngombi_ad_server_repository.dart';
 import 'config/ngombi_supabase_config.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'models/ngombi_ad.dart';
 
 import 'models/tv_channel.dart';
@@ -241,11 +242,6 @@ const List<MediaItem> radioChannels = [
     url: 'https://www.europe1.fr/',
     category: 'Information',
   ),
-  MediaItem(
-    name: 'TVRadioZap',
-    url: 'https://tvradiozap.eu/',
-    category: 'International',
-  ),
 ];
 
 // -----------------------------------------------------------------------------
@@ -368,6 +364,7 @@ class _MainTabScreenState extends State<MainTabScreen> {
         isActive: currentIndex == 1,
       ),
       const RadioScreen(),
+      const BouquetScreen(),
     ];
 
     return Scaffold(
@@ -397,6 +394,11 @@ class _MainTabScreenState extends State<MainTabScreen> {
             icon: Icon(Icons.radio_outlined),
             selectedIcon: Icon(Icons.radio_rounded),
             label: 'Radio',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.widgets_outlined),
+            selectedIcon: Icon(Icons.widgets_rounded),
+            label: 'Bouquet',
           ),
         ],
       ),
@@ -1300,6 +1302,138 @@ class _TvGridCard extends StatelessWidget {
       case StreamType.unknown:
         return 'Flux';
     }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// BOUQUET
+// -----------------------------------------------------------------------------
+
+class BouquetScreen extends StatelessWidget {
+  const BouquetScreen({super.key});
+
+  Future<void> _openCanalPlus(BuildContext context) async {
+    final uri = Uri.parse('https://www.canalplus.com/');
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible d’ouvrir le portail CANAL+.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: CustomScrollView(
+        slivers: [
+          const SliverToBoxAdapter(
+            child: _PageHeader(
+              title: 'Bouquet',
+              subtitle: 'Vos portails TV et services de télévision',
+              icon: Icons.widgets_rounded,
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                _BouquetServiceCard(
+                  title: 'TVRadioZap',
+                  subtitle: 'Ouvrir le portail TV et radio',
+                  icon: Icons.live_tv_rounded,
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const WebPlayerScreen(
+                          title: 'TVRadioZap',
+                          url: 'https://tvradiozap.eu/',
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                _BouquetServiceCard(
+                  title: 'CANAL+',
+                  subtitle: 'Se connecter ou créer un compte sur myCANAL',
+                  icon: Icons.tv_rounded,
+                  onTap: () => _openCanalPlus(context),
+                ),
+              ]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BouquetServiceCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _BouquetServiceCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF8A00).withOpacity(0.16),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  icon,
+                  size: 30,
+                  color: const Color(0xFFFFA21A),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: Colors.white60,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.open_in_new_rounded, color: Colors.white54),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

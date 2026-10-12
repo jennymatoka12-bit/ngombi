@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/ngombi_supabase_config.dart';
 import '../services/ngombi_ad_server_repository.dart';
-import 'ngombi_ad_manager_screen.dart';
+import 'ngombi_admin_hub_screen.dart';
 
 class NgombiAdminLoginScreen extends StatefulWidget {
   const NgombiAdminLoginScreen({super.key});
@@ -64,10 +64,7 @@ class _NgombiAdminLoginScreenState extends State<NgombiAdminLoginScreen> {
 
       await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => NgombiAdManagerScreen(
-            ads: ads,
-            remoteSave: NgombiAdServerRepository().saveAds,
-          ),
+          builder: (_) => NgombiAdminHubScreen(ads: ads),
         ),
       );
     } on AuthException catch (e) {

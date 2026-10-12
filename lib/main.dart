@@ -9,6 +9,7 @@ import 'widgets/ngombi_advertising_panel.dart';
 import 'services/ngombi_ad_repository.dart';
 import 'screens/ngombi_admin_login_screen.dart';
 import 'services/ngombi_ad_server_repository.dart';
+import 'services/ngombi_audience_tracking.dart';
 import 'config/ngombi_supabase_config.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -328,7 +329,7 @@ class MainTabScreen extends StatefulWidget {
   State<MainTabScreen> createState() => _MainTabScreenState();
 }
 
-class _MainTabScreenState extends State<MainTabScreen> {
+class _MainTabScreenState extends State<MainTabScreen> with WidgetsBindingObserver {
   int currentIndex = 0;
   late List<NgombiAd> _ads;
 
@@ -336,6 +337,24 @@ class _MainTabScreenState extends State<MainTabScreen> {
   void initState() {
     super.initState();
     _ads = List<NgombiAd>.from(widget.ads);
+    WidgetsBinding.instance.addObserver(this);
+    unawaited(NgombiAudienceTracking.instance.start('Accueil'));
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      NgombiAudienceTracking.instance.setSection(_sectionForIndex(currentIndex));
+    }
+  }
+
+  String _sectionForIndex(int index) => const ['Accueil', 'TV', 'Radio', 'Bouquet'][index.clamp(0, 3).toInt()];
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    NgombiAudienceTracking.instance.dispose();
+    super.dispose();
   }
 
   @override
@@ -351,11 +370,13 @@ class _MainTabScreenState extends State<MainTabScreen> {
           setState(() {
             currentIndex = 1;
           });
+          NgombiAudienceTracking.instance.setSection('TV');
         },
         onOpenRadio: () {
           setState(() {
             currentIndex = 2;
           });
+          NgombiAudienceTracking.instance.setSection('Radio');
         },
       ),
       TvScreen(
@@ -378,6 +399,7 @@ class _MainTabScreenState extends State<MainTabScreen> {
           setState(() {
             currentIndex = index;
           });
+          NgombiAudienceTracking.instance.setSection(_sectionForIndex(index));
         },
         destinations: const [
           NavigationDestination(

@@ -53,11 +53,7 @@ class NgombiAudienceTracking with WidgetsBindingObserver {
   Future<void> _sendHeartbeat() async {
     try {
       final id = _installationId;
-      if (id == null || Supabase.instance.client.auth.currentSession != null) {
-        // Authenticated and anonymous clients can both report presence; the
-        // publishable key is public and the database function accepts only
-        // an installation UUID and a whitelisted section.
-      }
+      // The heartbeat RPC accepts only an installation UUID and a whitelisted section.
       if (id == null) return;
       await Supabase.instance.client.rpc('ngombi_audience_heartbeat', params: {
         'p_installation_id': id,

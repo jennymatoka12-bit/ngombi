@@ -99,7 +99,7 @@ class _NgombiAudienceDashboardScreenState extends State<NgombiAudienceDashboardS
                             borderRadius: BorderRadius.circular(5),
                             child: LinearProgressIndicator(
                               minHeight: 9,
-                              value: _number(item['users']) == 0 ? 0 : (_number(item['users']) / _maxHistory(history)).clamp(0.0, 1.0),
+                              value: _number(item['users']) == 0 ? 0 : (_number(item['users']) / _maxHistory(history)).clamp(0.0, 1.0).toDouble(),
                             ),
                           )),
                           const SizedBox(width: 10),

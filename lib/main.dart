@@ -348,7 +348,7 @@ class _MainTabScreenState extends State<MainTabScreen> with WidgetsBindingObserv
     }
   }
 
-  String _sectionForIndex(int index) => const ['Accueil', 'TV', 'Radio', 'Bouquet'][index.clamp(0, 3)];
+  String _sectionForIndex(int index) => const ['Accueil', 'TV', 'Radio', 'Bouquet'][index.clamp(0, 3).toInt()];
 
   @override
   void dispose() {
@@ -370,11 +370,13 @@ class _MainTabScreenState extends State<MainTabScreen> with WidgetsBindingObserv
           setState(() {
             currentIndex = 1;
           });
+          NgombiAudienceTracking.instance.setSection('TV');
         },
         onOpenRadio: () {
           setState(() {
             currentIndex = 2;
           });
+          NgombiAudienceTracking.instance.setSection('Radio');
         },
       ),
       TvScreen(

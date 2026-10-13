@@ -33,6 +33,8 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
   bool _isAdvancing = false;
   bool _wasPlayingBeforeLifecycle = false;
   bool _isAdMuted = false;
+  double _dragDistance = 0;
+  bool _dragHandled = false;
 
   List<NgombiAd> get _activeAds {
     final items = widget.ads.where((ad) => ad.isScheduledActive).toList();
@@ -207,22 +209,41 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
     });
   }
 
-  void _advance() {
+  void _advance() => _changeAd(1);
+
+  void _changeAd(int direction) {
     if (!mounted || !widget.isActive || _isAdvancing) return;
     final ads = _activeAds;
-    if (ads.isEmpty) return;
+    if (ads.length < 2) return;
 
     _isAdvancing = true;
     _timer?.cancel();
     _timer = null;
 
     setState(() {
-      _index = (_index + 1) % ads.length;
+      _index = (_index + direction) % ads.length;
+      if (_index < 0) _index += ads.length;
     });
 
     _prepareCurrentAd().whenComplete(() {
       _isAdvancing = false;
     });
+  }
+
+  void _handleSwipeUpdate(DragUpdateDetails details) {
+    if (_dragHandled || !widget.isActive || _activeAds.length < 2) return;
+    _dragDistance += details.primaryDelta ?? 0;
+
+    if (_dragDistance.abs() >= 55) {
+      _dragHandled = true;
+      // Finger moves left -> next ad; finger moves right -> previous ad.
+      _changeAd(_dragDistance < 0 ? 1 : -1);
+    }
+  }
+
+  void _resetSwipe() {
+    _dragDistance = 0;
+    _dragHandled = false;
   }
 
   Future<void> _openAd() async {
@@ -276,6 +297,9 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
           : GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: _openAd,
+              onHorizontalDragUpdate: _handleSwipeUpdate,
+              onHorizontalDragEnd: (_) => _resetSwipe(),
+              onHorizontalDragCancel: _resetSwipe,
               child: Stack(
                 fit: StackFit.expand,
                 children: [

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:http/http.dart' as http;
 import 'widgets/ngombi_logo.dart';
 import 'widgets/ngombi_advertising_panel.dart';
 import 'services/ngombi_ad_repository.dart';
@@ -1377,12 +1378,208 @@ class BouquetScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 _BouquetServiceCard(
+                  title: 'TNT',
+                  subtitle: 'Chaînes françaises disponibles via playlist M3U',
+                  icon: Icons.live_tv_rounded,
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const TntScreen()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                _BouquetServiceCard(
                   title: 'CANAL+',
                   subtitle: 'Se connecter ou créer un compte sur myCANAL',
                   icon: Icons.tv_rounded,
                   onTap: () => _openCanalPlus(context),
                 ),
               ]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class TntScreen extends StatefulWidget {
+  const TntScreen({super.key});
+
+  @override
+  State<TntScreen> createState() => _TntScreenState();
+}
+
+class _TntScreenState extends State<TntScreen> {
+  static final Uri _playlistUri = Uri.parse(
+    'https://iptv-org.github.io/iptv/countries/fr.m3u',
+  );
+
+  late Future<List<TvChannel>> _channelsFuture;
+  String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _channelsFuture = _loadChannels();
+  }
+
+  Future<List<TvChannel>> _loadChannels() async {
+    final response = await http.get(
+      _playlistUri,
+      headers: const {'User-Agent': 'NGOMBI Android'},
+    ).timeout(const Duration(seconds: 25));
+
+    if (response.statusCode != 200) {
+      throw Exception('La playlist TNT est indisponible (HTTP ${response.statusCode}).');
+    }
+
+    final text = utf8.decode(response.bodyBytes, allowMalformed: true);
+    final channels = <TvChannel>[];
+    String? name;
+    String? logo;
+    String category = 'France';
+
+    for (final rawLine in text.split(RegExp(r'\\r?\\n'))) {
+      final line = rawLine.trim();
+      if (line.isEmpty) continue;
+
+      if (line.startsWith('#EXTINF:')) {
+        final comma = line.lastIndexOf(',');
+        name = comma >= 0 ? line.substring(comma + 1).trim() : 'Chaîne TV';
+        final logoMatch = RegExp(r'tvg-logo="([^"]*)"').firstMatch(line);
+        logo = logoMatch?.group(1);
+        final groupMatch = RegExp(r'group-title="([^"]*)"').firstMatch(line);
+        category = groupMatch?.group(1)?.trim().isNotEmpty == true
+            ? groupMatch!.group(1)!.trim()
+            : 'France';
+        continue;
+      }
+
+      if (line.startsWith('#')) continue;
+      final uri = Uri.tryParse(line);
+      if (uri == null ||
+          (uri.scheme != 'http' && uri.scheme != 'https') ||
+          name == null) {
+        name = null;
+        logo = null;
+        category = 'France';
+        continue;
+      }
+
+      channels.add(TvChannel(
+        name: name,
+        url: line,
+        type: detectStreamType(line),
+        category: category,
+        logo: (logo == null || logo.isEmpty) ? null : logo,
+      ));
+      name = null;
+      logo = null;
+      category = 'France';
+    }
+
+    if (channels.isEmpty) {
+      throw Exception('Aucune chaîne exploitable trouvée dans la playlist.');
+    }
+    return channels;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('TNT France'),
+        actions: [
+          IconButton(
+            tooltip: 'Actualiser la liste',
+            onPressed: () => setState(() {
+              _channelsFuture = _loadChannels();
+            }),
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: TextField(
+              onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
+              decoration: InputDecoration(
+                hintText: 'Rechercher une chaîne',
+                prefixIcon: const Icon(Icons.search_rounded),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+          ),
+          Expanded(
+            child: FutureBuilder<List<TvChannel>>(
+              future: _channelsFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.wifi_off_rounded, size: 42),
+                          const SizedBox(height: 12),
+                          Text('Impossible de charger la playlist TNT.\\n${snapshot.error}',
+                              textAlign: TextAlign.center),
+                          const SizedBox(height: 12),
+                          FilledButton.icon(
+                            onPressed: () => setState(() {
+                              _channelsFuture = _loadChannels();
+                            }),
+                            icon: const Icon(Icons.refresh_rounded),
+                            label: const Text('Réessayer'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                final all = snapshot.data ?? const <TvChannel>[];
+                final visible = all.where((channel) =>
+                  channel.name.toLowerCase().contains(_query) ||
+                  channel.category.toLowerCase().contains(_query)
+                ).toList();
+
+                if (visible.isEmpty) {
+                  return const Center(child: Text('Aucune chaîne ne correspond à la recherche.'));
+                }
+
+                return ListView.separated(
+                  itemCount: visible.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final channel = visible[index];
+                    return ListTile(
+                      leading: channel.logo == null
+                          ? const CircleAvatar(child: Icon(Icons.tv_rounded))
+                          : CircleAvatar(
+                              backgroundColor: Colors.black,
+                              backgroundImage: NetworkImage(channel.logo!),
+                              onBackgroundImageError: (_, __) {},
+                            ),
+                      title: Text(channel.name, maxLines: 2, overflow: TextOverflow.ellipsis),
+                      subtitle: Text(channel.category, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      trailing: const Icon(Icons.play_circle_outline_rounded),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => StreamPlayerScreen(channel: channel),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
             ),
           ),
         ],

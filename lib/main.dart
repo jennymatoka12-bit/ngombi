@@ -1440,7 +1440,7 @@ class _TntScreenState extends State<TntScreen> {
     String? logo;
     String category = 'France';
 
-    for (final rawLine in text.split(RegExp(r'\\r?\\n'))) {
+    for (final rawLine in text.split(RegExp(r'\r?\n'))) {
       final line = rawLine.trim();
       if (line.isEmpty) continue;
 
@@ -1529,7 +1529,7 @@ class _TntScreenState extends State<TntScreen> {
                         children: [
                           const Icon(Icons.wifi_off_rounded, size: 42),
                           const SizedBox(height: 12),
-                          Text('Impossible de charger la playlist TNT.\\n${snapshot.error}',
+                          Text('Impossible de charger la playlist TNT.\n${snapshot.error}',
                               textAlign: TextAlign.center),
                           const SizedBox(height: 12),
                           FilledButton.icon(

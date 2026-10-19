@@ -5,7 +5,7 @@
 #SERVICE 4097:0:2:1794:0:0:0:0:0:0:https%3a//origin-m6web.live.6cloud.fr/out/v1/6play/6play-w9/cmaf_cenc00/dash-short-hd.mpd#tvrz=Shaka&nolist:W9
 #SERVICE 4097:0:1:1790:0:0:0:0:0:0:https%3a//tvradiozap.eu/tools/m3u-m3u8.php/para/tmc.m3u8:TMC
 #SERVICE 4097:0:1:1792:0:0:0:0:0:0:https%3a//tvradiozap.eu/tools/m3u-m3u8.php/para/tfx.m3u8:TFX
-#SERVICE 4097:0:1:1360:0:0:0:0:0:0:https%3a//sr-m6web.live.6cloud.fr/out/v1/6play/6play-gulli/cmaf_q2hyb21h/hls-short-sd.m3u8:Gulli
+#SERVICE 4097:0:1:1360:0:0:0:0:0:0:http%3a//99.27.51.147%3a8080/Gulli.index.m3u8:Gulli
 #SERVICE 4097:0:1:1454:0:0:0:0:0:0:https%3a//live-cdn-bfmtv-euw1.bfmtv.bct.nextradiotv.com/m1/media.m3u8:BFM TV
 #SERVICE 4097:0:1:1284:0:0:0:0:0:0:https%3a//hls-m015-live-aka-canalplus.akamaized.net/live/disk/cnews-clair-hd/hls-v3-hd-clair/cnews-clair-hd.m3u8:CNews
 #SERVICE 4097:0:1:1798:0:0:0:0:0:0:https%3a//tvradiozap.eu/tools/tf-m3u8.php/LCI.m3u8:LCI

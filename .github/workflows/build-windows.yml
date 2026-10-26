@@ -17,8 +17,6 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          # MediaKit's current video controls use onPopInvokedWithResult,
-          # which is unavailable in Flutter 3.22.3.
           flutter-version: "3.29.3"
           channel: stable
           cache: true
@@ -48,34 +46,51 @@ jobs:
           )
           $releasePath = $null
           foreach ($candidate in $candidatePaths) {
-            if (Test-Path $candidate) {
+            if (Test-Path "$candidate/ngombi.exe") {
               $releasePath = $candidate
               break
             }
           }
           if ($null -eq $releasePath) {
-            Write-Host "Windows build output was not found. Existing build files:"
-            Get-ChildItem -Path "build/windows" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 100 FullName
-            throw "Windows release directory not found in either supported Flutter output layout."
+            Write-Host "Windows executables found:"
+            Get-ChildItem -Path "build/windows" -Filter "*.exe" -Recurse -File -ErrorAction SilentlyContinue | Select-Object FullName
+            throw "ngombi.exe was not found in the expected Windows release directory."
           }
-          $exe = Get-ChildItem -Path $releasePath -Filter "*.exe" -File | Select-Object -First 1
-          if ($null -eq $exe) {
-            Get-ChildItem -Path $releasePath -Force
-            throw "No executable was found in $releasePath."
+          $exe = Join-Path $releasePath "ngombi.exe"
+          if (!(Test-Path $exe)) {
+            throw "Required executable missing: $exe"
           }
-          Write-Host "Release directory: $releasePath"
-          Write-Host "Executable: $($exe.Name)"
+          Write-Host "Verified executable: $exe"
           "NGOMBI_RELEASE_PATH=$releasePath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
-          "NGOMBI_EXECUTABLE=$($exe.Name)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
 
-      - name: Package Windows release
+      - name: Package Windows release and verify ZIP contents
         shell: pwsh
         run: |
-          Compress-Archive -Path "$env:NGOMBI_RELEASE_PATH/*" -DestinationPath "NGOMBI-Windows-Test.zip" -Force
-          if (!(Test-Path "NGOMBI-Windows-Test.zip")) {
-            throw "Windows ZIP package was not created."
+          $stage = Join-Path $env:RUNNER_TEMP "ngombi-release-package"
+          if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
+          New-Item -ItemType Directory -Path $stage | Out-Null
+          Copy-Item -Path "$env:NGOMBI_RELEASE_PATH\*" -Destination $stage -Recurse -Force
+
+          $stagedExe = Join-Path $stage "ngombi.exe"
+          if (!(Test-Path $stagedExe)) {
+            throw "Packaging aborted: ngombi.exe is not at the package root."
           }
-          Get-Item "NGOMBI-Windows-Test.zip" | Format-List Name, Length, FullName
+          $zipPath = Join-Path $env:GITHUB_WORKSPACE "NGOMBI-Windows-Test.zip"
+          if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
+          Compress-Archive -Path "$stage\*" -DestinationPath $zipPath -Force
+
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $archive = [System.IO.Compression.ZipFile]::OpenRead($zipPath)
+          try {
+            $exeEntry = $archive.Entries | Where-Object { $_.FullName -eq "ngombi.exe" } | Select-Object -First 1
+            if ($null -eq $exeEntry) {
+              throw "Packaging aborted: ZIP does not contain ngombi.exe at its root."
+            }
+            Write-Host "ZIP verified: root ngombi.exe exists; entries=$($archive.Entries.Count)"
+          } finally {
+            $archive.Dispose()
+          }
+          Get-Item $zipPath | Format-List Name, Length, FullName
 
       - name: Upload Windows package
         uses: actions/upload-artifact@v4

@@ -146,11 +146,12 @@ class _WindowsDirectRadioScreenState extends State<WindowsDirectRadioScreen> {
       final candidates = <String>[];
       final patterns = [
         RegExp(r'''(?:src|href|data-src)\s*=\s*["']([^"']+)["']''', caseSensitive: false),
-        RegExp(r'''["'](https?:\\?/\\?/[^"']+?(?:\.mp3|\.aac|\.m4a|\.m3u8|\.pls)(?:\?[^"']*)?)["']''', caseSensitive: false),
+        RegExp(r'''[\"'](https?:\\/\\/[^\"']+?(?:\\.mp3|\\.aac|\\.m4a|\\.m3u8|\\.pls|\\.aacp)(?:\\?[^\"']*)?)[\"']''', caseSensitive: false),
+        RegExp(r'''https?://[^\s\"'<>]+?(?:\.mp3|\.aac|\.m4a|\.m3u8|\.pls|\.aacp)(?:\?[^\s\"'<>]*)?''', caseSensitive: false),
       ];
       for (final pattern in patterns) {
         for (final match in pattern.allMatches(html)) {
-          var candidate = match.group(1)?.replaceAll(r'\/', '/').trim() ?? '';
+          var candidate = (match.group(1) ?? match.group(0) ?? '').replaceAll(r'\/', '/').replaceAll('&amp;', '&').trim();
           if (candidate.isEmpty) continue;
           if (candidate.startsWith('//')) candidate = '${pageUri.scheme}:$candidate';
           if (candidate.startsWith('/')) candidate = pageUri.resolve(candidate).toString();

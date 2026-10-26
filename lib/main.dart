@@ -1521,9 +1521,7 @@ class _TntScreenState extends State<TntScreen> {
         actions: [
           IconButton(
             tooltip: 'Actualiser la liste',
-            onPressed: () => setState(() {
-              _channelsFuture = _loadChannels();
-            }),
+            onPressed: () => setState(() => _channelsFuture = _loadChannels()),
             icon: const Icon(Icons.refresh_rounded),
           ),
         ],
@@ -1557,116 +1555,13 @@ class _TntScreenState extends State<TntScreen> {
                         children: [
                           const Icon(Icons.wifi_off_rounded, size: 42),
                           const SizedBox(height: 12),
-                          Text('Impossible de charger la playlist TNT.\n${snapshot.error}',
-                              textAlign: TextAlign.center),
-                          const SizedBox(height: 12),
-                          FilledButton.icon(
-                            onPressed: () => setState(() {
-                              _channelsFuture = _loadChannels();
-                            }),
-                            icon: const Icon(Icons.refresh_rounded),
-                            label: const Text('Réessayer'),
+                          Text(
+                            'Impossible de charger la playlist TNT.\n${snapshot.error}',
+                            textAlign: TextAlign.center,
                           ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                final all = snapshot.data ?? const <TvChannel>[];
-                final visible = all.where((channel) =>
-                  channel.name.toLowerCase().contains(_query) ||
-                  channel.category.toLowerCase().contains(_query)
-                ).toList();
-
-                if (visible.isEmpty) {
-                  return const Center(child: Text('Aucune chaîne ne correspond à la recherche.'));
-                }
-
-                return ListView.separated(
-                  itemCount: visible.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final channel = visible[index];
-                    return ListTile(
-                      leading: channel.logo == null
-                          ? const CircleAvatar(child: Icon(Icons.tv_rounded))
-                          : CircleAvatar(
-                              backgroundColor: Colors.black,
-                              backgroundImage: NetworkImage(channel.logo!),
-                              onBackgroundImageError: (_, __) {},
-                            ),
-                      title: Text(channel.name, maxLines: 2, overflow: TextOverflow.ellipsis),
-                      subtitle: Text(channel.category, maxLines: 1, overflow: TextOverflow.ellipsis),
-                      trailing: const Icon(Icons.play_circle_outline_rounded),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => StreamPlayerScreen(channel: channel),
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('TNT France'),
-        actions: [
-          IconButton(
-            tooltip: 'Actualiser la liste',
-            onPressed: () => setState(() {
-              _channelsFuture = _loadChannels();
-            }),
-            icon: const Icon(Icons.refresh_rounded),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-            child: TextField(
-              onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
-              decoration: InputDecoration(
-                hintText: 'Rechercher une chaîne',
-                prefixIcon: const Icon(Icons.search_rounded),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-            ),
-          ),
-          Expanded(
-            child: FutureBuilder<List<TvChannel>>(
-              future: _channelsFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.wifi_off_rounded, size: 42),
-                          const SizedBox(height: 12),
-                          Text('Impossible de charger la playlist TNT.\n${snapshot.error}',
-                              textAlign: TextAlign.center),
                           const SizedBox(height: 12),
                           FilledButton.icon(
-                            onPressed: () => setState(() {
-                              _channelsFuture = _loadChannels();
-                            }),
+                            onPressed: () => setState(() => _channelsFuture = _loadChannels()),
                             icon: const Icon(Icons.refresh_rounded),
                             label: const Text('Réessayer'),
                           ),

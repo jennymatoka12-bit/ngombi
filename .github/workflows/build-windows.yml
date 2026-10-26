@@ -17,7 +17,9 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.22.3"
+          # MediaKit's current video controls use onPopInvokedWithResult,
+          # which is unavailable in Flutter 3.22.3.
+          flutter-version: "3.29.3"
           channel: stable
           cache: true
 

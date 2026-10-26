@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -118,7 +119,9 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
       return;
     }
 
-    if (widget.channel.type == StreamType.dash) {
+    // On Windows, route HLS, DASH and direct media through the MediaKit-backed
+    // video_player implementation. The old MethodChannel DASH path is Android-only.
+    if (widget.channel.type == StreamType.dash && !Platform.isWindows) {
       _openNativeDashPlayer();
     } else {
       _initializeFlutterPlayer();
@@ -409,6 +412,9 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
         _errorMessage = null;
       });
 
+      // Explicitly restore audio output on Windows. Some live streams initialize
+      // with a zero/muted output after switching tracks.
+      await playerController.setVolume(1.0);
       await playerController.play();
       _scheduleControlsHide();
       unawaited(_loadEpg());

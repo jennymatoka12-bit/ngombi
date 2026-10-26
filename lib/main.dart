@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -18,10 +19,16 @@ import 'models/ngombi_ad.dart';
 
 import 'models/tv_channel.dart';
 import 'screens/stream_player_screen.dart';
+import 'screens/radio_platform_screen.dart';
 import 'widgets/channel_logo.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Keep the existing Android player implementation unchanged. On Windows,
+  // register MediaKit as the video_player backend for HLS/DASH/MP4 and audio.
+  if (Platform.isWindows) {
+    VideoPlayerMediaKit.ensureInitialized(windows: true);
+  }
   runApp(const NgombiBootstrap());
 }
 
@@ -1182,7 +1189,7 @@ class NgombiCategoryScreen extends StatelessWidget {
             ...radio.map((item) => _RadioListCard(
               radio: item,
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => WebPlayerScreen(title: item.name, url: item.url)),
+                MaterialPageRoute(builder: (_) => RadioPlatformScreen(title: item.name, url: item.url)),
               ),
             )),
           ],
@@ -1699,7 +1706,7 @@ class RadioScreen extends StatelessWidget {
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) =>
-                                WebPlayerScreen(
+                                RadioPlatformScreen(
                               title: radio.name,
                               url: radio.url,
                             ),

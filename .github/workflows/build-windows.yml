@@ -37,14 +37,43 @@ jobs:
       - name: Build Windows release
         run: flutter build windows --release
 
+      - name: Locate and verify Windows release
+        shell: pwsh
+        run: |
+          $candidatePaths = @(
+            "build/windows/x64/runner/Release",
+            "build/windows/runner/Release"
+          )
+          $releasePath = $null
+          foreach ($candidate in $candidatePaths) {
+            if (Test-Path $candidate) {
+              $releasePath = $candidate
+              break
+            }
+          }
+          if ($null -eq $releasePath) {
+            Write-Host "Windows build output was not found. Existing build files:"
+            Get-ChildItem -Path "build/windows" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 100 FullName
+            throw "Windows release directory not found in either supported Flutter output layout."
+          }
+          $exe = Get-ChildItem -Path $releasePath -Filter "*.exe" -File | Select-Object -First 1
+          if ($null -eq $exe) {
+            Get-ChildItem -Path $releasePath -Force
+            throw "No executable was found in $releasePath."
+          }
+          Write-Host "Release directory: $releasePath"
+          Write-Host "Executable: $($exe.Name)"
+          "NGOMBI_RELEASE_PATH=$releasePath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
+          "NGOMBI_EXECUTABLE=$($exe.Name)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
+
       - name: Package Windows release
         shell: pwsh
         run: |
-          $releasePath = "build/windows/x64/runner/Release"
-          if (!(Test-Path "$releasePath/NGOMBI.exe")) {
-            throw "NGOMBI.exe not found in the Windows release output."
+          Compress-Archive -Path "$env:NGOMBI_RELEASE_PATH/*" -DestinationPath "NGOMBI-Windows-Test.zip" -Force
+          if (!(Test-Path "NGOMBI-Windows-Test.zip")) {
+            throw "Windows ZIP package was not created."
           }
-          Compress-Archive -Path "$releasePath/*" -DestinationPath "NGOMBI-Windows-Test.zip" -Force
+          Get-Item "NGOMBI-Windows-Test.zip" | Format-List Name, Length, FullName
 
       - name: Upload Windows package
         uses: actions/upload-artifact@v4

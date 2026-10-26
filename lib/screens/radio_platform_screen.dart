@@ -6,10 +6,8 @@ import 'package:video_player/video_player.dart';
 
 import '../main.dart' show WebPlayerScreen;
 
-/// Keeps the existing WebView-based radio experience on Android, while using
-/// a Windows-compatible audio player for direct streams. Websites that embed
-/// their own player open in the user's default browser on Windows because the
-/// mobile webview_flutter controller is not supported by the Windows runner.
+/// Uses native stream playback for known direct radio streams on Windows,
+/// while leaving the existing Android WebView implementation unchanged.
 class RadioPlatformScreen extends StatelessWidget {
   final String title;
   final String url;
@@ -26,13 +24,18 @@ class RadioPlatformScreen extends StatelessWidget {
       return WebPlayerScreen(title: title, url: url);
     }
 
-    final uri = Uri.tryParse(url);
+    final normalizedTitle = title.toLowerCase();
+    final directUrl = normalizedTitle.contains('skyrock')
+        ? 'https://www.skyrock.fm/stream.php/mytuner_128mp3.mp3'
+        : url;
+    final uri = Uri.tryParse(directUrl);
     final isDirectStream = uri != null &&
-        uri.host.toLowerCase() == 'studio.webradio.solutions' &&
-        uri.path == '/stream';
+        ((uri.host.toLowerCase() == 'studio.webradio.solutions' &&
+                uri.path == '/stream') ||
+            normalizedTitle.contains('skyrock'));
 
     if (isDirectStream) {
-      return WindowsDirectRadioScreen(title: title, url: url);
+      return WindowsDirectRadioScreen(title: title, url: directUrl);
     }
 
     return WindowsWebsiteRadioScreen(title: title, url: url);
@@ -70,7 +73,7 @@ class _WindowsDirectRadioScreenState extends State<WindowsDirectRadioScreen> {
     _controller = controller;
     controller.addListener(_onChanged);
     try {
-      await controller.initialize();
+      await controller.initialize().timeout(const Duration(seconds: 20));
       await controller.setLooping(false);
       await controller.play();
       if (!mounted) return;
@@ -86,6 +89,21 @@ class _WindowsDirectRadioScreenState extends State<WindowsDirectRadioScreen> {
 
   void _onChanged() {
     if (mounted) setState(() {});
+  }
+
+  Future<void> _retry() async {
+    final old = _controller;
+    _controller = null;
+    if (old != null) {
+      old.removeListener(_onChanged);
+      await old.dispose();
+    }
+    if (!mounted) return;
+    setState(() {
+      _error = null;
+      _loading = true;
+    });
+    await _initialize();
   }
 
   @override
@@ -122,13 +140,7 @@ class _WindowsDirectRadioScreenState extends State<WindowsDirectRadioScreen> {
                     style: const TextStyle(color: Colors.white54, fontSize: 12)),
                 const SizedBox(height: 12),
                 FilledButton.icon(
-                  onPressed: () => setState(() {
-                    _error = null;
-                    _loading = true;
-                    _controller?.dispose();
-                    _controller = null;
-                    _initialize();
-                  }),
+                  onPressed: _retry,
                   icon: const Icon(Icons.refresh),
                   label: const Text('Réessayer'),
                 ),
@@ -168,7 +180,7 @@ class WindowsWebsiteRadioScreen extends StatelessWidget {
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!opened && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Impossible d’ouvrir cette radio dans le navigateur.')),
+        const SnackBar(content: Text('Impossible d’ouvrir ce site dans le navigateur.')),
       );
     }
   }
@@ -193,16 +205,15 @@ class WindowsWebsiteRadioScreen extends StatelessWidget {
                     style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 12),
                 const Text(
-                  'Cette station diffuse depuis son propre site web. '
-                  'Sur Windows, NGOMBI ouvre ce site dans le navigateur par défaut '
-                  'pour éviter un écran blanc.',
+                  'Cette station utilise son propre portail web. Sur Windows, '
+                  'ouvre-le dans le navigateur pour accéder à son lecteur intégré.',
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 20),
                 FilledButton.icon(
                   onPressed: () => _openWebsite(context),
                   icon: const Icon(Icons.open_in_new_rounded),
-                  label: const Text('Ouvrir la radio dans le navigateur'),
+                  label: const Text('Ouvrir le portail dans le navigateur'),
                 ),
               ],
             ),

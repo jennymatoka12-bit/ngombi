@@ -1616,46 +1616,6 @@ class _TntScreenState extends State<TntScreen> {
   }
 }
 
-,
-        caseSensitive: false,
-      ).firstMatch(line);
-      if (userAgentMatch != null && name != null) {
-        headers['User-Agent'] = userAgentMatch.group(1)!.trim();
-        continue;
-      }
-
-      if (line.startsWith('#')) continue;
-      final uri = Uri.tryParse(line);
-      if (uri == null ||
-          (uri.scheme != 'http' && uri.scheme != 'https') ||
-          name == null) {
-        name = null;
-        logo = null;
-        category = 'France';
-        headers.clear();
-        continue;
-      }
-
-      channels.add(TvChannel(
-        name: name,
-        url: line,
-        type: detectStreamType(line),
-        category: category,
-        logo: (logo == null || logo.isEmpty) ? null : logo,
-        headers: Map<String, String>.unmodifiable(headers),
-      ));
-      name = null;
-      logo = null;
-      category = 'France';
-      headers.clear();
-    }
-
-    if (channels.isEmpty) {
-      throw Exception('Aucune chaîne exploitable trouvée dans la playlist.');
-    }
-    return channels;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(

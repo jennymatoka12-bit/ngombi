@@ -1448,14 +1448,14 @@ class _TntScreenState extends State<TntScreen> {
       throw Exception('La playlist TNT est indisponible (HTTP ${response.statusCode}).');
     }
 
-    final text = utf8.decode(response.bodyBytes, allowMalformed: true);
+    final playlistText = utf8.decode(response.bodyBytes, allowMalformed: true);
     final channels = <TvChannel>[];
     String? name;
     String? logo;
     String category = 'France';
     final headers = <String, String>{};
 
-    for (final rawLine in text.split(RegExp(r'\r?\n'))) {
+    for (final rawLine in playlistText.split(RegExp(r'\\r?\\n'))) {
       final line = rawLine.trim();
       if (line.isEmpty) continue;
 
@@ -1473,7 +1473,39 @@ class _TntScreenState extends State<TntScreen> {
       }
 
       final userAgentMatch = RegExp(
-        r'^#EXTVLCOPT:http-user-agent=(.+)
+        r'^#EXTVLCOPT:http-user-agent=(.+)$',
+        caseSensitive: false,
+      ).firstMatch(line);
+      if (userAgentMatch != null && name != null) {
+        headers['User-Agent'] = userAgentMatch.group(1)!.trim();
+        continue;
+      }
+
+      if (line.startsWith('#')) continue;
+      final uri = Uri.tryParse(line);
+      if (uri == null ||
+          (uri.scheme != 'http' && uri.scheme != 'https') ||
+          name == null) {
+        name = null;
+        logo = null;
+        category = 'France';
+        headers.clear();
+        continue;
+      }
+
+      channels.add(TvChannel(
+        name: name,
+        url: line,
+        type: detectStreamType(line),
+        category: category,
+        logo: (logo == null || logo.isEmpty) ? null : logo,
+        headers: Map<String, String>.unmodifiable(headers),
+      ));
+      name = null;
+      logo = null;
+      category = 'France';
+      headers.clear();
+    }
 
     if (channels.isEmpty) {
       throw Exception('Aucune chaîne exploitable trouvée dans la playlist.');

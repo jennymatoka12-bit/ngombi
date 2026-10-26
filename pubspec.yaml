@@ -31,7 +31,6 @@ flutter:
   assets:
     - assets/tvradiozap.txt
     - assets/ngombi_icon.png
-    - assets/ngombi_splash.png
     - assets/logos/
 
 flutter_launcher_icons:

@@ -570,7 +570,7 @@ class HomeScreen extends StatelessWidget {
     if (result.radioChannel != null) {
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => WebPlayerScreen(
+          builder: (_) => RadioPlatformScreen(
             title: result.radioChannel!.name,
             url: result.radioChannel!.url,
           ),
@@ -826,7 +826,7 @@ class HomeScreen extends StatelessWidget {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => WebPlayerScreen(
+                  builder: (_) => RadioPlatformScreen(
                     title: radio.name,
                     url: radio.url,
                   ),
@@ -1375,7 +1375,7 @@ class BouquetScreen extends StatelessWidget {
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => const WebPlayerScreen(
+                        builder: (_) => const RadioPlatformScreen(
                           title: 'TVRadioZap',
                           url: 'https://tvradiozap.eu/',
                         ),

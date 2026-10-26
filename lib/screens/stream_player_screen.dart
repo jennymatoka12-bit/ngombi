@@ -389,7 +389,15 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
       _controller = playerController;
       playerController.addListener(_onPlayerChanged);
 
-      await playerController.initialize();
+      // Some Windows streams never complete initialization when the
+      // broadcaster blocks the player or the URL is not a direct media URL.
+      // Surface a recoverable error instead of spinning forever.
+      await playerController.initialize().timeout(
+        const Duration(seconds: 25),
+        onTimeout: () => throw TimeoutException(
+          'Le flux TV ne répond pas après 25 secondes. Il peut être indisponible, géobloqué ou incompatible avec ce lecteur.',
+        ),
+      );
 
       if (!mounted) {
         playerController.dispose();

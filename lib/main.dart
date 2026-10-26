@@ -1373,15 +1373,21 @@ class BouquetScreen extends StatelessWidget {
                   title: 'TVRadioZap',
                   subtitle: 'Ouvrir le portail TV et radio',
                   icon: Icons.live_tv_rounded,
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const RadioPlatformScreen(
-                          title: 'TVRadioZap',
-                          url: 'https://tvradiozap.eu/',
+                  onTap: () async {
+                    final uri = Uri.parse('https://tvradiozap.eu/');
+                    if (Platform.isWindows) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    } else {
+                      if (!context.mounted) return;
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const RadioPlatformScreen(
+                            title: 'TVRadioZap',
+                            url: 'https://tvradiozap.eu/',
+                          ),
                         ),
-                      ),
-                    );
+                      );
+                    }
                   },
                 ),
                 const SizedBox(height: 12),

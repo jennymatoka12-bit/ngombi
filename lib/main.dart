@@ -138,7 +138,7 @@ class NgombiSplashScreen extends StatelessWidget {
                 width: size,
                 height: size,
                 child: Image.asset(
-                  'assets/ngombi_splash.png',
+                  'assets/ngombi_icon.png',
                   fit: BoxFit.contain,
                 ),
               ),

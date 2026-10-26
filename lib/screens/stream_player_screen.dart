@@ -383,18 +383,18 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
   }
 
   Future<void> _initializeFlutterPlayer() async {
+    final playerController = VideoPlayerController.networkUrl(
+      Uri.parse(widget.channel.url),
+      httpHeaders: widget.channel.headers,
+    );
+
+    _controller = playerController;
+    playerController.addListener(_onPlayerChanged);
+
     try {
-      final playerController = VideoPlayerController.networkUrl(
-        Uri.parse(widget.channel.url),
-        httpHeaders: widget.channel.headers,
-      );
-
-      _controller = playerController;
-      playerController.addListener(_onPlayerChanged);
-
-      // Some Windows streams never complete initialization when the
-      // broadcaster blocks the player or the URL is not a direct media URL.
-      // Surface a recoverable error instead of spinning forever.
+      // A timed-out initialize() may still complete underneath the timeout.
+      // Dispose the failed native player and detach it from the screen so a
+      // later channel selection cannot inherit stale MediaKit resources.
       await playerController.initialize().timeout(
         const Duration(seconds: 25),
         onTimeout: () => throw TimeoutException(
@@ -402,8 +402,9 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
         ),
       );
 
-      if (!mounted) {
-        playerController.dispose();
+      if (!mounted || !identical(_controller, playerController)) {
+        playerController.removeListener(_onPlayerChanged);
+        await playerController.dispose();
         return;
       }
 
@@ -412,16 +413,24 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
         _errorMessage = null;
       });
 
-      // Explicitly restore audio output on Windows. Some live streams initialize
-      // with a zero/muted output after switching tracks.
+      // Keep playback initialization separate from cleanup/error handling:
+      // a volume/play failure must not leave a half-initialized controller.
       await playerController.setVolume(1.0);
       await playerController.play();
       _scheduleControlsHide();
       unawaited(_loadEpg());
     } catch (error) {
-      if (!mounted) return;
+      playerController.removeListener(_onPlayerChanged);
+      if (identical(_controller, playerController)) {
+        _controller = null;
+      }
+      try {
+        await playerController.dispose();
+      } catch (_) {}
 
+      if (!mounted) return;
       setState(() {
+        _initialized = false;
         _errorMessage = error.toString();
       });
     }

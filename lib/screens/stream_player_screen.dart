@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:vlc_player/vlc_player.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../models/tv_channel.dart';
@@ -30,6 +31,8 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
       MethodChannel('ngombi/player');
 
   VideoPlayerController? _controller;
+  VlcPlayerController? _vlcController;
+  bool _useVlcFallback = false;
   WebViewController? _webController;
 
   bool _initialized = false;
@@ -129,8 +132,9 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
     }
 
     if (_isWindowsProtectedDash) {
-      _errorMessage =
-          'Ce flux utilise un DASH chiffré qui n’est pas pris en charge de façon fiable par le lecteur Windows actuel. Ouvre le portail officiel pour tenter la lecture.';
+      // Give LibVLC a chance to open the stream before falling back to the
+      // broadcaster portal. VLC cannot bypass DRM, but can handle more DASH variants.
+      _startVlcFallback();
       return;
     }
 
@@ -444,9 +448,45 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
       } catch (_) {}
 
       if (!mounted) return;
+      if (Platform.isWindows) {
+        _startVlcFallback(errorMessage: error.toString());
+      } else {
+        setState(() {
+          _initialized = false;
+          _errorMessage = error.toString();
+        });
+      }
+    }
+  }
+
+  void _startVlcFallback({String? errorMessage}) {
+    if (!Platform.isWindows || !mounted) {
+      if (mounted) {
+        setState(() => _errorMessage = errorMessage ?? 'Impossible de démarrer le lecteur VLC.');
+      }
+      return;
+    }
+
+    try {
+      final oldController = _vlcController;
+      final controller = VlcPlayerController(
+        mediaSource: VlcMediaSource(
+          uri: Uri.parse(widget.channel.url),
+          httpHeaders: widget.channel.headers,
+          mediaOptions: const <String>[':network-caching=1500'],
+        ),
+        autoPlay: true,
+      );
+      _vlcController = controller;
+      oldController?.dispose();
       setState(() {
+        _useVlcFallback = true;
         _initialized = false;
-        _errorMessage = error.toString();
+        _errorMessage = null;
+      });
+    } catch (error) {
+      setState(() {
+        _errorMessage = 'Le lecteur principal a échoué et VLC n’a pas pu démarrer : $error';
       });
     }
   }
@@ -511,6 +551,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
     unawaited(_setKeepScreenOn(false));
     _controller?.removeListener(_onPlayerChanged);
     _controller?.dispose();
+    _vlcController?.dispose();
     unawaited(_restoreOrientation());
     super.dispose();
   }
@@ -600,6 +641,66 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
   }
 
   Widget _buildPlayer() {
+    if (_useVlcFallback && _vlcController != null) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          VlcPlayer(
+            controller: _vlcController!,
+            backgroundColor: Colors.black,
+            fit: VlcVideoFit.contain,
+          ),
+          Positioned(
+            top: 12,
+            left: 12,
+            right: 12,
+            child: Row(
+              children: [
+                _overlayButton(
+                  icon: Icons.arrow_back_rounded,
+                  tooltip: 'Retour',
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '${widget.channel.name} • Lecteur VLC',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                  ),
+                ),
+                _overlayButton(
+                  icon: _isLandscape
+                      ? Icons.stay_current_portrait_rounded
+                      : Icons.stay_current_landscape_rounded,
+                  tooltip: _isLandscape ? 'Mode portrait' : 'Mode paysage',
+                  onPressed: _toggleOrientation,
+                ),
+              ],
+            ),
+          ),
+          ValueListenableBuilder<VlcPlayerValue>(
+            valueListenable: _vlcController!,
+            builder: (context, value, child) {
+              if (!value.hasError) return const SizedBox.shrink();
+              return Center(
+                child: Container(
+                  margin: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(16),
+                  color: Colors.black87,
+                  child: Text(
+                    'VLC ne peut pas lire ce flux. Il peut être indisponible ou protégé par DRM.\\n${value.errorDescription ?? ''}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      );
+    }
     if (_errorMessage != null) return _buildError();
 
     if (!_initialized || _controller == null) {

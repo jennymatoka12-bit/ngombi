@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:video_player_media_kit/video_player_media_kit.dart';
 import 'package:flutter/services.dart';
+import 'package:window_manager/window_manager.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'widgets/ngombi_logo.dart';
@@ -25,6 +26,10 @@ import 'widgets/channel_logo.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (Platform.isWindows) {
+    await windowManager.ensureInitialized();
+    await windowManager.setPreventClose(false);
+  }
   // Keep the existing Android player implementation unchanged. On Windows,
   // register MediaKit as the video_player backend for HLS/DASH/MP4 and audio.
   if (Platform.isWindows) {

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:window_manager/window_manager.dart';
 import 'package:vlc_player/vlc_player.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -173,6 +174,11 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
     final targetLandscape = !_isLandscape;
 
     try {
+      if (Platform.isWindows) {
+        // Windows desktop has no device orientation; use real borderless
+        // fullscreen so the taskbar is hidden along with the title bar.
+        await windowManager.setFullScreen(targetLandscape);
+      }
       await SystemChrome.setPreferredOrientations(
         targetLandscape
             ? const [
@@ -221,6 +227,9 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
             ? SystemUiMode.immersiveSticky
             : SystemUiMode.edgeToEdge,
       );
+      if (Platform.isWindows) {
+        await windowManager.setFullScreen(false);
+      }
     } catch (_) {}
   }
 
@@ -414,10 +423,14 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
       // A timed-out initialize() may still complete underneath the timeout.
       // Dispose the failed native player and detach it from the screen so a
       // later channel selection cannot inherit stale MediaKit resources.
+      // Do not leave a channel spinning indefinitely in the primary engine.
+      // If MediaKit has not initialized after 12 seconds, hand the same URL
+      // and headers to VLC, which often supports additional stream variants.
+      // This is a player switch, not a message telling the user to retry.
       await playerController.initialize().timeout(
-        const Duration(seconds: 25),
+        const Duration(seconds: 12),
         onTimeout: () => throw TimeoutException(
-          'Le flux TV ne répond pas après 25 secondes. Il peut être indisponible, géobloqué ou incompatible avec ce lecteur.',
+          'Le lecteur principal met trop de temps à ouvrir le flux ; tentative automatique avec VLC.',
         ),
       );
 

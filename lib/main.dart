@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:media_kit/media_kit.dart';
+import 'package:video_player_media_kit/video_player_media_kit.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:http/http.dart' as http;
@@ -25,10 +25,10 @@ import 'widgets/channel_logo.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Initialize the MediaKit engine used by the dedicated Windows TV player.
-  // Android playback remains on its existing native/video_player paths.
+  // Keep the existing Android player implementation unchanged. On Windows,
+  // register MediaKit as the video_player backend for HLS/DASH/MP4 and audio.
   if (Platform.isWindows) {
-    MediaKit.ensureInitialized();
+    VideoPlayerMediaKit.ensureInitialized(windows: true);
   }
   runApp(const NgombiBootstrap());
 }

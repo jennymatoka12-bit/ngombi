@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../models/tv_channel.dart';
@@ -481,6 +482,19 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
   }
 
   Future<void> _setKeepScreenOn(bool enabled) async {
+    // Android uses the existing native channel. On Windows, wakelock_plus
+    // prevents the display/system from sleeping while a TV player is open.
+    if (Platform.isWindows) {
+      try {
+        if (enabled) {
+          await WakelockPlus.enable();
+        } else {
+          await WakelockPlus.disable();
+        }
+      } catch (_) {}
+      return;
+    }
+
     try {
       await _nativePlayer.invokeMethod(
         'setKeepScreenOn',

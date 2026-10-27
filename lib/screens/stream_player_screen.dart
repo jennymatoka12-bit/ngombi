@@ -1,10 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:media_kit/media_kit.dart';
-import 'package:media_kit_video/media_kit_video.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -32,11 +29,6 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
 
   VideoPlayerController? _controller;
   WebViewController? _webController;
-  Player? _windowsPlayer;
-  VideoController? _windowsVideoController;
-  StreamSubscription<String>? _windowsErrorSubscription;
-
-  bool get _isWindows => !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
 
   bool _initialized = false;
   bool _webLoading = true;
@@ -127,11 +119,9 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
       return;
     }
 
-    // Keep the previously working MediaKit player on Windows. Android keeps
-    // its existing native DASH path and video_player path unchanged.
-    if (_isWindows) {
-      unawaited(_initializeWindowsPlayer());
-    } else if (widget.channel.type == StreamType.dash) {
+    // On Windows, route HLS, DASH and direct media through the MediaKit-backed
+    // video_player implementation. The old MethodChannel DASH path is Android-only.
+    if (widget.channel.type == StreamType.dash && !Platform.isWindows) {
       _openNativeDashPlayer();
     } else {
       _initializeFlutterPlayer();
@@ -392,126 +382,6 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
     }
   }
 
-  Future<String> _resolveWindowsStreamUrl() async {
-    final client = HttpClient()
-      ..connectionTimeout = const Duration(seconds: 15)
-      ..autoUncompress = false;
-
-    try {
-      var uri = Uri.parse(widget.channel.url);
-
-      for (var attempt = 0; attempt < 5; attempt++) {
-        final request = await client.getUrl(uri);
-        request.followRedirects = false;
-
-        widget.channel.headers.forEach((key, value) {
-          request.headers.set(key, value);
-        });
-
-        if (request.headers.value(HttpHeaders.acceptHeader) == null) {
-          request.headers.set(
-            HttpHeaders.acceptHeader,
-            'application/vnd.apple.mpegurl, application/x-mpegURL, */*',
-          );
-        }
-
-        final response = await request.close();
-        final status = response.statusCode;
-
-        if (status >= 300 && status < 400) {
-          final location = response.headers.value(HttpHeaders.locationHeader);
-
-          if (location == null || location.isEmpty) {
-            throw HttpException(
-              'Redirection HLS reçue sans adresse de destination.',
-              uri: uri,
-            );
-          }
-
-          uri = uri.resolve(location);
-          await response.drain<void>();
-          continue;
-        }
-
-        if (status >= 200 && status < 300) {
-          await response.drain<void>();
-          return uri.toString();
-        }
-
-        await response.drain<void>();
-        throw HttpException(
-          'Le serveur HLS a répondu HTTP $status.',
-          uri: uri,
-        );
-      }
-
-      throw TimeoutException(
-        'Trop de redirections lors de la résolution du flux HLS.',
-      );
-    } finally {
-      client.close(force: true);
-    }
-  }
-
-  Future<void> _initializeWindowsPlayer() async {
-    try {
-      final resolvedUrl = await _resolveWindowsStreamUrl();
-
-      if (!mounted) return;
-
-      final player = Player();
-      final videoController = VideoController(player);
-
-      _windowsPlayer = player;
-      _windowsVideoController = videoController;
-
-      _windowsErrorSubscription =
-          player.stream.error.listen((message) {
-        if (!mounted || message.trim().isEmpty) {
-          return;
-        }
-
-        setState(() {
-          _errorMessage = message;
-        });
-      });
-
-      await player
-          .open(
-            Media(
-              resolvedUrl,
-              httpHeaders: widget.channel.headers,
-            ),
-            play: true,
-          )
-          .timeout(
-            const Duration(seconds: 30),
-            onTimeout: () {
-              throw TimeoutException(
-                'Délai de connexion au flux dépassé.',
-              );
-            },
-          );
-
-      if (!mounted) {
-        await player.dispose();
-        return;
-      }
-
-      setState(() {
-        _initialized = true;
-        _errorMessage = null;
-      });
-    } catch (error) {
-      if (!mounted) return;
-
-      setState(() {
-        _errorMessage = error.toString();
-      });
-    }
-  }
-
-
   Future<void> _initializeFlutterPlayer() async {
     final playerController = VideoPlayerController.networkUrl(
       Uri.parse(widget.channel.url),
@@ -613,8 +483,6 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
     unawaited(_setKeepScreenOn(false));
     _controller?.removeListener(_onPlayerChanged);
     _controller?.dispose();
-    _windowsErrorSubscription?.cancel();
-    _windowsPlayer?.dispose();
     unawaited(_restoreOrientation());
     super.dispose();
   }
@@ -705,39 +573,6 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
 
   Widget _buildPlayer() {
     if (_errorMessage != null) return _buildError();
-
-    if (_isWindows) {
-      final player = _windowsPlayer;
-      final videoController = _windowsVideoController;
-      if (!_initialized || player == null || videoController == null) {
-        return const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [CircularProgressIndicator(), SizedBox(height: 16), Text('Connexion au flux…', style: TextStyle(color: Colors.white))],
-        );
-      }
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: _toggleControls,
-        child: Stack(fit: StackFit.expand, children: [
-          Video(controller: videoController, fit: BoxFit.contain),
-          if (_showControls)
-            Positioned(
-              top: 12, left: 12, right: 12,
-              child: Row(children: [
-                _overlayButton(icon: Icons.arrow_back_rounded, tooltip: 'Retour', onPressed: () => Navigator.of(context).pop()),
-                const SizedBox(width: 10),
-                Expanded(child: Text(widget.channel.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                _overlayButton(icon: _isLandscape ? Icons.stay_current_portrait_rounded : Icons.stay_current_landscape_rounded, tooltip: _isLandscape ? 'Mode portrait' : 'Mode paysage', onPressed: _toggleOrientation),
-              ]),
-            ),
-          if (_showControls)
-            Positioned(left: 16, right: 16, bottom: 16, child: Row(children: [
-              StreamBuilder<bool>(stream: player.stream.playing, initialData: player.state.playing, builder: (context, snapshot) => IconButton(color: Colors.white, iconSize: 42, icon: Icon(snapshot.data == true ? Icons.pause_circle_filled_rounded : Icons.play_circle_filled_rounded), onPressed: () => snapshot.data == true ? player.pause() : player.play())),
-              Expanded(child: StreamBuilder<Duration>(stream: player.stream.position, initialData: player.state.position, builder: (context, snapshot) => Text('EN DIRECT  •  ${snapshot.data?.inSeconds ?? 0}s', style: const TextStyle(color: Colors.white70, fontSize: 11)))),
-            ])),
-        ]),
-      );
-    }
 
     if (!_initialized || _controller == null) {
       return const Column(

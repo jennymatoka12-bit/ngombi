@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../models/tv_channel.dart';
@@ -81,6 +82,13 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
         name.contains('2stv senegal');
   }
 
+  // Encrypted DASH streams can hang or crash the generic Windows decoder.
+  // Until licensed DRM playback is integrated, fail safely and offer the
+  // broadcaster portal rather than attempting native decoding.
+  bool get _isWindowsProtectedDash =>
+      Platform.isWindows &&
+      widget.channel.url.toLowerCase().contains('cmaf_cenc00');
+
   bool get _isOfficialWebPlayer =>
       _isGabon24 ||
       _isGabonPremiere ||
@@ -116,6 +124,12 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
 
     if (_isOfficialWebPlayer) {
       _initializeOfficialWebPlayer();
+      return;
+    }
+
+    if (_isWindowsProtectedDash) {
+      _errorMessage =
+          'Ce flux utilise un DASH chiffré qui n’est pas pris en charge de façon fiable par le lecteur Windows actuel. Ouvre le portail officiel pour tenter la lecture.';
       return;
     }
 
@@ -882,6 +896,17 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
               style: const TextStyle(color: Colors.white54),
               textAlign: TextAlign.center,
             ),
+            if (_isWindowsProtectedDash) ...[
+              FilledButton.icon(
+                onPressed: () async {
+                  final uri = Uri.parse('https://www.m6.fr/');
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                },
+                icon: const Icon(Icons.open_in_browser),
+                label: const Text('Ouvrir le portail officiel'),
+              ),
+              const SizedBox(height: 10),
+            ],
             const SizedBox(height: 20),
             FilledButton.icon(
               onPressed: () => Navigator.of(context).pop(),

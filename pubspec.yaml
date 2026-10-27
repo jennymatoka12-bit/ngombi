@@ -16,7 +16,7 @@ dependencies:
   webview_flutter: ^4.7.0
   video_player: ^2.9.1
   # Windows fallback engine for streams that fail in MediaKit.
-  vlc_player: ^0.4.0
+  vlc_player: ^1.0.0
   wakelock_plus: ^1.2.8
   video_player_media_kit: ^2.0.0
   media_kit_libs_windows_video: ^1.0.11

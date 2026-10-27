@@ -42,6 +42,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
   bool _orientationInitialized = false;
   bool _initialLandscape = false;
   bool _isLandscape = false;
+  bool _isFullscreen = false;
   String? _errorMessage;
 
   EpgProgram? _currentProgram;
@@ -172,12 +173,13 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
 
   Future<void> _toggleOrientation() async {
     final targetLandscape = !_isLandscape;
+    final targetFullscreen = !_isFullscreen;
 
     try {
       if (Platform.isWindows) {
         // Windows desktop has no device orientation; use real borderless
         // fullscreen so the taskbar is hidden along with the title bar.
-        await windowManager.setFullScreen(targetLandscape);
+        await windowManager.setFullScreen(targetFullscreen);
       }
       await SystemChrome.setPreferredOrientations(
         targetLandscape
@@ -200,7 +202,12 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
       if (!mounted) return;
 
       setState(() {
-        _isLandscape = targetLandscape;
+        if (Platform.isWindows) {
+          _isFullscreen = targetFullscreen;
+          _isLandscape = true;
+        } else {
+          _isLandscape = targetLandscape;
+        }
         _showControls = true;
       });
 
@@ -229,6 +236,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
       );
       if (Platform.isWindows) {
         await windowManager.setFullScreen(false);
+      if (mounted) setState(() => _isFullscreen = false);
       }
     } catch (_) {}
   }
@@ -644,8 +652,12 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
             top: 12,
             right: 12,
             child: _overlayButton(
-              icon: Icons.stay_current_portrait_rounded,
-              tooltip: 'Mode portrait',
+              icon: Platform.isWindows
+                  ? (_isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen)
+                  : Icons.stay_current_portrait_rounded,
+              tooltip: Platform.isWindows
+                  ? (_isFullscreen ? 'Quitter le plein écran' : 'Plein écran')
+                  : 'Mode portrait',
               onPressed: _toggleOrientation,
             ),
           ),
@@ -684,10 +696,14 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
                   ),
                 ),
                 _overlayButton(
-                  icon: _isLandscape
-                      ? Icons.stay_current_portrait_rounded
-                      : Icons.stay_current_landscape_rounded,
-                  tooltip: _isLandscape ? 'Mode portrait' : 'Mode paysage',
+                  icon: Platform.isWindows
+                      ? (_isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen)
+                      : (_isLandscape
+                          ? Icons.stay_current_portrait_rounded
+                          : Icons.stay_current_landscape_rounded),
+                  tooltip: Platform.isWindows
+                      ? (_isFullscreen ? 'Quitter le plein écran' : 'Plein écran')
+                      : (_isLandscape ? 'Mode portrait' : 'Mode paysage'),
                   onPressed: _toggleOrientation,
                 ),
               ],
@@ -833,12 +849,14 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
                 ),
               ),
               _overlayButton(
-                icon: _isLandscape
-                    ? Icons.stay_current_portrait_rounded
-                    : Icons.stay_current_landscape_rounded,
-                tooltip: _isLandscape
-                    ? 'Mode portrait'
-                    : 'Mode paysage',
+                icon: Platform.isWindows
+                    ? (_isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen)
+                    : (_isLandscape
+                        ? Icons.stay_current_portrait_rounded
+                        : Icons.stay_current_landscape_rounded),
+                tooltip: Platform.isWindows
+                    ? (_isFullscreen ? 'Quitter le plein écran' : 'Plein écran')
+                    : (_isLandscape ? 'Mode portrait' : 'Mode paysage'),
                 onPressed: _toggleOrientation,
               ),
             ],

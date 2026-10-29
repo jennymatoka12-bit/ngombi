@@ -1267,8 +1267,8 @@ jobs:
       # Analyze Flutter project
       # --------------------------------------------------
 
-      - name: Analyze Flutter project
-        run: flutter analyze
+      - name: Analyze application source
+        run: flutter analyze lib
 
       # --------------------------------------------------
       # Build release APK

@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - feature/windows-desktop-mainline
+      - codex/windows-tv-webview-prototype
 
 jobs:
   build-windows:
@@ -98,3 +99,44 @@ jobs:
           name: NGOMBI-Windows-Test
           path: NGOMBI-Windows-Test.zip
           if-no-files-found: error
+
+  build-windows-tv-webview-poc:
+    runs-on: windows-2022
+
+    defaults:
+      run:
+        working-directory: windows_tv_webview_poc
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.8"
+          channel: stable
+          cache: true
+
+      - name: Enable Windows desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Generate Windows runner files
+        run: flutter create --platforms=windows .
+
+      - name: Install prototype dependencies
+        run: flutter pub get
+
+      - name: Analyze prototype
+        run: flutter analyze
+
+      - name: Build prototype release
+        run: flutter build windows --release
+
+      - name: Upload prototype release
+        uses: actions/upload-artifact@v4
+        with:
+          name: NGOMBI-Windows-WebView-HLS-Prototype
+          path: windows_tv_webview_poc/build/windows/x64/runner/Release/
+          if-no-files-found: error
+

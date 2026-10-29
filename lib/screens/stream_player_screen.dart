@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -35,6 +36,11 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
   VlcPlayerController? _vlcController;
   bool _useVlcFallback = false;
   WebViewController? _webController;
+  Process? _windowsWebViewProcess;
+  StreamSubscription<String>? _windowsWebViewStdout;
+  StreamSubscription<String>? _windowsWebViewStderr;
+  bool _windowsWebViewActive = false;
+  bool _windowsWebViewFallbackStarted = false;
 
   bool _initialized = false;
   bool _webLoading = true;
@@ -98,6 +104,17 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
       Platform.isWindows &&
       widget.channel.url.toLowerCase().contains('cmaf_cenc00');
 
+  bool get _isWindowsTvRadioZapHls {
+    if (!Platform.isWindows || widget.channel.type != StreamType.hls) {
+      return false;
+    }
+    final uri = Uri.tryParse(widget.channel.url);
+    final host = uri?.host.toLowerCase() ?? '';
+    return uri != null &&
+        uri.scheme == 'https' &&
+        (host == 'tvradiozap.eu' || host.endsWith('.tvradiozap.eu'));
+  }
+
   bool get _isOfficialWebPlayer =>
       _isGabon24 ||
       _isGabonPremiere ||
@@ -140,6 +157,11 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
       // Give LibVLC a chance to open the stream before falling back to the
       // broadcaster portal. VLC cannot bypass DRM, but can handle more DASH variants.
       _startVlcFallback();
+      return;
+    }
+
+    if (_isWindowsTvRadioZapHls) {
+      unawaited(_launchWindowsWebViewPlayer());
       return;
     }
 
@@ -293,6 +315,109 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
       // Keep the last valid EPG data instead of clearing the programme
       // just because a single refresh request timed out.
     }
+  }
+
+  Future<void> _launchWindowsWebViewPlayer() async {
+    final appDirectory = File(Platform.resolvedExecutable).parent;
+    final playerDirectory = Directory(
+      '${appDirectory.path}${Platform.pathSeparator}webview_player',
+    );
+    final playerExecutable = File(
+      '${playerDirectory.path}${Platform.pathSeparator}ngombi_windows_tv_webview_poc.exe',
+    );
+
+    if (!await playerExecutable.exists()) {
+      if (mounted) _initializeFlutterPlayer();
+      return;
+    }
+
+    try {
+      final process = await Process.start(
+        playerExecutable.path,
+        [widget.channel.url],
+        workingDirectory: playerDirectory.path,
+      );
+      if (!mounted) {
+        process.kill();
+        return;
+      }
+
+      _windowsWebViewProcess = process;
+      _windowsWebViewFallbackStarted = false;
+      setState(() {
+        _windowsWebViewActive = true;
+        _errorMessage = null;
+      });
+
+      _windowsWebViewStdout = process.stdout
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .listen((line) {
+        if (line.startsWith('NGOMBI_WEBVIEW_FATAL:')) {
+          _fallbackFromWindowsWebView(line);
+        }
+      });
+      _windowsWebViewStderr = process.stderr
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .listen((line) => debugPrint('[NGOMBI WebView2] $line'));
+
+      unawaited(process.exitCode.then((exitCode) {
+        if (!mounted || !identical(_windowsWebViewProcess, process)) return;
+        if (exitCode != 0) {
+          _fallbackFromWindowsWebView(
+            'Le lecteur WebView2 s’est arrêté avec le code $exitCode.',
+          );
+          return;
+        }
+
+        _windowsWebViewProcess = null;
+        _windowsWebViewActive = false;
+        unawaited(_windowsWebViewStdout?.cancel());
+        unawaited(_windowsWebViewStderr?.cancel());
+        _windowsWebViewStdout = null;
+        _windowsWebViewStderr = null;
+        if (mounted) Navigator.of(context).maybePop();
+      }));
+    } catch (error) {
+      if (!mounted) return;
+      debugPrint('[NGOMBI WebView2] Impossible de lancer le lecteur : $error');
+      _initializeFlutterPlayer();
+    }
+  }
+
+  void _fallbackFromWindowsWebView(String reason) {
+    if (!mounted || !_windowsWebViewActive || _windowsWebViewFallbackStarted) {
+      return;
+    }
+    _windowsWebViewFallbackStarted = true;
+    _windowsWebViewActive = false;
+
+    final process = _windowsWebViewProcess;
+    _windowsWebViewProcess = null;
+    unawaited(_windowsWebViewStdout?.cancel());
+    unawaited(_windowsWebViewStderr?.cancel());
+    _windowsWebViewStdout = null;
+    _windowsWebViewStderr = null;
+    process?.kill();
+
+    setState(() {
+      _errorMessage = null;
+    });
+    debugPrint('[NGOMBI WebView2] Bascule vers MediaKit/VLC : $reason');
+    unawaited(_initializeFlutterPlayer());
+  }
+
+  void _closeWindowsWebViewAndReturn() {
+    final process = _windowsWebViewProcess;
+    _windowsWebViewProcess = null;
+    _windowsWebViewActive = false;
+    unawaited(_windowsWebViewStdout?.cancel());
+    unawaited(_windowsWebViewStderr?.cancel());
+    _windowsWebViewStdout = null;
+    _windowsWebViewStderr = null;
+    process?.kill();
+    if (mounted) Navigator.of(context).maybePop();
   }
 
   void _initializeOfficialWebPlayer() {
@@ -644,6 +769,9 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
     _controller?.removeListener(_onPlayerChanged);
     _controller?.dispose();
     _vlcController?.dispose();
+    _windowsWebViewProcess?.kill();
+    unawaited(_windowsWebViewStdout?.cancel());
+    unawaited(_windowsWebViewStderr?.cancel());
     unawaited(_restoreOrientation());
     super.dispose();
   }
@@ -684,7 +812,41 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
             ),
       body: _isOfficialWebPlayer
           ? _buildOfficialWebPlayer()
-          : Center(child: _buildPlayer()),
+          : _windowsWebViewActive
+              ? _buildWindowsWebViewStatus()
+              : Center(child: _buildPlayer()),
+    );
+  }
+
+  Widget _buildWindowsWebViewStatus() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.open_in_new_rounded, size: 48, color: Colors.white70),
+            const SizedBox(height: 16),
+            Text(
+              'Le lecteur WebView2 de ${widget.channel.name} est ouvert dans sa fenêtre.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: () => _fallbackFromWindowsWebView(
+                'Bascule demandée depuis NGOMBI.',
+              ),
+              icon: const Icon(Icons.swap_horiz_rounded),
+              label: const Text('Utiliser le lecteur de secours'),
+            ),
+            TextButton(
+              onPressed: _closeWindowsWebViewAndReturn,
+              child: const Text('Fermer le lecteur et revenir'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

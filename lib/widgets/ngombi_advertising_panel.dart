@@ -70,7 +70,7 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
       }
     }
 
-    if (oldWidget.isActive != _isActive) {
+    if (oldWidget.isActive != widget.isActive) {
       if (_isActive) {
         _resumePlayback();
       } else {

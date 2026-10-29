@@ -14,6 +14,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   url_launcher: ^6.2.5
   webview_flutter: ^4.7.0
+  # Vendored WebView2 texture plugin; Windows-only implementation keeps Android runtime dependencies unchanged.
+  webview_windows:
+    path: packages/webview_windows
   video_player: ^2.9.1
   # Windows fallback engine for streams that fail in MediaKit.
   vlc_player: ^1.0.0

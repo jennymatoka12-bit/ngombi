@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:webview_flutter_windows/webview_flutter_windows.dart';
@@ -7,23 +8,45 @@ import 'package:webview_flutter_windows/webview_flutter_windows.dart';
 const _defaultStreamUrl =
     'https://tvradiozap.eu/tools/m3u-m3u8.php/para/tf1.m3u8';
 
-void main() => runApp(const WindowsTvWebviewPocApp());
+void main(List<String> args) {
+  final hasStreamArgument = args.isNotEmpty && args.first.trim().isNotEmpty;
+  runApp(
+    WindowsTvWebviewPocApp(
+      initialStreamUrl: hasStreamArgument ? args.first : _defaultStreamUrl,
+      autoStart: hasStreamArgument,
+    ),
+  );
+}
 
 class WindowsTvWebviewPocApp extends StatelessWidget {
-  const WindowsTvWebviewPocApp({super.key});
+  final String initialStreamUrl;
+  final bool autoStart;
+
+  const WindowsTvWebviewPocApp({
+    super.key,
+    required this.initialStreamUrl,
+    required this.autoStart,
+  });
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'NGOMBI Windows HLS test',
       theme: ThemeData.dark(useMaterial3: true),
-      home: const WindowsTvWebviewPocScreen(),
+      home: WindowsTvWebviewPocScreen(initialStreamUrl: initialStreamUrl, autoStart: autoStart),
     );
   }
 }
 
 class WindowsTvWebviewPocScreen extends StatefulWidget {
-  const WindowsTvWebviewPocScreen({super.key});
+  final String initialStreamUrl;
+  final bool autoStart;
+
+  const WindowsTvWebviewPocScreen({
+    super.key,
+    required this.initialStreamUrl,
+    required this.autoStart,
+  });
 
   @override
   State<WindowsTvWebviewPocScreen> createState() =>
@@ -31,7 +54,8 @@ class WindowsTvWebviewPocScreen extends StatefulWidget {
 }
 
 class _WindowsTvWebviewPocScreenState extends State<WindowsTvWebviewPocScreen> {
-  final _urlController = TextEditingController(text: _defaultStreamUrl);
+  late final TextEditingController _urlController;
+  bool _fatalReported = false;
   WebviewController? _webController;
   StreamSubscription<dynamic>? _messageSubscription;
   StreamSubscription<dynamic>? _loadErrorSubscription;
@@ -39,6 +63,24 @@ class _WindowsTvWebviewPocScreenState extends State<WindowsTvWebviewPocScreen> {
   bool _loading = false;
   bool _isPlaying = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _urlController = TextEditingController(text: widget.initialStreamUrl);
+    if (widget.autoStart) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _startPlayback();
+      });
+    }
+  }
+
+  void _reportFatal(String message) {
+    if (_fatalReported) return;
+    _fatalReported = true;
+    stdout.writeln('NGOMBI_WEBVIEW_FATAL:$message');
+    unawaited(stdout.flush().then((_) => exit(2)));
+  }
 
   Future<void> _startPlayback() async {
     final uri = Uri.tryParse(_urlController.text.trim());
@@ -57,6 +99,7 @@ class _WindowsTvWebviewPocScreenState extends State<WindowsTvWebviewPocScreen> {
     _loadErrorSubscription = controller.onLoadError.listen((status) {
       if (!mounted) return;
       setState(() => _error = 'WebView2: $status');
+      _reportFatal('WebView2 load error: $status');
     });
 
     setState(() {
@@ -87,6 +130,7 @@ class _WindowsTvWebviewPocScreenState extends State<WindowsTvWebviewPocScreen> {
             ? 'Runtime Microsoft Edge WebView2 introuvable.'
             : 'Impossible d’initialiser le lecteur : $error';
       });
+      _reportFatal('WebView2 initialization failed: $error');
     }
   }
 
@@ -113,6 +157,9 @@ class _WindowsTvWebviewPocScreenState extends State<WindowsTvWebviewPocScreen> {
         _error = messageText ?? 'Erreur de lecture HLS.';
       }
     });
+    if (type == 'error') {
+      _reportFatal(messageText ?? 'Erreur de lecture HLS.');
+    }
   }
 
   String _playerHtml(String streamUrl) {

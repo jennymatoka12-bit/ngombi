@@ -1,13 +1,34 @@
 name: Build NGOMBI Windows
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
   push:
     branches:
       - feature/windows-desktop-mainline
       - codex/windows-tv-webview-prototype
+      - codex/windows-hls-sidecar-integration
 
 jobs:
+  verify-android-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter compatible with the current vlc_player dependency
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.8"
+          channel: stable
+          cache: true
+
+      - name: Resolve project dependencies
+        run: flutter pub get
+
   build-windows:
     runs-on: windows-2022
 
@@ -139,4 +160,3 @@ jobs:
           name: NGOMBI-Windows-WebView-HLS-Prototype
           path: windows_tv_webview_poc/build/windows/x64/runner/Release/
           if-no-files-found: error
-

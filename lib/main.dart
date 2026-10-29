@@ -1381,7 +1381,12 @@ class BouquetScreen extends StatelessWidget {
                   onTap: () async {
                     final uri = Uri.parse('https://tvradiozap.eu/');
                     if (Platform.isWindows) {
-                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      if (!context.mounted) return;
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const WindowsTvradiozapPortalScreen(),
+                        ),
+                      );
                     } else {
                       if (!context.mounted) return;
                       Navigator.of(context).push(
@@ -1505,6 +1510,7 @@ class _TntScreenState extends State<TntScreen> {
         category: category,
         logo: (logo == null || logo.isEmpty) ? null : logo,
         headers: Map<String, String>.unmodifiable(headers),
+        preferWindowsWebView: true,
       ));
       name = null;
       logo = null;

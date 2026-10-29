@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - master
+      - codex/android-flutter-3-47-compat-probe
   pull_request:
     branches:
       - feature/windows-desktop-mainline

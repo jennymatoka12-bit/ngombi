@@ -1,5 +1,9 @@
 name: Build NGOMBI Windows
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
   push:
@@ -9,6 +13,22 @@ on:
       - codex/windows-hls-sidecar-integration
 
 jobs:
+  verify-android-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter Android toolchain
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.22.3"
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies with the existing Android toolchain
+        run: flutter pub get
+
   build-windows:
     runs-on: windows-2022
 

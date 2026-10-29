@@ -44,6 +44,7 @@ flutter:
 
 flutter_launcher_icons:
   android: "launcher_icon"
+  windows: true
   image_path: "assets/ngombi_icon.png"
   adaptive_icon_background: "#080808"
   min_sdk_android: 23

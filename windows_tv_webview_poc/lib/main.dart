@@ -151,6 +151,9 @@ class _WindowsTvWebviewPocScreenState extends State<WindowsTvWebviewPocScreen> {
       });
       hls.on(Hls.Events.MEDIA_ATTACHED, () => hls.loadSource(streamUrl));
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        // Le test Windows isole la vidéo; aucun sous-titre n’est nécessaire ici.
+        // Désactiver la piste par défaut évite qu’une piste texte défaillante bloque le flux.
+        hls.subtitleTrack = -1;
         video.play().catch(() => notify('status', 'Appuyez sur Lecture pour démarrer le direct.'));
       });
       hls.attachMedia(video);

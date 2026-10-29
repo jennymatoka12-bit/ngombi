@@ -1,0 +1,21 @@
+name: ngombi_windows_tv_webview_poc
+description: Isolated Windows HLS/WebView2 playback prototype for NGOMBI.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.12.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  webview_flutter_windows: ^1.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+

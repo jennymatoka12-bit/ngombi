@@ -61,9 +61,9 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
   bool get _isGabonPremiere {
     final name = widget.channel.name.toLowerCase();
     return name.contains('gabon 1ere') ||
-        name.contains('gabon 1Ã¨re') ||
+        name.contains('gabon 1ère') ||
         name.contains('gabon premiere') ||
-        name.contains('gabon premiÃ¨re');
+        name.contains('gabon première');
   }
 
   bool get _isCRTV {
@@ -78,16 +78,16 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
     final name = widget.channel.name.toLowerCase();
     return name == 'nci' ||
         name.startsWith('nci ') ||
-        name.contains('nci cÃ´te dâ€™ivoire') ||
+        name.contains('nci côte d’ivoire') ||
         name.contains("nci cote d'ivoire") ||
-        name.contains('nouvelle chaÃ®ne ivoirienne');
+        name.contains('nouvelle chaîne ivoirienne');
   }
 
   bool get _is2STV {
     final name = widget.channel.name.toLowerCase();
     return name == '2stv' ||
         name.startsWith('2stv ') ||
-        name.contains('2stv sÃ©nÃ©gal') ||
+        name.contains('2stv sénégal') ||
         name.contains('2stv senegal');
   }
 
@@ -441,7 +441,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
       await playerController.initialize().timeout(
         const Duration(seconds: 12),
         onTimeout: () => throw TimeoutException(
-          'Le lecteur principal met trop de temps Ã  ouvrir le flux ; tentative automatique avec VLC.',
+          'Le lecteur principal met trop de temps à ouvrir le flux ; tentative automatique avec VLC.',
         ),
       );
 
@@ -509,7 +509,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
     if (value.hasError) {
       _startVlcFallback(
         errorMessage: value.errorDescription ??
-            'Le lecteur Windows a signalÃ© une erreur de lecture.',
+            'Le lecteur Windows a signalé une erreur de lecture.',
       );
       return;
     }
@@ -519,7 +519,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
       if (_stalledPlaybackChecks >= 3) {
         _startVlcFallback(
           errorMessage:
-              'Le flux ne dÃ©marre pas dans le lecteur Windows ; tentative avec VLC.',
+              'Le flux ne démarre pas dans le lecteur Windows ; tentative avec VLC.',
         );
       }
       return;
@@ -538,7 +538,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
     // Windows backend has stalled; hand the same URL and headers to VLC.
     if (_stalledPlaybackChecks >= 3) {
       _startVlcFallback(
-        errorMessage: 'Lecture Windows bloquÃ©e : bascule automatique vers VLC.',
+        errorMessage: 'Lecture Windows bloquée : bascule automatique vers VLC.',
       );
     }
   }
@@ -546,7 +546,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
   void _startVlcFallback({String? errorMessage}) {
     if (!Platform.isWindows || !mounted) {
       if (mounted) {
-        setState(() => _errorMessage = errorMessage ?? 'Impossible de dÃ©marrer le lecteur VLC.');
+        setState(() => _errorMessage = errorMessage ?? 'Impossible de démarrer le lecteur VLC.');
       }
       return;
     }
@@ -577,7 +577,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
       });
     } catch (error) {
       setState(() {
-        _errorMessage = 'Le lecteur principal a Ã©chouÃ© et VLC nâ€™a pas pu dÃ©marrer : $error';
+        _errorMessage = 'Le lecteur principal a échoué et VLC n’a pas pu démarrer : $error';
       });
     }
   }
@@ -708,7 +708,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
                   CircularProgressIndicator(),
                   SizedBox(height: 16),
                   Text(
-                    'Chargement du directâ€¦',
+                    'Chargement du direct…',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -727,7 +727,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
                   ? (_isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen)
                   : Icons.stay_current_portrait_rounded,
               tooltip: Platform.isWindows
-                  ? (_isFullscreen ? 'Quitter le plein Ã©cran' : 'Plein Ã©cran')
+                  ? (_isFullscreen ? 'Quitter le plein écran' : 'Plein écran')
                   : 'Mode portrait',
               onPressed: _toggleOrientation,
             ),
@@ -760,7 +760,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    '${widget.channel.name} â€¢ Lecteur VLC',
+                    '${widget.channel.name} • Lecteur VLC',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
@@ -773,7 +773,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
                           ? Icons.stay_current_portrait_rounded
                           : Icons.stay_current_landscape_rounded),
                   tooltip: Platform.isWindows
-                      ? (_isFullscreen ? 'Quitter le plein Ã©cran' : 'Plein Ã©cran')
+                      ? (_isFullscreen ? 'Quitter le plein écran' : 'Plein écran')
                       : (_isLandscape ? 'Mode portrait' : 'Mode paysage'),
                   onPressed: _toggleOrientation,
                 ),
@@ -790,7 +790,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
                   padding: const EdgeInsets.all(16),
                   color: Colors.black87,
                   child: Text(
-                    'VLC ne peut pas lire ce flux. Il peut Ãªtre indisponible ou protÃ©gÃ© par DRM.\\n${value.errorDescription ?? ''}',
+                    'VLC ne peut pas lire ce flux. Il peut être indisponible ou protégé par DRM.\\n${value.errorDescription ?? ''}',
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: Colors.white),
                   ),
@@ -810,7 +810,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
           CircularProgressIndicator(),
           SizedBox(height: 16),
           Text(
-            'Connexion au fluxâ€¦',
+            'Connexion au flux…',
             style: TextStyle(color: Colors.white),
           ),
         ],
@@ -926,7 +926,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
                         ? Icons.stay_current_portrait_rounded
                         : Icons.stay_current_landscape_rounded),
                 tooltip: Platform.isWindows
-                    ? (_isFullscreen ? 'Quitter le plein Ã©cran' : 'Plein Ã©cran')
+                    ? (_isFullscreen ? 'Quitter le plein écran' : 'Plein écran')
                     : (_isLandscape ? 'Mode portrait' : 'Mode paysage'),
                 onPressed: _toggleOrientation,
               ),
@@ -1050,7 +1050,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
                     ),
                     SizedBox(width: 6),
                     Text(
-                      'Direct â€¢ lecture en temps rÃ©el',
+                      'Direct • lecture en temps réel',
                       style: TextStyle(
                         color: Colors.white70,
                         fontSize: 11,

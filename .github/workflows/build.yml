@@ -1130,7 +1130,7 @@ jobs:
           if settings.suffix == ".kts":
               text = re.sub(
                   r'id\("com\.android\.application"\) version "[^"]+" apply false',
-                  'id("com.android.application") version "8.10.0" apply false',
+                  'id("com.android.application") version "8.11.1" apply false',
                   text
               )
               text = re.sub(
@@ -1141,7 +1141,7 @@ jobs:
           else:
               text = re.sub(
                   r'id "com\.android\.application" version "[^"]+" apply false',
-                  'id "com.android.application" version "8.10.0" apply false',
+                  'id "com.android.application" version "8.11.1" apply false',
                   text
               )
               text = re.sub(
@@ -1170,7 +1170,7 @@ jobs:
 
           wrapper.write_text(text)
 
-          print("Android Gradle Plugin: 8.10.0")
+          print("Android Gradle Plugin: 8.11.1")
           print("Gradle: 8.14.3")
           print("Compile SDK: 36")
           print("Min SDK: 23")

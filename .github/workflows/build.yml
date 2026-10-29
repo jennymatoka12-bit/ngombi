@@ -943,6 +943,11 @@ jobs:
           import re
 
           gradle = Path("android/app/build.gradle")
+          if not gradle.exists():
+              gradle = Path("android/app/build.gradle.kts")
+          if not gradle.exists():
+              raise FileNotFoundError("Flutter Android Gradle build file not found")
+          is_kotlin_dsl = gradle.suffix == ".kts"
           text = gradle.read_text()
 
           # Compile SDK
@@ -979,17 +984,26 @@ jobs:
 
           # Media3 dependencies
           if "androidx.media3:media3-exoplayer:1.11.1" not in text:
-              dependencies = (
-                  "\n"
-                  "dependencies {\n"
-                  '    implementation "androidx.media3:media3-exoplayer:1.11.1"\n'
-                  '    implementation "androidx.media3:media3-exoplayer-dash:1.11.1"\n'
-                  '    implementation "androidx.media3:media3-ui:1.11.1"\n'
-                  '    implementation "androidx.media3:media3-session:1.11.1"\n'
-                  '    implementation "androidx.media:media:1.7.0"\n'
-                  "}\n"
-              )
-
+              if is_kotlin_dsl:
+                  dependencies = (
+                      "\\ndependencies {\\n"
+                      '    implementation("androidx.media3:media3-exoplayer:1.11.1")\\n'
+                      '    implementation("androidx.media3:media3-exoplayer-dash:1.11.1")\\n'
+                      '    implementation("androidx.media3:media3-ui:1.11.1")\\n'
+                      '    implementation("androidx.media3:media3-session:1.11.1")\\n'
+                      '    implementation("androidx.media:media:1.7.0")\\n'
+                      "}\\n"
+                  )
+              else:
+                  dependencies = (
+                      "\\ndependencies {\\n"
+                      '    implementation "androidx.media3:media3-exoplayer:1.11.1"\\n'
+                      '    implementation "androidx.media3:media3-exoplayer-dash:1.11.1"\\n'
+                      '    implementation "androidx.media3:media3-ui:1.11.1"\\n'
+                      '    implementation "androidx.media3:media3-session:1.11.1"\\n'
+                      '    implementation "androidx.media:media:1.7.0"\\n'
+                      "}\\n"
+                  )
               text += dependencies
 
           gradle.write_text(text)

@@ -13,6 +13,8 @@ class TvChannel {
   final String category;
   final String? logo;
   final Map<String, String> headers;
+  /// Prefer the embedded WebView2 HLS player on Windows for this channel.
+  final bool preferWindowsWebView;
 
   const TvChannel({
     required this.name,
@@ -21,6 +23,7 @@ class TvChannel {
     required this.category,
     this.logo,
     this.headers = const {},
+    this.preferWindowsWebView = false,
   });
 }
 

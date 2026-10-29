@@ -14,6 +14,7 @@ import 'package:webview_windows/webview_windows.dart' as windows_webview;
 
 import '../models/tv_channel.dart';
 import '../services/epg_service.dart';
+import '../services/tv_playback_state.dart';
 
 class StreamPlayerScreen extends StatefulWidget {
   final TvChannel channel;
@@ -117,9 +118,10 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
     }
     final uri = Uri.tryParse(widget.channel.url);
     final host = uri?.host.toLowerCase() ?? '';
+    final isTvradiozap = host == 'tvradiozap.eu' || host.endsWith('.tvradiozap.eu');
     return uri != null &&
         uri.scheme == 'https' &&
-        (host == 'tvradiozap.eu' || host.endsWith('.tvradiozap.eu'));
+        (widget.channel.preferWindowsWebView || isTvradiozap);
   }
 
   bool get _isOfficialWebPlayer =>
@@ -141,6 +143,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    ngombiTvPlaybackActive.value = true;
 
     // A TV/video player must keep the display awake while this screen is
     // active. The native MethodChannel is retained for compatibility, while
@@ -1052,6 +1055,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
     _epgRefreshTimer?.cancel();
     _playbackWatchdogTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
+    ngombiTvPlaybackActive.value = false;
     unawaited(_setKeepScreenOn(false));
     _controller?.removeListener(_onPlayerChanged);
     _controller?.dispose();

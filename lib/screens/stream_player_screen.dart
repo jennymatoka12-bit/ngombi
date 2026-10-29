@@ -502,7 +502,26 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
     }
 
     final value = controller.value;
-    if (!value.isInitialized || !value.isPlaying || value.hasError) {
+    if (!value.isInitialized) {
+      return;
+    }
+
+    if (value.hasError) {
+      _startVlcFallback(
+        errorMessage: value.errorDescription ??
+            'Le lecteur Windows a signalé une erreur de lecture.',
+      );
+      return;
+    }
+
+    if (!value.isPlaying) {
+      _stalledPlaybackChecks++;
+      if (_stalledPlaybackChecks >= 3) {
+        _startVlcFallback(
+          errorMessage:
+              'Le flux ne démarre pas dans le lecteur Windows ; tentative avec VLC.',
+        );
+      }
       return;
     }
 
@@ -1117,3 +1136,4 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
     );
   }
 }
+

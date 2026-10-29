@@ -6,6 +6,7 @@ on:
     branches:
       - feature/windows-desktop-mainline
       - codex/windows-tv-webview-prototype
+      - codex/windows-hls-sidecar-integration
 
 jobs:
   build-windows:
@@ -37,6 +38,18 @@ jobs:
 
       - name: Build Windows release
         run: flutter build windows --release
+      - name: Build WebView2 player sidecar
+        shell: pwsh
+        run: |
+          Push-Location windows_tv_webview_poc
+          try {
+            flutter create --platforms=windows .
+            flutter pub get
+            flutter build windows --release
+          } finally {
+            Pop-Location
+          }
+
 
       - name: Locate and verify Windows release
         shell: pwsh
@@ -72,9 +85,31 @@ jobs:
           New-Item -ItemType Directory -Path $stage | Out-Null
           Copy-Item -Path "$env:NGOMBI_RELEASE_PATH\*" -Destination $stage -Recurse -Force
 
+          $playerCandidates = @(
+            "windows_tv_webview_poc/build/windows/x64/runner/Release",
+            "windows_tv_webview_poc/build/windows/runner/Release"
+          )
+          $playerRelease = $null
+          foreach ($candidate in $playerCandidates) {
+            if (Test-Path "$candidate/ngombi_windows_tv_webview_poc.exe") {
+              $playerRelease = $candidate
+              break
+            }
+          }
+          if ($null -eq $playerRelease) {
+            throw "WebView2 player executable was not found in its release directory."
+          }
+          $playerStage = Join-Path $stage "webview_player"
+          New-Item -ItemType Directory -Path $playerStage | Out-Null
+          Copy-Item -Path "$playerRelease\*" -Destination $playerStage -Recurse -Force
+
           $stagedExe = Join-Path $stage "ngombi.exe"
           if (!(Test-Path $stagedExe)) {
             throw "Packaging aborted: ngombi.exe is not at the package root."
+          }
+          $stagedPlayer = Join-Path $playerStage "ngombi_windows_tv_webview_poc.exe"
+          if (!(Test-Path $stagedPlayer)) {
+            throw "Packaging aborted: WebView2 sidecar is missing."
           }
           $zipPath = Join-Path $env:GITHUB_WORKSPACE "NGOMBI-Windows-Test.zip"
           if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
@@ -87,7 +122,11 @@ jobs:
             if ($null -eq $exeEntry) {
               throw "Packaging aborted: ZIP does not contain ngombi.exe at its root."
             }
-            Write-Host "ZIP verified: root ngombi.exe exists; entries=$($archive.Entries.Count)"
+            $playerEntry = $archive.Entries | Where-Object { $_.FullName -eq "webview_player/ngombi_windows_tv_webview_poc.exe" } | Select-Object -First 1
+            if ($null -eq $playerEntry) {
+              throw "Packaging aborted: ZIP does not contain the WebView2 sidecar."
+            }
+            Write-Host "ZIP verified: root app and WebView2 sidecar exist; entries=$($archive.Entries.Count)"
           } finally {
             $archive.Dispose()
           }

@@ -90,7 +90,6 @@ class _WindowsDirectRadioScreenState extends State<WindowsDirectRadioScreen> {
   String? _error;
   bool _loading = true;
   bool _discovering = false;
-  String? _activeUrl;
 
   @override
   void initState() {
@@ -103,7 +102,6 @@ class _WindowsDirectRadioScreenState extends State<WindowsDirectRadioScreen> {
     try {
       controller = VideoPlayerController.networkUrl(Uri.parse(url));
       _controller = controller;
-      _activeUrl = url;
       controller.addListener(_onChanged);
       await controller.initialize().timeout(const Duration(seconds: 18));
       await controller.setVolume(1.0);
@@ -191,7 +189,6 @@ class _WindowsDirectRadioScreenState extends State<WindowsDirectRadioScreen> {
     try {
       controller = VideoPlayerController.networkUrl(Uri.parse(url));
       _controller = controller;
-      _activeUrl = url;
       controller.addListener(_onChanged);
       await controller.initialize().timeout(const Duration(seconds: 12));
       await controller.setVolume(1.0);

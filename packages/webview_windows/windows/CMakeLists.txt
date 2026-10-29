@@ -26,28 +26,31 @@ find_program(NUGET nuget)
 if(NOT NUGET)
   message(NOTICE "Nuget is not installed.")
   set(NUGET ${CMAKE_BINARY_DIR}/nuget.exe)
-  if (NOT EXISTS ${NUGET})
+  if(NOT EXISTS ${NUGET})
     message(NOTICE "Attempting to download nuget.")
     file(DOWNLOAD ${NUGET_URL} ${NUGET})
   endif()
 
   file(SHA256 ${NUGET} NUGET_DL_HASH)
-  if (NOT NUGET_DL_HASH STREQUAL NUGET_SHA256)
+  if(NOT NUGET_DL_HASH STREQUAL NUGET_SHA256)
     message(FATAL_ERROR "Integrity check for ${NUGET} failed.")
   endif()
 endif()
 
-# Create custom target for dependencies
-add_custom_target(${PROJECT_NAME}_DEPENDENCIES_DOWNLOAD ALL)
+# NuGet packages provide the WebView2 and WIL headers and native import library.
+set(NUGET_PACKAGES "${CMAKE_BINARY_DIR}/packages")
+set(WEBVIEW2_PACKAGE "${NUGET_PACKAGES}/Microsoft.Web.WebView2")
+set(WIL_PACKAGE "${NUGET_PACKAGES}/Microsoft.Windows.ImplementationLibrary")
 
-# Download dependencies using NuGet
-# Note: Removed DEPENDS keyword from TARGET version of add_custom_command
+# Download dependencies using NuGet. The plugin target below explicitly depends
+# on this target so compilation cannot race package installation.
+add_custom_target(${PROJECT_NAME}_DEPENDENCIES_DOWNLOAD ALL)
 add_custom_command(
   TARGET ${PROJECT_NAME}_DEPENDENCIES_DOWNLOAD PRE_BUILD
-  COMMAND ${CMAKE_COMMAND} -E echo "Downloading dependencies..."
-  COMMAND ${NUGET} install Microsoft.Windows.ImplementationLibrary -Version ${WIL_VERSION} -ExcludeVersion -OutputDirectory ${CMAKE_BINARY_DIR}/packages
-  COMMAND ${NUGET} install Microsoft.Web.WebView2 -Version ${WEBVIEW_VERSION} -ExcludeVersion -OutputDirectory ${CMAKE_BINARY_DIR}/packages
-  COMMENT "Downloading and installing NuGet packages"
+  COMMAND ${CMAKE_COMMAND} -E echo "Downloading WebView2/WIL dependencies..."
+  COMMAND ${NUGET} install Microsoft.Windows.ImplementationLibrary -Version ${WIL_VERSION} -ExcludeVersion -OutputDirectory ${NUGET_PACKAGES}
+  COMMAND ${NUGET} install Microsoft.Web.WebView2 -Version ${WEBVIEW_VERSION} -ExcludeVersion -OutputDirectory ${NUGET_PACKAGES}
+  COMMENT "Downloading and installing WebView2 and WIL NuGet packages"
 )
 
 # Define source files
@@ -68,6 +71,9 @@ set(PLUGIN_SOURCES
 # Create the plugin library
 add_library(${PLUGIN_NAME} SHARED ${PLUGIN_SOURCES})
 
+# Ensure NuGet headers and libraries exist before compiling the plugin.
+add_dependencies(${PLUGIN_NAME} ${PROJECT_NAME}_DEPENDENCIES_DOWNLOAD)
+
 # Configure compiler options
 if(MSVC)
   target_compile_options(${PLUGIN_NAME} PRIVATE "/await")
@@ -76,29 +82,40 @@ endif()
 # Apply standard settings
 apply_standard_settings(${PLUGIN_NAME})
 
-# Set C++ standard to 20 for std::format support
+# Set C++ standard for std::format support
 target_compile_features(${PLUGIN_NAME} PUBLIC cxx_std_20)
 
 # Configure visibility
-set_target_properties(${PLUGIN_NAME} PROPERTIES 
+set_target_properties(${PLUGIN_NAME} PROPERTIES
   CXX_VISIBILITY_PRESET hidden
 )
 
-# Add dependencies
-target_link_libraries(${PLUGIN_NAME} PRIVATE 
-  ${CMAKE_BINARY_DIR}/packages/Microsoft.Web.WebView2/build/native/Microsoft.Web.WebView2.targets
-  ${CMAKE_BINARY_DIR}/packages/Microsoft.Windows.ImplementationLibrary/build/native/Microsoft.Windows.ImplementationLibrary.targets
-  flutter 
-  flutter_wrapper_plugin
+# The .targets files are MSBuild XML and cannot be passed to target_link_libraries.
+# Add the NuGet headers explicitly and link the native WebView2 loader library.
+target_include_directories(${PLUGIN_NAME} PRIVATE
+  "${WEBVIEW2_PACKAGE}/build/native/include"
+  "${WIL_PACKAGE}/build/native/include"
 )
-
-# Configure definitions and includes
-target_compile_definitions(${PLUGIN_NAME} PRIVATE FLUTTER_PLUGIN_IMPL)
 target_include_directories(${PLUGIN_NAME} INTERFACE
   "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 
+target_link_libraries(${PLUGIN_NAME} PRIVATE
+  "${WEBVIEW2_PACKAGE}/build/native/x64/WebView2LoaderStatic.lib"
+  version
+  d3d11
+  dxgi
+  dcomp
+  runtimeobject
+  shcore
+  windowsapp
+  flutter
+  flutter_wrapper_plugin
+)
+
+target_compile_definitions(${PLUGIN_NAME} PRIVATE FLUTTER_PLUGIN_IMPL)
+
 # Set bundled libraries
 set(webview_windows_bundled_libraries
   PARENT_SCOPE
-) 
+)

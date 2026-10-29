@@ -11,6 +11,7 @@ on:
       - feature/windows-desktop-mainline
       - codex/windows-tv-webview-prototype
       - codex/windows-hls-sidecar-integration
+      - codex/ngombi-windows-targeted-fixes
 
 jobs:
   verify-android-dependencies:
@@ -51,6 +52,17 @@ jobs:
 
       - name: Install Flutter dependencies
         run: flutter pub get
+
+      - name: Generate NGOMBI launcher icons
+        run: dart run flutter_launcher_icons
+
+      - name: Verify generated Windows icon
+        shell: pwsh
+        run: |
+          if (!(Test-Path 'windows/runner/resources/app_icon.ico')) {
+            throw 'NGOMBI Windows app icon was not generated.'
+          }
+          Write-Host 'Verified NGOMBI Windows app icon.'
 
       - name: Analyze Flutter project
         run: flutter analyze lib

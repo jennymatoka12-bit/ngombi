@@ -94,7 +94,7 @@ set_target_properties(${PLUGIN_NAME} PROPERTIES
 # Add the NuGet headers explicitly and link the native WebView2 loader library.
 target_include_directories(${PLUGIN_NAME} PRIVATE
   "${WEBVIEW2_PACKAGE}/build/native/include"
-  "${WIL_PACKAGE}/build/native/include"
+  "${WIL_PACKAGE}/include"
 )
 target_include_directories(${PLUGIN_NAME} INTERFACE
   "${CMAKE_CURRENT_SOURCE_DIR}/include"

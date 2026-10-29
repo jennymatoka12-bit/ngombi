@@ -10,6 +10,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:vlc_player/vlc_player.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_windows/webview_windows.dart' as windows_webview;
 
 import '../models/tv_channel.dart';
 import '../services/epg_service.dart';
@@ -36,11 +37,17 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
   VlcPlayerController? _vlcController;
   bool _useVlcFallback = false;
   WebViewController? _webController;
-  Process? _windowsWebViewProcess;
-  StreamSubscription<String>? _windowsWebViewStdout;
-  StreamSubscription<String>? _windowsWebViewStderr;
-  bool _windowsWebViewActive = false;
+  windows_webview.WebviewController? _windowsWebViewController;
+  StreamSubscription<dynamic>? _windowsWebViewMessages;
+  StreamSubscription<dynamic>? _windowsWebViewLoadErrors;
+  Timer? _windowsWebViewWatchdog;
+  bool _windowsWebViewMode = false;
+  bool _windowsWebViewLoading = true;
+  bool _windowsWebViewPlaying = false;
   bool _windowsWebViewFallbackStarted = false;
+  String _windowsWebViewStatus = 'Préparation du lecteur…';
+  DateTime? _windowsWebViewLastProgress;
+  static Future<void>? _windowsWebViewEnvironment;
 
   bool _initialized = false;
   bool _webLoading = true;
@@ -161,7 +168,8 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
     }
 
     if (_isWindowsTvRadioZapHls) {
-      unawaited(_launchWindowsWebViewPlayer());
+      _windowsWebViewMode = true;
+      unawaited(_initializeWindowsWebViewPlayer());
       return;
     }
 
@@ -317,107 +325,386 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
     }
   }
 
-  Future<void> _launchWindowsWebViewPlayer() async {
-    final appDirectory = File(Platform.resolvedExecutable).parent;
-    final playerDirectory = Directory(
-      '${appDirectory.path}${Platform.pathSeparator}webview_player',
-    );
-    final playerExecutable = File(
-      '${playerDirectory.path}${Platform.pathSeparator}ngombi_windows_tv_webview_poc.exe',
-    );
-
-    if (!await playerExecutable.exists()) {
-      if (mounted) _initializeFlutterPlayer();
-      return;
+  Future<void> _initializeWindowsWebViewPlayer() async {
+    if (mounted) {
+      setState(() {
+        _windowsWebViewLoading = true;
+        _windowsWebViewPlaying = false;
+        _windowsWebViewStatus = 'Initialisation du lecteur WebView2…';
+        _errorMessage = null;
+      });
     }
 
     try {
-      final process = await Process.start(
-        playerExecutable.path,
-        [widget.channel.url],
-        workingDirectory: playerDirectory.path,
+      final runtimeVersion =
+          await windows_webview.WebviewController.getWebViewVersion();
+      if (runtimeVersion == null) {
+        throw StateError(
+          'Le runtime Microsoft Edge WebView2 est absent de cet ordinateur.',
+        );
+      }
+
+      _windowsWebViewEnvironment ??=
+          windows_webview.WebviewController.initializeEnvironment(
+        additionalArguments: '--autoplay-policy=no-user-gesture-required',
       );
-      if (!mounted) {
-        process.kill();
+      await _windowsWebViewEnvironment!.timeout(
+        const Duration(seconds: 20),
+      );
+
+      final controller = windows_webview.WebviewController();
+      _windowsWebViewController = controller;
+      _windowsWebViewMessages = controller.webMessage.listen(
+        _onWindowsWebViewMessage,
+        onError: (Object error) => _fallbackFromWindowsEmbeddedWebView(
+          'La communication avec le lecteur WebView2 a échoué : $error',
+        ),
+      );
+      _windowsWebViewLoadErrors = controller.onLoadError.listen((status) {
+        _fallbackFromWindowsEmbeddedWebView(
+          'WebView2 n’a pas pu charger le lecteur : $status',
+        );
+      });
+
+      await controller.initialize().timeout(
+        const Duration(seconds: 20),
+      );
+      await controller.setPopupWindowPolicy(
+        windows_webview.WebviewPopupWindowPolicy.deny,
+      );
+      await controller.setBackgroundColor(Colors.black);
+      await controller.loadStringContent(
+        _windowsWebPlayerHtml(widget.channel.url),
+      ).timeout(const Duration(seconds: 20));
+
+      if (!mounted || !identical(_windowsWebViewController, controller)) {
+        await controller.dispose();
         return;
       }
 
-      _windowsWebViewProcess = process;
-      _windowsWebViewFallbackStarted = false;
       setState(() {
-        _windowsWebViewActive = true;
-        _errorMessage = null;
+        _windowsWebViewLoading = false;
+        _windowsWebViewStatus = 'Connexion au direct…';
       });
-
-      _windowsWebViewStdout = process.stdout
-          .transform(utf8.decoder)
-          .transform(const LineSplitter())
-          .listen((line) {
-        if (line.startsWith('NGOMBI_WEBVIEW_FATAL:')) {
-          _fallbackFromWindowsWebView(line);
-        }
-      });
-      _windowsWebViewStderr = process.stderr
-          .transform(utf8.decoder)
-          .transform(const LineSplitter())
-          .listen((line) => debugPrint('[NGOMBI WebView2] $line'));
-
-      unawaited(process.exitCode.then((exitCode) {
-        if (!mounted || !identical(_windowsWebViewProcess, process)) return;
-        if (exitCode != 0) {
-          _fallbackFromWindowsWebView(
-            'Le lecteur WebView2 s’est arrêté avec le code $exitCode.',
-          );
-          return;
-        }
-
-        _windowsWebViewProcess = null;
-        _windowsWebViewActive = false;
-        unawaited(_windowsWebViewStdout?.cancel());
-        unawaited(_windowsWebViewStderr?.cancel());
-        _windowsWebViewStdout = null;
-        _windowsWebViewStderr = null;
-        if (mounted) Navigator.of(context).maybePop();
-      }));
+      _windowsWebViewLastProgress = DateTime.now();
+      _windowsWebViewWatchdog?.cancel();
+      _windowsWebViewWatchdog = Timer.periodic(
+        const Duration(seconds: 10),
+        (_) => _checkWindowsWebViewProgress(),
+      );
+      _scheduleControlsHide();
     } catch (error) {
-      if (!mounted) return;
-      debugPrint('[NGOMBI WebView2] Impossible de lancer le lecteur : $error');
-      _initializeFlutterPlayer();
+      debugPrint('[NGOMBI WebView2] Initialisation intégrée échouée : $error');
+      _fallbackFromWindowsEmbeddedWebView(error.toString());
     }
   }
 
-  void _fallbackFromWindowsWebView(String reason) {
-    if (!mounted || !_windowsWebViewActive || _windowsWebViewFallbackStarted) {
+  String _windowsWebPlayerHtml(String streamUrl) {
+    final jsUrl = jsonEncode(streamUrl);
+    return '''
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    html, body { width:100%; height:100%; margin:0; background:#000; overflow:hidden; }
+    video { width:100%; height:100%; object-fit:contain; background:#000; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.18/dist/hls.min.js"></script>
+</head>
+<body>
+  <video id="video" autoplay playsinline></video>
+  <script>
+    const streamUrl = $jsUrl;
+    const video = document.getElementById('video');
+    function notify(type, message, position) {
+      try {
+        window.chrome.webview.postMessage({type: type, message: message, position: position});
+      } catch (_) {}
+    }
+    let lastProgressReport = 0;
+    video.addEventListener('playing', () => notify('playing', 'Lecture active'));
+    video.addEventListener('waiting', () => notify('status', 'Mise en mémoire tampon…'));
+    video.addEventListener('timeupdate', () => {
+      const now = Date.now();
+      if (now - lastProgressReport >= 4000) {
+        lastProgressReport = now;
+        notify('progress', 'Lecture active', video.currentTime);
+      }
+    });
+    video.addEventListener('error', () => {
+      const code = video.error ? video.error.code : 'inconnu';
+      notify('error', 'Erreur vidéo HTML5 (' + code + ').');
+    });
+    if (window.Hls && Hls.isSupported()) {
+      const hls = new Hls({enableWorker: true, lowLatencyMode: false});
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        if (data && data.fatal) {
+          notify('error', 'Erreur HLS fatale : ' + data.details);
+        }
+      });
+      hls.on(Hls.Events.MEDIA_ATTACHED, () => hls.loadSource(streamUrl));
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        hls.subtitleTrack = -1;
+        video.play().catch(() => notify('status', 'Appuyez sur Lecture pour démarrer le direct.'));
+      });
+      hls.attachMedia(video);
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = streamUrl;
+      video.play().catch(() => notify('status', 'Appuyez sur Lecture pour démarrer le direct.'));
+    } else {
+      notify('error', 'HLS.js ou le décodage HLS natif est indisponible.');
+    }
+  </script>
+</body>
+</html>
+''';
+  }
+
+  void _onWindowsWebViewMessage(dynamic message) {
+    if (!mounted || !_windowsWebViewMode || message is! Map) return;
+    final type = message['type']?.toString();
+    final text = message['message']?.toString();
+    if (type == 'progress') {
+      _windowsWebViewLastProgress = DateTime.now();
+    }
+    if (type == 'error') {
+      _fallbackFromWindowsEmbeddedWebView(text ?? 'Erreur de lecture HLS.');
+      return;
+    }
+
+    setState(() {
+      if (type == 'playing') {
+        _windowsWebViewPlaying = true;
+        _windowsWebViewLoading = false;
+      }
+      if (text != null && text.isNotEmpty) {
+        _windowsWebViewStatus = text;
+      }
+    });
+    if (type == 'playing') _scheduleControlsHide();
+  }
+
+  void _checkWindowsWebViewProgress() {
+    if (!mounted || !_windowsWebViewMode || !_windowsWebViewPlaying) return;
+    final lastProgress = _windowsWebViewLastProgress;
+    if (lastProgress != null &&
+        DateTime.now().difference(lastProgress) >
+            const Duration(seconds: 35)) {
+      _fallbackFromWindowsEmbeddedWebView(
+        'Le flux ne progresse plus dans WebView2 ; bascule vers le lecteur de secours.',
+      );
+    }
+  }
+
+  void _fallbackFromWindowsEmbeddedWebView(String reason) {
+    if (!mounted || !_windowsWebViewMode || _windowsWebViewFallbackStarted) {
       return;
     }
     _windowsWebViewFallbackStarted = true;
-    _windowsWebViewActive = false;
+    _windowsWebViewMode = false;
+    _windowsWebViewWatchdog?.cancel();
+    _windowsWebViewWatchdog = null;
 
-    final process = _windowsWebViewProcess;
-    _windowsWebViewProcess = null;
-    unawaited(_windowsWebViewStdout?.cancel());
-    unawaited(_windowsWebViewStderr?.cancel());
-    _windowsWebViewStdout = null;
-    _windowsWebViewStderr = null;
-    process?.kill();
+    final controller = _windowsWebViewController;
+    _windowsWebViewController = null;
+    unawaited(_windowsWebViewMessages?.cancel());
+    unawaited(_windowsWebViewLoadErrors?.cancel());
+    _windowsWebViewMessages = null;
+    _windowsWebViewLoadErrors = null;
+    if (controller != null) {
+      unawaited(controller.dispose().catchError((_) {}));
+    }
 
     setState(() {
+      _windowsWebViewLoading = false;
       _errorMessage = null;
     });
     debugPrint('[NGOMBI WebView2] Bascule vers MediaKit/VLC : $reason');
     unawaited(_initializeFlutterPlayer());
   }
 
-  void _closeWindowsWebViewAndReturn() {
-    final process = _windowsWebViewProcess;
-    _windowsWebViewProcess = null;
-    _windowsWebViewActive = false;
-    unawaited(_windowsWebViewStdout?.cancel());
-    unawaited(_windowsWebViewStderr?.cancel());
-    _windowsWebViewStdout = null;
-    _windowsWebViewStderr = null;
-    process?.kill();
-    if (mounted) Navigator.of(context).maybePop();
+  Future<void> _toggleWindowsWebViewPlayback() async {
+    final controller = _windowsWebViewController;
+    if (controller == null) return;
+    try {
+      await controller.executeScript('''
+        (function() {
+          var video = document.querySelector('video');
+          if (!video) return;
+          if (video.paused) {
+            video.play().catch(function() {});
+          } else {
+            video.pause();
+          }
+        })();
+      ''');
+    } catch (error) {
+      debugPrint('[NGOMBI WebView2] Commande lecture/pause échouée : $error');
+    }
+  }
+
+  Widget _buildWindowsWebViewPlayer() {
+    final controller = _windowsWebViewController;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        const ColoredBox(color: Colors.black),
+        if (controller?.value.isInitialized == true)
+          windows_webview.Webview(controller!)
+        else
+          const Center(child: CircularProgressIndicator()),
+        if (_windowsWebViewLoading)
+          const Center(child: CircularProgressIndicator()),
+        if (_showControls)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.72),
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.80),
+                    ],
+                    stops: const [0, 0.48, 1],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        if (_showControls)
+          Positioned(
+            top: 12,
+            left: 12,
+            right: 12,
+            child: Row(
+              children: [
+                _overlayButton(
+                  icon: Icons.arrow_back_rounded,
+                  tooltip: 'Retour',
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.channel.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      Text(
+                        _currentProgram?.title ?? 'EN DIRECT',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                _overlayButton(
+                  icon: Icons.swap_horiz_rounded,
+                  tooltip: 'Utiliser le lecteur de secours',
+                  onPressed: () => _fallbackFromWindowsEmbeddedWebView(
+                    'Bascule demandée depuis les commandes du lecteur.',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _overlayButton(
+                  icon: _isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
+                  tooltip: _isFullscreen ? 'Quitter le plein écran' : 'Plein écran',
+                  onPressed: _toggleOrientation,
+                ),
+              ],
+            ),
+          ),
+        if (_showControls)
+          Center(
+            child: IconButton(
+              iconSize: 72,
+              color: Colors.white,
+              onPressed: () => unawaited(_toggleWindowsWebViewPlayback()),
+              icon: Icon(
+                _windowsWebViewPlaying
+                    ? Icons.pause_circle_filled_rounded
+                    : Icons.play_circle_filled_rounded,
+              ),
+            ),
+          ),
+        if (_showControls)
+          Positioned(
+            left: 18,
+            right: 18,
+            bottom: 18,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_currentProgram != null) ...[
+                  Text(
+                    _currentProgram!.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      minHeight: 4,
+                      value: _currentProgram!.duration.inMilliseconds > 0
+                          ? (_currentProgram!.elapsed.inMilliseconds /
+                                  _currentProgram!.duration.inMilliseconds)
+                              .clamp(0.0, 1.0)
+                          : null,
+                      backgroundColor: Colors.white24,
+                    ),
+                  ),
+                  if (_nextProgram != null) ...[
+                    const SizedBox(height: 5),
+                    Text(
+                      'Ensuite : ' + _nextProgram!.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white54, fontSize: 11),
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                ],
+                Row(
+                  children: [
+                    const Icon(Icons.live_tv_rounded, color: Colors.white70, size: 16),
+                    const SizedBox(width: 6),
+                    Text(
+                      _windowsWebViewStatus,
+                      style: const TextStyle(color: Colors.white70, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        if (!_showControls)
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: _toggleControls,
+            ),
+          ),
+      ],
+    );
   }
 
   void _initializeOfficialWebPlayer() {
@@ -769,9 +1056,14 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
     _controller?.removeListener(_onPlayerChanged);
     _controller?.dispose();
     _vlcController?.dispose();
-    _windowsWebViewProcess?.kill();
-    unawaited(_windowsWebViewStdout?.cancel());
-    unawaited(_windowsWebViewStderr?.cancel());
+    _windowsWebViewWatchdog?.cancel();
+    unawaited(_windowsWebViewMessages?.cancel());
+    unawaited(_windowsWebViewLoadErrors?.cancel());
+    final embeddedWebView = _windowsWebViewController;
+    _windowsWebViewController = null;
+    if (embeddedWebView != null) {
+      unawaited(embeddedWebView.dispose().catchError((_) {}));
+    }
     unawaited(_restoreOrientation());
     super.dispose();
   }
@@ -812,41 +1104,9 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
             ),
       body: _isOfficialWebPlayer
           ? _buildOfficialWebPlayer()
-          : _windowsWebViewActive
-              ? _buildWindowsWebViewStatus()
+          : _windowsWebViewMode
+              ? _buildWindowsWebViewPlayer()
               : Center(child: _buildPlayer()),
-    );
-  }
-
-  Widget _buildWindowsWebViewStatus() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.open_in_new_rounded, size: 48, color: Colors.white70),
-            const SizedBox(height: 16),
-            Text(
-              'Le lecteur WebView2 de ${widget.channel.name} est ouvert dans sa fenêtre.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white, fontSize: 16),
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: () => _fallbackFromWindowsWebView(
-                'Bascule demandée depuis NGOMBI.',
-              ),
-              icon: const Icon(Icons.swap_horiz_rounded),
-              label: const Text('Utiliser le lecteur de secours'),
-            ),
-            TextButton(
-              onPressed: _closeWindowsWebViewAndReturn,
-              child: const Text('Fermer le lecteur et revenir'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 

@@ -986,23 +986,23 @@ jobs:
           if "androidx.media3:media3-exoplayer:1.11.1" not in text:
               if is_kotlin_dsl:
                   dependencies = (
-                      "\\ndependencies {\\n"
-                      '    implementation("androidx.media3:media3-exoplayer:1.11.1")\\n'
-                      '    implementation("androidx.media3:media3-exoplayer-dash:1.11.1")\\n'
-                      '    implementation("androidx.media3:media3-ui:1.11.1")\\n'
-                      '    implementation("androidx.media3:media3-session:1.11.1")\\n'
-                      '    implementation("androidx.media:media:1.7.0")\\n'
-                      "}\\n"
+                      "\ndependencies {\n"
+                      '    implementation("androidx.media3:media3-exoplayer:1.11.1")\n'
+                      '    implementation("androidx.media3:media3-exoplayer-dash:1.11.1")\n'
+                      '    implementation("androidx.media3:media3-ui:1.11.1")\n'
+                      '    implementation("androidx.media3:media3-session:1.11.1")\n'
+                      '    implementation("androidx.media:media:1.7.0")\n'
+                      "}\n"
                   )
               else:
                   dependencies = (
-                      "\\ndependencies {\\n"
-                      '    implementation "androidx.media3:media3-exoplayer:1.11.1"\\n'
-                      '    implementation "androidx.media3:media3-exoplayer-dash:1.11.1"\\n'
-                      '    implementation "androidx.media3:media3-ui:1.11.1"\\n'
-                      '    implementation "androidx.media3:media3-session:1.11.1"\\n'
-                      '    implementation "androidx.media:media:1.7.0"\\n'
-                      "}\\n"
+                      "\ndependencies {\n"
+                      '    implementation "androidx.media3:media3-exoplayer:1.11.1"\n'
+                      '    implementation "androidx.media3:media3-exoplayer-dash:1.11.1"\n'
+                      '    implementation "androidx.media3:media3-ui:1.11.1"\n'
+                      '    implementation "androidx.media3:media3-session:1.11.1"\n'
+                      '    implementation "androidx.media:media:1.7.0"\n'
+                      "}\n"
                   )
               text += dependencies
 

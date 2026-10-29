@@ -6,6 +6,7 @@ import 'package:video_player/video_player.dart';
 
 import '../models/ngombi_ad.dart';
 import 'ngombi_logo.dart';
+import '../services/tv_playback_state.dart';
 
 class NgombiAdvertisingPanel extends StatefulWidget {
   final List<NgombiAd> ads;
@@ -26,6 +27,8 @@ class NgombiAdvertisingPanel extends StatefulWidget {
 
 class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
     with WidgetsBindingObserver {
+  bool get _isActive => widget.isActive && !ngombiTvPlaybackActive.value;
+
   int _index = 0;
   Timer? _timer;
   VideoPlayerController? _videoController;
@@ -53,6 +56,7 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    ngombiTvPlaybackActive.addListener(_onTvPlaybackChanged);
     _prepareCurrentAd();
   }
 
@@ -61,17 +65,25 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.ads != widget.ads) {
       _index = 0;
-      if (widget.isActive) {
+      if (_isActive) {
         _prepareCurrentAd();
       }
     }
 
-    if (oldWidget.isActive != widget.isActive) {
-      if (widget.isActive) {
+    if (oldWidget.isActive != _isActive) {
+      if (_isActive) {
         _resumePlayback();
       } else {
         _pausePlayback();
       }
+    }
+  }
+
+  void _onTvPlaybackChanged() {
+    if (_isActive) {
+      _resumePlayback();
+    } else {
+      _pausePlayback();
     }
   }
 
@@ -84,7 +96,7 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
   }
 
   void _resumePlayback() {
-    if (!mounted || !widget.isActive) return;
+    if (!mounted || !_isActive) return;
 
     final controller = _videoController;
     if (controller != null && controller.value.isInitialized) {
@@ -105,7 +117,7 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
       return;
     }
 
-    if (state == AppLifecycleState.resumed && widget.isActive) {
+    if (state == AppLifecycleState.resumed && _isActive) {
       // Keep the same controller/texture whenever possible. Recreating a
       // controller on every lifecycle transition can leave Android rendering
       // the first frame while the audio track continues.
@@ -121,7 +133,7 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
   }
 
   Future<void> _prepareCurrentAd() async {
-    if (!mounted || !widget.isActive) return;
+    if (!mounted || !_isActive) return;
 
     _timer?.cancel();
     _timer = null;
@@ -146,7 +158,7 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
         await controller.setLooping(false);
         await controller.setVolume(_isAdMuted ? 0.0 : 1.0);
 
-        if (!mounted || !widget.isActive || generation != _mediaGeneration) {
+        if (!mounted || !_isActive || generation != _mediaGeneration) {
           await controller.dispose();
           return;
         }
@@ -197,13 +209,13 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
       await previousController.dispose();
     }
 
-    if (!mounted || !widget.isActive || generation != _mediaGeneration) {
+    if (!mounted || !_isActive || generation != _mediaGeneration) {
       return;
     }
 
     setState(() {});
     _timer = Timer(ad.duration, () {
-      if (generation == _mediaGeneration && widget.isActive) {
+      if (generation == _mediaGeneration && _isActive) {
         _advance();
       }
     });
@@ -212,7 +224,7 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
   void _advance() => _changeAd(1);
 
   void _changeAd(int direction) {
-    if (!mounted || !widget.isActive || _isAdvancing) return;
+    if (!mounted || !_isActive || _isAdvancing) return;
     final ads = _activeAds;
     if (ads.length < 2) return;
 
@@ -231,7 +243,7 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
   }
 
   void _handleSwipeUpdate(DragUpdateDetails details) {
-    if (_dragHandled || !widget.isActive || _activeAds.length < 2) return;
+    if (_dragHandled || !_isActive || _activeAds.length < 2) return;
     _dragDistance += details.primaryDelta ?? 0;
 
     if (_dragDistance.abs() >= 55) {
@@ -271,6 +283,7 @@ class _NgombiAdvertisingPanelState extends State<NgombiAdvertisingPanel>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    ngombiTvPlaybackActive.removeListener(_onTvPlaybackChanged);
     _timer?.cancel();
     _mediaGeneration++;
     _videoController?.dispose();

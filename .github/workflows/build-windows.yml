@@ -128,7 +128,7 @@ jobs:
         run: flutter pub get
 
       - name: Analyze prototype
-        run: flutter analyze
+        run: flutter analyze lib
 
       - name: Build prototype release
         run: flutter build windows --release

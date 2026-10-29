@@ -35,7 +35,7 @@ class _WindowsTvWebviewPocScreenState extends State<WindowsTvWebviewPocScreen> {
   WebviewController? _webController;
   StreamSubscription<dynamic>? _messageSubscription;
   StreamSubscription<dynamic>? _loadErrorSubscription;
-  String _status = 'PrÃªt Ã  lancer le test.';
+  String _status = 'Prêt à lancer le test.';
   bool _loading = false;
   bool _isPlaying = false;
   String? _error;
@@ -63,7 +63,7 @@ class _WindowsTvWebviewPocScreenState extends State<WindowsTvWebviewPocScreen> {
       _loading = true;
       _isPlaying = false;
       _error = null;
-      _status = 'Initialisation de WebView2â€¦';
+      _status = 'Initialisation de WebView2…';
     });
 
     try {
@@ -76,7 +76,7 @@ class _WindowsTvWebviewPocScreenState extends State<WindowsTvWebviewPocScreen> {
       if (mounted) {
         setState(() {
           _loading = false;
-          _status = 'WebView2 prÃªt; attente du fluxâ€¦';
+          _status = 'WebView2 prêt; attente du flux…';
         });
       }
     } catch (error) {
@@ -85,7 +85,7 @@ class _WindowsTvWebviewPocScreenState extends State<WindowsTvWebviewPocScreen> {
         _loading = false;
         _error = error.toString().contains('environment_creation_failed')
             ? 'Runtime Microsoft Edge WebView2 introuvable.'
-            : 'Impossible dâ€™initialiser le lecteur : $error';
+            : 'Impossible d’initialiser le lecteur : $error';
       });
     }
   }
@@ -139,10 +139,10 @@ class _WindowsTvWebviewPocScreenState extends State<WindowsTvWebviewPocScreen> {
       try { window.chrome.webview.postMessage({type, message}); } catch (_) {}
     }
     video.addEventListener('playing', () => notify('playing', 'Lecture active'));
-    video.addEventListener('waiting', () => notify('status', 'Mise en mÃ©moire tamponâ€¦'));
+    video.addEventListener('waiting', () => notify('status', 'Mise en mémoire tampon…'));
     video.addEventListener('error', () => {
       const code = video.error ? video.error.code : 'inconnu';
-      notify('error', 'Erreur vidÃ©o HTML5 (' + code + ').');
+      notify('error', 'Erreur vidéo HTML5 (' + code + ').');
     });
     if (window.Hls && Hls.isSupported()) {
       const hls = new Hls({enableWorker: true, lowLatencyMode: false});
@@ -151,14 +151,14 @@ class _WindowsTvWebviewPocScreenState extends State<WindowsTvWebviewPocScreen> {
       });
       hls.on(Hls.Events.MEDIA_ATTACHED, () => hls.loadSource(streamUrl));
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        video.play().catch(() => notify('status', 'Appuyez sur Lecture pour dÃ©marrer le direct.'));
+        video.play().catch(() => notify('status', 'Appuyez sur Lecture pour démarrer le direct.'));
       });
       hls.attachMedia(video);
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = streamUrl;
-      video.play().catch(() => notify('status', 'Appuyez sur Lecture pour dÃ©marrer le direct.'));
+      video.play().catch(() => notify('status', 'Appuyez sur Lecture pour démarrer le direct.'));
     } else {
-      notify('error', 'HLS.js ou le dÃ©codage HLS natif est indisponible.');
+      notify('error', 'HLS.js ou le décodage HLS natif est indisponible.');
     }
   </script>
 </body>
@@ -179,14 +179,14 @@ class _WindowsTvWebviewPocScreenState extends State<WindowsTvWebviewPocScreen> {
   Widget build(BuildContext context) {
     final webController = _webController;
     return Scaffold(
-      appBar: AppBar(title: const Text('NGOMBI â€” prototype HLS Windows')),
+      appBar: AppBar(title: const Text('NGOMBI — prototype HLS Windows')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              'Essai isolÃ© WebView2 + HLS.js. Ce prototype ne modifie pas le lecteur Android ni le lecteur principal.',
+              'Essai isolé WebView2 + HLS.js. Ce prototype ne modifie pas le lecteur Android ni le lecteur principal.',
             ),
             const SizedBox(height: 12),
             TextField(

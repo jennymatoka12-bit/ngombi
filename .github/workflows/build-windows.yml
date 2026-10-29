@@ -19,14 +19,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Flutter Android toolchain
+      - name: Set up Flutter compatible with the current vlc_player dependency
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.22.3"
+          flutter-version: "3.47.8"
           channel: stable
           cache: true
 
-      - name: Resolve dependencies with the existing Android toolchain
+      - name: Resolve project dependencies
         run: flutter pub get
 
   build-windows:
@@ -54,10 +54,10 @@ jobs:
 
       - name: Analyze Flutter project
         run: flutter analyze lib
-        continue-on-error: true
 
       - name: Build Windows release
         run: flutter build windows --release
+
       - name: Locate and verify Windows release
         shell: pwsh
         run: |
@@ -159,4 +159,3 @@ jobs:
           name: NGOMBI-Windows-WebView-HLS-Prototype
           path: windows_tv_webview_poc/build/windows/x64/runner/Release/
           if-no-files-found: error
-

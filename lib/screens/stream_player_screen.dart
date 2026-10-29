@@ -1563,3 +1563,179 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
   }
 }
 
+
+
+/// In-app TVRadioZap portal for Windows. This is separate from the HLS
+/// video surface so portal navigation never launches an external browser.
+class WindowsTvradiozapPortalScreen extends StatefulWidget {
+  const WindowsTvradiozapPortalScreen({super.key});
+
+  @override
+  State<WindowsTvradiozapPortalScreen> createState() =>
+      _WindowsTvradiozapPortalScreenState();
+}
+
+class _WindowsTvradiozapPortalScreenState
+    extends State<WindowsTvradiozapPortalScreen> {
+  static Future<void>? _environmentInitialization;
+  windows_webview.WebviewController? _controller;
+  StreamSubscription<dynamic>? _historySubscription;
+  StreamSubscription<dynamic>? _loadingSubscription;
+  StreamSubscription<dynamic>? _errorSubscription;
+  bool _loading = true;
+  bool _canGoBack = false;
+  String? _error;
+  String _pageTitle = 'TVRadioZap';
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_initializePortal());
+  }
+
+  Future<void> _initializePortal() async {
+    final runtime = await windows_webview.WebviewController.getWebViewVersion();
+    if (runtime == null || runtime.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = 'WebView2 Runtime est absent de cet ordinateur.';
+        });
+      }
+      return;
+    }
+
+    try {
+      _environmentInitialization ??=
+          windows_webview.WebviewController.initializeEnvironment(
+        additionalArguments: '--autoplay-policy=no-user-gesture-required',
+      );
+      try {
+        await _environmentInitialization;
+      } catch (_) {
+        // The shared WebView2 environment may already have been initialized
+        // by the TV player. Continue with that existing environment.
+      }
+
+      final controller = windows_webview.WebviewController();
+      _controller = controller;
+      _historySubscription = controller.historyChanged.listen((history) {
+        if (mounted) setState(() => _canGoBack = history.canGoBack);
+      });
+      _loadingSubscription = controller.loadingState.listen((state) {
+        if (!mounted) return;
+        setState(() => _loading = state != windows_webview.LoadingState.navigationCompleted);
+      });
+      _errorSubscription = controller.onLoadError.listen((status) {
+        if (!mounted) return;
+        setState(() {
+          _loading = false;
+          _error = 'Le portail n’a pas pu être chargé : $status';
+        });
+      });
+      controller.title.listen((title) {
+        if (!mounted || title.trim().isEmpty) return;
+        setState(() => _pageTitle = title);
+      });
+      await controller.initialize();
+      await controller.setPopupWindowPolicy(
+        windows_webview.WebviewPopupWindowPolicy.sameWindow,
+      );
+      await controller.setBackgroundColor(Colors.black);
+      await controller.loadUrl('https://tvradiozap.eu/');
+      if (mounted) setState(() => _loading = false);
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = 'Impossible d’ouvrir TVRadioZap dans NGOMBI : $error';
+        });
+      }
+    }
+  }
+
+  Future<void> _goBack() async {
+    final controller = _controller;
+    if (_canGoBack && controller != null) {
+      await controller.goBack();
+    } else if (mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  Future<void> _reload() async {
+    final controller = _controller;
+    if (controller == null) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    await controller.reload();
+  }
+
+  @override
+  void dispose() {
+    unawaited(_historySubscription?.cancel());
+    unawaited(_loadingSubscription?.cancel());
+    unawaited(_errorSubscription?.cancel());
+    final controller = _controller;
+    _controller = null;
+    if (controller != null) unawaited(controller.dispose());
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: Text(_pageTitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+        leading: IconButton(
+          tooltip: _canGoBack ? 'Page précédente' : 'Retour au bouquet',
+          onPressed: _goBack,
+          icon: const Icon(Icons.arrow_back_rounded),
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Actualiser le portail',
+            onPressed: _reload,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          if (_controller?.value.isInitialized == true)
+            windows_webview.Webview(_controller!)
+          else if (_error == null)
+            const Center(child: CircularProgressIndicator()),
+          if (_loading)
+            const Align(
+              alignment: Alignment.topCenter,
+              child: LinearProgressIndicator(),
+            ),
+          if (_error != null)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.wifi_off_rounded, size: 44),
+                    const SizedBox(height: 12),
+                    Text(_error!, textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      onPressed: _initializePortal,
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('Réessayer'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}

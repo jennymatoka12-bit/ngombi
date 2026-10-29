@@ -91,6 +91,14 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
   // Encrypted DASH streams can hang or crash the generic Windows decoder.
   // Until licensed DRM playback is integrated, fail safely and offer the
   // broadcaster portal rather than attempting native decoding.
+  // The remote TNT playlist uses this independent 6ter HLS source.
+  // Test VLC directly on Windows for this one stream because MediaKit can
+  // initialize video successfully while the audio track remains silent.
+  bool get _isWindowsTnt6terHls =>
+      Platform.isWindows &&
+      widget.channel.url.trim().toLowerCase() ==
+          'http://149.62.177.107:9999/6ter/index.m3u8';
+
   bool get _isWindowsProtectedDash =>
       Platform.isWindows &&
       widget.channel.url.toLowerCase().contains('cmaf_cenc00');
@@ -130,6 +138,13 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
 
     if (_isOfficialWebPlayer) {
       _initializeOfficialWebPlayer();
+      return;
+    }
+
+    if (_isWindowsTnt6terHls) {
+      // Keep this workaround scoped to the exact TNT playlist URL. Do not
+      // change playback behavior for the other channels or Android.
+      _startVlcFallback();
       return;
     }
 

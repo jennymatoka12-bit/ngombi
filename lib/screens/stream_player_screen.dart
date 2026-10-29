@@ -49,6 +49,9 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
   EpgProgram? _nextProgram;
   Timer? _hideControlsTimer;
   Timer? _epgRefreshTimer;
+  Timer? _playbackWatchdogTimer;
+  Duration _lastObservedPosition = Duration.zero;
+  int _stalledPlaybackChecks = 0;
 
   bool get _isGabon24 {
     final name = widget.channel.name.toLowerCase();
@@ -457,6 +460,15 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
       // a volume/play failure must not leave a half-initialized controller.
       await playerController.setVolume(1.0);
       await playerController.play();
+      if (Platform.isWindows) {
+        _lastObservedPosition = playerController.value.position;
+        _stalledPlaybackChecks = 0;
+        _playbackWatchdogTimer?.cancel();
+        _playbackWatchdogTimer = Timer.periodic(
+          const Duration(seconds: 8),
+          (_) => _checkWindowsPlaybackHealth(playerController),
+        );
+      }
       _scheduleControlsHide();
       unawaited(_loadEpg());
     } catch (error) {
@@ -480,6 +492,38 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
     }
   }
 
+  void _checkWindowsPlaybackHealth(VideoPlayerController controller) {
+    if (!Platform.isWindows ||
+        !mounted ||
+        _useVlcFallback ||
+        !identical(_controller, controller)) {
+      _playbackWatchdogTimer?.cancel();
+      return;
+    }
+
+    final value = controller.value;
+    if (!value.isInitialized || !value.isPlaying || value.hasError) {
+      return;
+    }
+
+    final position = value.position;
+    if (position > _lastObservedPosition) {
+      _lastObservedPosition = position;
+      _stalledPlaybackChecks = 0;
+      return;
+    }
+
+    _stalledPlaybackChecks++;
+    // A live stream should advance even when its duration is unknown. Three
+    // consecutive checks with no position movement indicate that the primary
+    // Windows backend has stalled; hand the same URL and headers to VLC.
+    if (_stalledPlaybackChecks >= 3) {
+      _startVlcFallback(
+        errorMessage: 'Lecture Windows bloquée : bascule automatique vers VLC.',
+      );
+    }
+  }
+
   void _startVlcFallback({String? errorMessage}) {
     if (!Platform.isWindows || !mounted) {
       if (mounted) {
@@ -489,6 +533,13 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
     }
 
     try {
+      _playbackWatchdogTimer?.cancel();
+      final oldVideoController = _controller;
+      _controller = null;
+      if (oldVideoController != null) {
+        oldVideoController.removeListener(_onPlayerChanged);
+        unawaited(oldVideoController.dispose());
+      }
       final oldController = _vlcController;
       final controller = VlcPlayerController(
         mediaSource: VlcMediaSource(
@@ -568,6 +619,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
   void dispose() {
     _hideControlsTimer?.cancel();
     _epgRefreshTimer?.cancel();
+    _playbackWatchdogTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     unawaited(_setKeepScreenOn(false));
     _controller?.removeListener(_onPlayerChanged);

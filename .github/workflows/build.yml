@@ -673,7 +673,9 @@ jobs:
                       }
                   }
 
-                  return START_STICKY;
+                  // Let MediaSessionService complete its own lifecycle handling
+                  // (foreground notification / media-session command processing).
+                  return super.onStartCommand(intent, flags, startId);
               }
 
               @Override

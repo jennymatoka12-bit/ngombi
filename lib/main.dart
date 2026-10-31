@@ -95,19 +95,36 @@ Future<_NgombiStartupData> _initializeNgombi() async {
 
   final tvChannels = parseEnigma2Bouquet(bouquetContent);
 
-  if (NgombiSupabaseConfig.isConfigured) {
-    await Supabase.initialize(
-      url: NgombiSupabaseConfig.url,
-      publishableKey: NgombiSupabaseConfig.publishableKey,
-    );
+  // Load the local catalogue first so NGOMBI can still start when the
+  // remote Supabase service is temporarily unavailable.
+  final localAdRepository = NgombiAdRepository();
+  List<NgombiAd> localAds = const [];
+  try {
+    localAds = await localAdRepository.loadAds();
+  } catch (_) {
+    // Keep startup available even if local preferences cannot be read.
   }
 
-  final localAdRepository = NgombiAdRepository();
-  final ads = NgombiSupabaseConfig.isConfigured
-      ? await NgombiAdServerRepository().loadPublicAds(
-          fallback: await localAdRepository.loadAds(),
-        )
-      : await localAdRepository.loadAds();
+  var ads = localAds;
+  if (NgombiSupabaseConfig.isConfigured) {
+    try {
+      await Supabase.initialize(
+        url: NgombiSupabaseConfig.url,
+        publishableKey: NgombiSupabaseConfig.publishableKey,
+      );
+
+      // loadPublicAds already falls back to the local catalogue on query
+      // errors. Keeping the call inside this guarded block also protects
+      // startup from initialization/network failures.
+      ads = await NgombiAdServerRepository().loadPublicAds(
+        fallback: localAds,
+      );
+    } catch (_) {
+      // Do not leave users stuck on the splash screen because the ad
+      // backend is unavailable. Continue with the last local catalogue.
+      ads = localAds;
+    }
+  }
 
   return _NgombiStartupData(
     tvChannels: tvChannels,

@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - master
+      - codex/ngombi-global-phase1-stability
   workflow_dispatch:
 
 jobs:

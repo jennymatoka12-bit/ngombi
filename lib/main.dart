@@ -95,19 +95,36 @@ Future<_NgombiStartupData> _initializeNgombi() async {
 
   final tvChannels = parseEnigma2Bouquet(bouquetContent);
 
-  if (NgombiSupabaseConfig.isConfigured) {
-    await Supabase.initialize(
-      url: NgombiSupabaseConfig.url,
-      publishableKey: NgombiSupabaseConfig.publishableKey,
-    );
+  // Load the local catalogue first so NGOMBI can still start when the
+  // remote Supabase service is temporarily unavailable.
+  final localAdRepository = NgombiAdRepository();
+  List<NgombiAd> localAds = const [];
+  try {
+    localAds = await localAdRepository.loadAds();
+  } catch (_) {
+    // Keep startup available even if local preferences cannot be read.
   }
 
-  final localAdRepository = NgombiAdRepository();
-  final ads = NgombiSupabaseConfig.isConfigured
-      ? await NgombiAdServerRepository().loadPublicAds(
-          fallback: await localAdRepository.loadAds(),
-        )
-      : await localAdRepository.loadAds();
+  var ads = localAds;
+  if (NgombiSupabaseConfig.isConfigured) {
+    try {
+      await Supabase.initialize(
+        url: NgombiSupabaseConfig.url,
+        publishableKey: NgombiSupabaseConfig.publishableKey,
+      );
+
+      // loadPublicAds already falls back to the local catalogue on query
+      // errors. Keeping the call inside this guarded block also protects
+      // startup from initialization/network failures.
+      ads = await NgombiAdServerRepository().loadPublicAds(
+        fallback: localAds,
+      );
+    } catch (_) {
+      // Do not leave users stuck on the splash screen because the ad
+      // backend is unavailable. Continue with the last local catalogue.
+      ads = localAds;
+    }
+  }
 
   return _NgombiStartupData(
     tvChannels: tvChannels,
@@ -1434,13 +1451,14 @@ class _TntScreenState extends State<TntScreen> {
       throw Exception('La playlist TNT est indisponible (HTTP ${response.statusCode}).');
     }
 
-    final text = utf8.decode(response.bodyBytes, allowMalformed: true);
+    final playlistText = utf8.decode(response.bodyBytes, allowMalformed: true);
     final channels = <TvChannel>[];
     String? name;
     String? logo;
     String category = 'France';
+    final headers = <String, String>{};
 
-    for (final rawLine in text.split(RegExp(r'\r?\n'))) {
+    for (final rawLine in playlistText.split(RegExp(r'\r?\n'))) {
       final line = rawLine.trim();
       if (line.isEmpty) continue;
 
@@ -1453,6 +1471,16 @@ class _TntScreenState extends State<TntScreen> {
         category = groupMatch?.group(1)?.trim().isNotEmpty == true
             ? groupMatch!.group(1)!.trim()
             : 'France';
+        headers.clear();
+        continue;
+      }
+
+      final userAgentMatch = RegExp(
+        r'^#EXTVLCOPT:http-user-agent=(.+)$',
+        caseSensitive: false,
+      ).firstMatch(line);
+      if (userAgentMatch != null && name != null) {
+        headers['User-Agent'] = userAgentMatch.group(1)!.trim();
         continue;
       }
 
@@ -1464,6 +1492,7 @@ class _TntScreenState extends State<TntScreen> {
         name = null;
         logo = null;
         category = 'France';
+        headers.clear();
         continue;
       }
 
@@ -1473,10 +1502,12 @@ class _TntScreenState extends State<TntScreen> {
         type: detectStreamType(line),
         category: category,
         logo: (logo == null || logo.isEmpty) ? null : logo,
+        headers: Map<String, String>.unmodifiable(headers),
       ));
       name = null;
       logo = null;
       category = 'France';
+      headers.clear();
     }
 
     if (channels.isEmpty) {
@@ -1889,6 +1920,9 @@ class _WebPlayerScreenState
   late final WebViewController controller;
 
   bool loading = true;
+  bool _directStreamMode = false;
+  bool _directStreamStarted = false;
+  String? _directStreamError;
   String? _directStreamUrl;
   bool _backgroundRadioStarted = false;
   bool _backgroundNotificationStarted = false;
@@ -1899,6 +1933,16 @@ class _WebPlayerScreenState
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    // A direct audio endpoint is not an HTML page. Play it through the
+    // existing native Media3 service in the foreground and keep that same
+    // player alive when Android backgrounds/resumes the app.
+    if (_isLikelyDirectAudioUrl(widget.url)) {
+      _directStreamMode = true;
+      _directStreamUrl = widget.url;
+      unawaited(_startDirectStream());
+      return;
+    }
 
     controller = WebViewController()
       ..setJavaScriptMode(
@@ -1958,10 +2002,40 @@ class _WebPlayerScreenState
     });
   }
 
+  Future<void> _startDirectStream() async {
+    if (!mounted) return;
+    setState(() {
+      _directStreamStarted = false;
+      _directStreamError = null;
+    });
+
+    try {
+      await _nativeRadio.invokeMethod(
+        'startBackgroundRadio',
+        {'url': widget.url, 'title': widget.title},
+      );
+      if (!mounted) {
+        await _nativeRadio.invokeMethod('stopBackgroundRadio');
+        return;
+      }
+      setState(() => _directStreamStarted = true);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _directStreamError = error.toString());
+    }
+  }
+
+  Future<void> _stopDirectStream() async {
+    try {
+      await _nativeRadio.invokeMethod('stopBackgroundRadio');
+    } catch (_) {}
+  }
+
   @override
   void didChangeAppLifecycleState(
     AppLifecycleState state,
   ) {
+    if (_directStreamMode) return;
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused) {
       // Android may briefly mark the app inactive when the notification
@@ -2056,7 +2130,7 @@ class _WebPlayerScreenState
   }
 
   Future<void> _handoffToBackgroundAudio() async {
-    if (_backgroundRadioStarted || _backgroundHandoffInProgress) return;
+    if (_directStreamMode || _backgroundRadioStarted || _backgroundHandoffInProgress) return;
     _backgroundHandoffInProgress = true;
 
     try {
@@ -2112,6 +2186,7 @@ class _WebPlayerScreenState
   }
 
   Future<void> _returnToWebPlayer() async {
+    if (_directStreamMode) return;
     if (!_backgroundRadioStarted && !_backgroundNotificationStarted) return;
 
     if (_backgroundRadioStarted) {
@@ -2151,6 +2226,7 @@ class _WebPlayerScreenState
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _streamProbeTimer?.cancel();
+    if (_directStreamMode) unawaited(_stopDirectStream());
     _nativeRadio.setMethodCallHandler(null);
     super.dispose();
   }
@@ -2161,17 +2237,65 @@ class _WebPlayerScreenState
       appBar: AppBar(
         title: Text(widget.title),
       ),
-      body: Stack(
-        children: [
-          WebViewWidget(
-            controller: controller,
-          ),
-          if (loading)
-            const Center(
-              child: CircularProgressIndicator(),
+      body: _directStreamMode
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.radio_rounded,
+                      size: 76,
+                      color: Colors.orange,
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      widget.title,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 21,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (_directStreamError == null) ...[
+                      if (!_directStreamStarted)
+                        const CircularProgressIndicator(),
+                      const SizedBox(height: 12),
+                      Text(
+                        _directStreamStarted
+                            ? 'Flux transmis au lecteur audio Android. La lecture continue lorsque l’application passe en arrière-plan.'
+                            : 'Connexion au flux audio…',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.white70),
+                      ),
+                    ] else ...[
+                      Text(
+                        'Impossible de démarrer la radio : $_directStreamError',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.redAccent),
+                      ),
+                      const SizedBox(height: 14),
+                      FilledButton.icon(
+                        onPressed: _startDirectStream,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Réessayer'),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            )
+          : Stack(
+              children: [
+                WebViewWidget(controller: controller),
+                if (loading)
+                  const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+              ],
             ),
-        ],
-      ),
     );
   }
 }

@@ -1475,17 +1475,8 @@ class _TntScreenState extends State<TntScreen> {
         continue;
       }
 
-      // Preserve stream-specific HTTP headers declared by the M3U source.
-      // Some broadcasters reject playback when their User-Agent is omitted.
       final userAgentMatch = RegExp(
         r'^#EXTVLCOPT:http-user-agent=(.+)
-
-    if (channels.isEmpty) {
-      throw Exception('Aucune chaîne exploitable trouvée dans la playlist.');
-    }
-    return channels;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(

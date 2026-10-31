@@ -1458,7 +1458,7 @@ class _TntScreenState extends State<TntScreen> {
     String category = 'France';
     final headers = <String, String>{};
 
-    for (final rawLine in playlistText.split(RegExp(r'\\r?\\n'))) {
+    for (final rawLine in playlistText.split(RegExp(r'\r?\n'))) {
       final line = rawLine.trim();
       if (line.isEmpty) continue;
 

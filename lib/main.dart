@@ -645,6 +645,31 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _openTelegramBackup(BuildContext context) async {
+    final uri = Uri.parse('https://t.me/+24174320698');
+    try {
+      final opened = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!opened && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Impossible d’ouvrir Telegram. Vérifiez que l’application est installée ou réessayez.'),
+          ),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Impossible d’ouvrir Telegram pour le moment.'),
+          ),
+        );
+      }
+    }
+  }
+
   Widget _buildSectionTitle(
     BuildContext context,
     String title,
@@ -669,6 +694,18 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
           ),
+          if (title == 'En direct')
+            TextButton.icon(
+              onPressed: () => _openTelegramBackup(context),
+              icon: const Icon(Icons.forum_rounded, size: 16),
+              label: const Text('Backup'),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFFFF8A00),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                minimumSize: const Size(0, 36),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
           if (action != null && onPressed != null)
             TextButton(
               onPressed: onPressed,

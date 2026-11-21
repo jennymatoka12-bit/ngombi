@@ -336,6 +336,18 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
   }
 
   Future<void> _openNativeDashPlayer() async {
+    // The ngombi/player MethodChannel is implemented by the Android host only.
+    // iOS must never invoke it: AVPlayer (used by video_player) does not
+    // provide native MPEG-DASH playback, so report this limitation clearly.
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage =
+            'Ce flux utilise le format MPEG-DASH, qui n’est pas encore pris en charge sur iOS.';
+      });
+      return;
+    }
+
     EpgProgram? program;
 
     try {
@@ -444,6 +456,11 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
   }
 
   Future<void> _setKeepScreenOn(bool enabled) async {
+    // This channel currently has an Android implementation only.
+    // A dedicated iOS wakelock implementation will be added with the
+    // persisted iOS Runner project; do not send unsupported channel calls.
+    if (defaultTargetPlatform != TargetPlatform.android) return;
+
     try {
       await _nativePlayer.invokeMethod(
         'setKeepScreenOn',

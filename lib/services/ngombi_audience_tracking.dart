@@ -94,7 +94,7 @@ class NgombiAudienceTracking with WidgetsBindingObserver {
     final id = _installationId;
     final now = DateTime.now();
     final previous = _lastUsageSampleAt ?? now;
-    final seconds = now.difference(previous).inSeconds.clamp(0, 300);
+    final seconds = now.difference(previous).inSeconds.clamp(0, 300).toInt();
     _lastUsageSampleAt = now;
     if (id == null) return;
 

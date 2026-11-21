@@ -6,6 +6,11 @@ on:
     branches:
       - ios-testflight
 
+# Keep only the newest branch build; rapid commits must not race each other.
+concurrency:
+  group: ngombi-ios-testflight
+  cancel-in-progress: true
+
 permissions:
   contents: write
 

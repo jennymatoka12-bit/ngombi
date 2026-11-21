@@ -6,6 +6,7 @@ on:
       - main
       - master
       - codex/ngombi-global-phase1-stability
+      - codex/build-439-ad-pause-on-player
   workflow_dispatch:
 
 jobs:

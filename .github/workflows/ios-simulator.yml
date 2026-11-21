@@ -37,15 +37,24 @@ jobs:
       - name: Build unsigned iOS Simulator app
         run: flutter build ios --simulator --debug --no-codesign
 
-      - name: Package simulator build
+      - name: Add build information
         run: |
-          cd build/ios/iphonesimulator
-          ditto -c -k --sequesterRsrc --keepParent Runner.app ngombi-ios-simulator.zip
+          cat > build/ios/iphonesimulator/BUILD-INFO.txt <<'EOF'
+          NGOMBI - iOS Simulator build
+          Type: unsigned simulator application (.app)
+          Device: iOS Simulator only
+          Physical iPhone installation: not supported
+          This artifact is not an IPA and is not signed for device installation.
+          EOF
 
-      - name: Upload simulator build
+      # Upload the .app directory directly. GitHub creates the single ZIP
+      # download archive, avoiding the previous nested ZIP inside a ZIP.
+      - name: Upload simulator app
         uses: actions/upload-artifact@v4
         with:
-          name: ngombi-ios-simulator
-          path: build/ios/iphonesimulator/ngombi-ios-simulator.zip
+          name: ngombi-ios-simulator-app
+          path: |
+            build/ios/iphonesimulator/Runner.app
+            build/ios/iphonesimulator/BUILD-INFO.txt
           if-no-files-found: error
           retention-days: 14

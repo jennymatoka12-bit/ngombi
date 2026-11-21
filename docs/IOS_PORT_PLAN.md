@@ -8,17 +8,19 @@ Préparer une version iOS indépendante de NGOMBI, sans modifier les branches An
 
 - Application Flutter existante.
 - Dépendances repérées : `video_player`, `webview_flutter`, `url_launcher`, `shared_preferences`, `supabase_flutter`, `http` et `xml`.
-- Les sources iOS natives (`ios/Runner`, `ios/Podfile`) ne sont pas présentes dans la branche au démarrage.
+- Les sources iOS natives sont générées par Flutter sur le runner macOS.
 - Le lecteur TV contient un canal natif Flutter nommé `ngombi/player` pour le traitement DASH. Son implémentation doit être examinée avant toute adaptation iOS.
 - La configuration Supabase est fournie par `lib/config/ngombi_supabase_config.dart`.
 
 ## Première étape : socle de compilation
 
-Le workflow `.github/workflows/ios-simulator.yml` génère le squelette iOS Flutter manquant sur un runner macOS, récupère les dépendances et compile une application pour le simulateur iOS sans signature.
+Le workflow `.github/workflows/ios-simulator.yml` génère le squelette iOS Flutter manquant sur un runner macOS, puis l'enregistre dans la branche `ios-testflight` avant de récupérer les dépendances et de compiler une application pour le simulateur iOS sans signature.
 
-Le squelette généré pendant le workflow n'est pas encore enregistré dans Git. Cette première compilation sert à vérifier la compatibilité de base des plugins et du code Flutter avec iOS.
+Le dépôt doit donc conserver les fichiers natifs iOS générés, au lieu de les recréer uniquement dans un environnement temporaire à chaque exécution.
 
 L'identifiant d'application généré par défaut (`com.ngombi.ngombi`) est provisoire et devra être confirmé avant la signature et la distribution.
+
+Le workflow téléverse le dossier d'application du simulateur directement comme artefact GitHub : l'archive téléchargée ne contient plus un ZIP imbriqué. Cela ne transforme pas l'application en IPA installable sur iPhone.
 
 ## Limites connues à traiter
 
@@ -29,7 +31,7 @@ L'identifiant d'application généré par défaut (`com.ngombi.ngombi`) est prov
 - Les MethodChannels Android doivent être isolés derrière des contrôles de plateforme et ne jamais être appelés sur iOS.
 - Le canal `ngombi/radio` dépend des services Android de premier plan ; son enregistrement et son transfert audio sont désormais limités à Android. La lecture radio iOS en arrière-plan reste à implémenter avec `AVAudioSession` et le mode Background Audio.
 - Le canal `ngombi/player` est également Android-only. Sur iOS, les flux DASH sont explicitement signalés comme non pris en charge plutôt que d'appeler un handler absent.
-- Le premier build a échoué dans `video_player_avfoundation 2.12.4` (`Extra argument 'isolation' in call`). Une surcharge temporaire vers `2.12.1` est testée ; elle précède la migration du lecteur natif vers Swift introduite en `2.12.2`.
+- Le premier build a échoué dans `video_player_avfoundation 2.12.4` (`Extra argument 'isolation' in call`). Une surcharge temporaire vers `2.12.1` est utilisée ; elle précède la migration du lecteur natif vers Swift introduite en `2.12.2`.
 
 ## Règles de travail
 
@@ -41,8 +43,8 @@ L'identifiant d'application généré par défaut (`com.ngombi.ngombi`) est prov
 
 ## Étapes suivantes
 
-1. Exécuter le workflow de compilation simulateur.
-2. Corriger uniquement les erreurs de compatibilité iOS démontrées par les logs.
+1. Versionner les fichiers iOS natifs générés.
+2. Vérifier la compilation après persistance du projet iOS.
 3. Auditer les MethodChannels et les fonctions audio/vidéo natives.
 4. Définir la stratégie HLS, DASH et lecture radio en arrière-plan.
-5. Ajouter et versionner les fichiers iOS natifs, puis préparer la signature Apple et TestFlight lorsque le compte développeur sera disponible.
+5. Préparer la signature Apple et TestFlight lorsque le compte développeur sera disponible.

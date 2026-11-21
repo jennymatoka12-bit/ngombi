@@ -115,7 +115,7 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
     );
 
     if (_isOfficialWebPlayer) {
-      _initializeOfficialWebPlayer();
+      unawaited(_initializeOfficialWebPlayer());
       return;
     }
 
@@ -254,20 +254,13 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
     }
   }
 
-  void _initializeOfficialWebPlayer() {
+  Future<void> _initializeOfficialWebPlayer() async {
     try {
       late final WebViewController controller;
 
       controller = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
         ..setBackgroundColor(Colors.black)
-        ..setUserAgent(
-          'Mozilla/5.0 (Linux; Android 10; Mobile) '
-          'AppleWebKit/537.36 '
-          '(KHTML, like Gecko) '
-          'Chrome/120.0.0.0 '
-          'Mobile Safari/537.36',
-        )
         ..setNavigationDelegate(
           NavigationDelegate(
             onPageStarted: (String url) {
@@ -322,10 +315,23 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
               return NavigationDecision.navigate;
             },
           ),
-        )
-        ..loadRequest(Uri.parse(_officialWebUrl));
+        );
+
+      // Keep the existing Android browser identity for Android portals.
+      // On iOS, retain WKWebView's native Safari identity instead of
+      // pretending to be an Android/Chrome device.
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        await controller.setUserAgent(
+          'Mozilla/5.0 (Linux; Android 10; Mobile) '
+          'AppleWebKit/537.36 '
+          '(KHTML, like Gecko) '
+          'Chrome/120.0.0.0 '
+          'Mobile Safari/537.36',
+        );
+      }
 
       _webController = controller;
+      await controller.loadRequest(Uri.parse(_officialWebUrl));
     } catch (error) {
       if (!mounted) return;
 

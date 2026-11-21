@@ -78,7 +78,10 @@ jobs:
           import android.content.Context;
           import android.content.Intent;
           import android.content.IntentFilter;
+          import android.net.TrafficStats;
           import android.os.Bundle;
+          import java.util.HashMap;
+          import java.util.Map;
 
           import androidx.annotation.NonNull;
           import androidx.core.content.ContextCompat;
@@ -112,6 +115,23 @@ jobs:
                       @NonNull FlutterEngine flutterEngine
               ) {
                   super.configureFlutterEngine(flutterEngine);
+
+                  new MethodChannel(
+                          flutterEngine.getDartExecutor().getBinaryMessenger(),
+                          "ngombi/usage"
+                  ).setMethodCallHandler((call, result) -> {
+                      if ("getAppNetworkBytes".equals(call.method)) {
+                          int uid = android.os.Process.myUid();
+                          long rxBytes = TrafficStats.getUidRxBytes(uid);
+                          long txBytes = TrafficStats.getUidTxBytes(uid);
+                          Map<String, Long> counters = new HashMap<>();
+                          counters.put("rxBytes", rxBytes);
+                          counters.put("txBytes", txBytes);
+                          result.success(counters);
+                          return;
+                      }
+                      result.notImplemented();
+                  });
 
                   new MethodChannel(
                           flutterEngine.getDartExecutor().getBinaryMessenger(),

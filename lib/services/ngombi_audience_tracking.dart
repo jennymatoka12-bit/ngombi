@@ -157,7 +157,7 @@ class NgombiAudienceTracking with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       _foreground = true;
       _lastUsageSampleAt = DateTime.now();
-      unawaited(_loadNetworkBaseline());
+      // Keep the previous byte baseline so background-radio traffic is counted on resume.
       unawaited(_sendHeartbeat());
       _timer ??= Timer.periodic(const Duration(minutes: 1), (_) {
         unawaited(_flushUsage());

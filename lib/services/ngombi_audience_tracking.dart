@@ -40,8 +40,19 @@ class NgombiAudienceTracking with WidgetsBindingObserver {
   }
 
   void setSection(String section) {
-    _section = _validSection(section);
-    if (_started) unawaited(_sendHeartbeat());
+    final nextSection = _validSection(section);
+    if (_started && nextSection != _section) {
+      unawaited(_changeSection(nextSection));
+    } else {
+      _section = nextSection;
+      if (_started) unawaited(_sendHeartbeat());
+    }
+  }
+
+  Future<void> _changeSection(String nextSection) async {
+    await _flushUsage();
+    _section = nextSection;
+    await _sendHeartbeat();
   }
 
   String _validSection(String value) =>

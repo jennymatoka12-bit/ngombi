@@ -27,6 +27,9 @@ L'identifiant d'application généré par défaut (`com.ngombi.ngombi`) est prov
 - WebView et portails : vérifier les restrictions iOS, la lecture automatique, les cookies et les politiques de contenu.
 - Radio en arrière-plan : ajouter et tester la configuration audio iOS appropriée avant d'annoncer cette fonction comme disponible.
 - Les MethodChannels Android doivent être isolés derrière des contrôles de plateforme et ne jamais être appelés sur iOS.
+- Le canal `ngombi/radio` dépend des services Android de premier plan ; son enregistrement et son transfert audio sont désormais limités à Android. La lecture radio iOS en arrière-plan reste à implémenter avec `AVAudioSession` et le mode Background Audio.
+- Le canal `ngombi/player` est également Android-only. Sur iOS, les flux DASH sont explicitement signalés comme non pris en charge plutôt que d'appeler un handler absent.
+- Le premier build a échoué dans `video_player_avfoundation 2.12.4` (`Extra argument 'isolation' in call`). Une surcharge temporaire vers `2.12.1` est testée ; elle précède la migration du lecteur natif vers Swift introduite en `2.12.2`.
 
 ## Règles de travail
 

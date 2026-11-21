@@ -7,7 +7,7 @@ on:
       - ios-testflight
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   ios-simulator:
@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout iOS development branch
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -29,6 +31,18 @@ jobs:
         run: |
           if [ ! -d ios ]; then
             flutter create --platforms=ios --org com.ngombi .
+          fi
+
+      - name: Persist generated iOS project files on ios-testflight
+        run: |
+          git add ios/
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "iOS: add persistent Flutter platform project"
+            git push origin HEAD:ios-testflight
+          else
+            echo "The iOS project scaffold is already committed."
           fi
 
       - name: Resolve Flutter dependencies
@@ -47,8 +61,6 @@ jobs:
           This artifact is not an IPA and is not signed for device installation.
           EOF
 
-      # Upload the .app directory directly. GitHub creates the single ZIP
-      # download archive, avoiding the previous nested ZIP inside a ZIP.
       - name: Upload simulator app
         uses: actions/upload-artifact@v4
         with:

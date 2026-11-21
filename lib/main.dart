@@ -1943,25 +1943,33 @@ class _WebPlayerScreenState
 
     // The native notification controls are forwarded back to the WebView
     // for stations whose audio stream is embedded in a website.
-    _nativeRadio.setMethodCallHandler((call) async {
-      if (call.method != 'radioNotificationControl') return;
-      final control = call.arguments?.toString();
-      if (control == 'pause') {
-        await controller.runJavaScript(
-          "document.querySelectorAll('audio, video').forEach((m) => m.pause());",
-        );
-      } else if (control == 'play') {
-        await controller.runJavaScript(
-          "document.querySelectorAll('audio, video').forEach((m) => { var p = m.play(); if (p) p.catch(() => {}); });",
-        );
-      }
-    });
+    // The ngombi/radio native service and notification controls exist on
+    // Android only. Do not register or invoke that channel on iOS/Windows.
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      _nativeRadio.setMethodCallHandler((call) async {
+        if (call.method != 'radioNotificationControl') return;
+        final control = call.arguments?.toString();
+        if (control == 'pause') {
+          await controller.runJavaScript(
+            "document.querySelectorAll('audio, video').forEach((m) => m.pause());",
+          );
+        } else if (control == 'play') {
+          await controller.runJavaScript(
+            "document.querySelectorAll('audio, video').forEach((m) => { var p = m.play(); if (p) p.catch(() => {}); });",
+          );
+        }
+      });
+    }
   }
 
   @override
   void didChangeAppLifecycleState(
     AppLifecycleState state,
   ) {
+    // Background-radio handoff currently depends on Android foreground
+    // services. iOS requires its own AVAudioSession/background-mode path.
+    if (defaultTargetPlatform != TargetPlatform.android) return;
+
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused) {
       // Android may briefly mark the app inactive when the notification
@@ -2056,6 +2064,7 @@ class _WebPlayerScreenState
   }
 
   Future<void> _handoffToBackgroundAudio() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return;
     if (_backgroundRadioStarted || _backgroundHandoffInProgress) return;
     _backgroundHandoffInProgress = true;
 
@@ -2112,6 +2121,7 @@ class _WebPlayerScreenState
   }
 
   Future<void> _returnToWebPlayer() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return;
     if (!_backgroundRadioStarted && !_backgroundNotificationStarted) return;
 
     if (_backgroundRadioStarted) {

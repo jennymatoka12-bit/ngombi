@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../models/tv_channel.dart';
 import '../services/epg_service.dart';
@@ -456,9 +457,15 @@ class _StreamPlayerScreenState extends State<StreamPlayerScreen>
   }
 
   Future<void> _setKeepScreenOn(bool enabled) async {
-    // This channel currently has an Android implementation only.
-    // A dedicated iOS wakelock implementation will be added with the
-    // persisted iOS Runner project; do not send unsupported channel calls.
+    // Keep the existing Android native implementation unchanged. iOS uses
+    // the cross-platform wakelock plugin instead of the Android MethodChannel.
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      try {
+        await WakelockPlus.toggle(enable: enabled);
+      } catch (_) {}
+      return;
+    }
+
     if (defaultTargetPlatform != TargetPlatform.android) return;
 
     try {

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -1938,9 +1939,15 @@ class _WebPlayerScreenState
           },
         ),
       )
-      ..loadRequest(
-        Uri.parse(widget.url),
-      );
+      ;
+
+    // Configure iOS for media playback before opening the station page.
+    // Android keeps its existing WebView startup and native foreground-service flow.
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      unawaited(_loadIosRadioPage());
+    } else {
+      unawaited(controller.loadRequest(Uri.parse(widget.url)));
+    }
 
     // The native notification controls are forwarded back to the WebView
     // for stations whose audio stream is embedded in a website.
@@ -1961,6 +1968,18 @@ class _WebPlayerScreenState
         }
       });
     }
+  }
+
+  Future<void> _loadIosRadioPage() async {
+    try {
+      final session = await AudioSession.instance;
+      await session.configure(const AudioSessionConfiguration.music());
+    } catch (_) {
+      // Keep the WebView available even if iOS audio-session setup fails.
+    }
+
+    if (!mounted) return;
+    await controller.loadRequest(Uri.parse(widget.url));
   }
 
   @override

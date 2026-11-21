@@ -1938,8 +1938,7 @@ class _WebPlayerScreenState
             );
           },
         ),
-      )
-      ;
+      );
 
     // Configure iOS for media playback before opening the station page.
     // Android keeps its existing WebView startup and native foreground-service flow.

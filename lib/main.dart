@@ -496,6 +496,9 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ModalRoute.isCurrent changes when a player route is pushed or popped.
+    // This pauses the home advertising panel without disposing its controller.
+    final isHomeRouteCurrent = ModalRoute.of(context)?.isCurrent ?? true;
     return SafeArea(
       child: CustomScrollView(
         slivers: [
@@ -504,7 +507,7 @@ class HomeScreen extends StatelessWidget {
           ),
 
           SliverToBoxAdapter(
-            child: NgombiHero(ads: ads, isActive: isActive),
+            child: NgombiHero(ads: ads, isActive: isActive && isHomeRouteCurrent),
           ),
 
           SliverToBoxAdapter(

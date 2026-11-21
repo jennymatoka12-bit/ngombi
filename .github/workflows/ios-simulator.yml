@@ -1,0 +1,51 @@
+name: iOS Simulator Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - ios-testflight
+
+permissions:
+  contents: read
+
+jobs:
+  ios-simulator:
+    name: Build NGOMBI for iOS Simulator
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout iOS development branch
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate the iOS platform scaffold if missing
+        run: |
+          if [ ! -d ios ]; then
+            flutter create --platforms=ios --org com.ngombi .
+          fi
+
+      - name: Resolve Flutter dependencies
+        run: flutter pub get
+
+      - name: Build unsigned iOS Simulator app
+        run: flutter build ios --simulator --debug --no-codesign
+
+      - name: Package simulator build
+        run: |
+          cd build/ios/iphonesimulator
+          ditto -c -k --sequesterRsrc --keepParent Runner.app ngombi-ios-simulator.zip
+
+      - name: Upload simulator build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ngombi-ios-simulator
+          path: build/ios/iphonesimulator/ngombi-ios-simulator.zip
+          if-no-files-found: error
+          retention-days: 14

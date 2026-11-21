@@ -19,6 +19,7 @@ dependencies:
   xml: ^6.5.0
   shared_preferences: ^2.3.2
   supabase_flutter: ^2.9.1
+  wakelock_plus: 1.2.11
 
 dev_dependencies:
   flutter_test:

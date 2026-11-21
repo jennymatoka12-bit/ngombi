@@ -27,7 +27,7 @@ Le workflow téléverse le dossier d'application du simulateur directement comme
 - HLS : `video_player` s'appuie sur AVPlayer sur iOS ; les flux doivent être testés individuellement.
 - MPEG-DASH : ne pas supposer une prise en charge native par AVPlayer. Il faudra choisir et valider une solution iOS dédiée ou un repli compatible, sans modifier le comportement Android.
 - WebView et portails : vérifier les restrictions iOS, la lecture automatique, les cookies et les politiques de contenu.
-- Radio en arrière-plan : ajouter et tester la configuration audio iOS appropriée avant d'annoncer cette fonction comme disponible.
+- Radio en arrière-plan : la branche active désormais le mode iOS `UIBackgroundModes=audio` et configure `AVAudioSession` en catégorie lecture via `audio_session` avant le chargement du lecteur WebView. Cette préparation compile, mais la continuité réelle écran verrouillé / app en arrière-plan et les commandes de contrôle doivent encore être validées sur un iPhone physique.
 - Les MethodChannels Android doivent être isolés derrière des contrôles de plateforme et ne jamais être appelés sur iOS.
 - Le canal `ngombi/radio` dépend des services Android de premier plan ; son enregistrement et son transfert audio sont désormais limités à Android. La lecture radio iOS en arrière-plan reste à implémenter avec `AVAudioSession` et le mode Background Audio.
 - Le canal `ngombi/player` est également Android-only. Sur iOS, les flux DASH sont explicitement signalés comme non pris en charge plutôt que d'appeler un handler absent.
@@ -45,6 +45,6 @@ Le workflow téléverse le dossier d'application du simulateur directement comme
 
 1. Versionner les fichiers iOS natifs générés.
 2. Vérifier la compilation après persistance du projet iOS.
-3. Auditer les MethodChannels et les fonctions audio/vidéo natives.
-4. Définir la stratégie HLS, DASH et lecture radio en arrière-plan.
+3. Préparer puis tester la lecture radio iOS en arrière-plan et les contrôles système sur iPhone physique.
+4. Définir la stratégie HLS, DASH et portails TV.
 5. Préparer la signature Apple et TestFlight lorsque le compte développeur sera disponible.
